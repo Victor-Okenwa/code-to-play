@@ -1,47 +1,29 @@
 {
-  "version": "2.0.0",
-  "tasks": [
-    {
-      "label": "pnpm: watch",
-      "type": "shell",
-      "command": "pnpm run watch",
-      "isBackground": true,
-      "problemMatcher": {
-        "pattern": [],
-        "background": {
-          "activeOnStart": true,
-          "beginsPattern": ".*",
-          "endsPattern": "Watching for file changes"
-        }
-      },
-      "presentation": {
-        "reveal": "never",
-        "group": "watchers"
-      },
-      "group": {
-        "kind": "build",
-        "isDefault": true
+  "label": "pnpm: watch",
+  "type": "shell",
+  "command": "pnpm run watch",
+  "isBackground": true,
+  "problemMatcher": {
+    "owner": "custom",
+    "pattern": [
+      {
+        "regexp": "^(.*):(\\d+):(.*)$",
+        "file": 1,
+        "line": 2,
+        "message": 3
       }
-    },
-
-    {
-      "label": "pnpm: watch-tests",
-      "type": "shell",
-      "command": "pnpm run watch-tests",
-      "isBackground": true,
-      "problemMatcher": {
-        "pattern": [],
-        "background": {
-          "activeOnStart": true,
-          "beginsPattern": ".*",
-          "endsPattern": "Watching for file changes"
-        }
-      },
-      "presentation": {
-        "reveal": "never",
-        "group": "watchers"
-      },
-      "group": "build"
+    ],
+    "background": {
+      "activeOnStart": true,
+      "beginsPattern": ".*",
+      "endsPattern": "(Watching for file changes|Watching\\.|Build complete|Compiled successfully)"
     }
-  ]
+  },
+  "presentation": {
+    "reveal": "never"
+  },
+  "group": {
+    "kind": "build",
+    "isDefault": true
+  }
 }
