@@ -5,7 +5,7 @@
  * Contains all interfaces, types, and enums used across the extension.
  */
 
-import { TRACKEDEXTENSION } from "../constants/trackedextensions";
+import { TRACKEDEXTENSION } from "../constants/TrackedExtensions";
 
 /**
  * Represents a playable game in the extension

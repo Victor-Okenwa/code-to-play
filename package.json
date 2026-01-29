@@ -29,7 +29,7 @@
     "views": {
       "codeToPlay": [
         {
-          "id": "gameList",
+          "id": "codeToPlayGames",
           "name": "Available Games",
           "icon": "media/icons/game-controller.svg"
         }
@@ -43,6 +43,10 @@
       {
         "command": "codeToPlay.refreshGames",
         "title": "Refresh Games"
+      },
+      {
+        "command": "codeToPlay.showStatus",
+        "title": "Show Game Status"
       }
     ]
   },
