@@ -270,6 +270,110 @@ export class CodeTracker {
     }
 
     /**
+     * Map of language IDs to their comment regex patterns
+     */
+    private readonly commentPatternMap: Record<string, RegExp[]> = {
+        // ---------- C-style + JSDoc ----------
+        javascript: [
+            /^\/\/.*/,   // single-line
+            /^\/\*\*/,   // JSDoc block start
+            /^\/\*/,     // normal block start
+            /^\*/        // block / JSDoc continuation
+        ],
+        javascriptreact: [
+            /^\/\/.*/,
+            /^\/\*\*/,
+            /^\/\*/,
+            /^\*/
+        ],
+        typescript: [
+            /^\/\/.*/,
+            /^\/\*\*/,
+            /^\/\*/,
+            /^\*/
+        ],
+        typescriptreact: [
+            /^\/\/.*/,
+            /^\/\*\*/,
+            /^\/\*/,
+            /^\*/
+        ],
+        java: [
+            /^\/\/.*/,
+            /^\/\*\*/,
+            /^\/\*/,
+            /^\*/
+        ],
+        c: [/^\/\/.*/, /^\/\*/, /^\*/],
+        cpp: [/^\/\/.*/, /^\/\*/, /^\*/],
+        csharp: [/^\/\/.*/, /^\/\*/, /^\*/],
+        go: [/^\/\/.*/, /^\/\*/, /^\*/],
+        rust: [/^\/\/.*/, /^\/\*/, /^\*/],
+        php: [/^\/\/.*/, /^\/\*/, /^\*/],
+        swift: [/^\/\/.*/, /^\/\*/, /^\*/],
+        kotlin: [/^\/\/.*/, /^\/\*/, /^\*/],
+        scala: [/^\/\/.*/, /^\/\*/, /^\*/],
+        'objective-c': [/^\/\/.*/, /^\/\*/, /^\*/],
+        zig: [/^\/\/.*/, /^\/\*/, /^\*/],
+
+        // ---------- Hash-style ----------
+        python: [/^#.*/],
+        ruby: [/^#.*/],
+        shellscript: [/^#.*/],
+        bash: [/^#.*/],
+        zsh: [/^#.*/],
+        powershell: [/^#.*/],
+        makefile: [/^#.*/],
+        perl: [/^#.*/],
+        r: [/^#.*/],
+        julia: [/^#.*/],
+        yaml: [/^#.*/],
+        toml: [/^#.*/],
+
+        // ---------- HTML / XML ----------
+        html: [/^<!--/],
+        xml: [/^<!--/],
+        markdown: [/^<!--/],
+        mdx: [/^<!--/],
+        xhtml: [/^<!--/],
+        svg: [/^<!--/],
+
+        // ---------- CSS ----------
+        css: [/^\/\*/, /^\*/],
+        scss: [/^\/\*/, /^\*/],
+        sass: [/^\/\*/, /^\*/],
+        less: [/^\/\*/, /^\*/],
+        stylus: [/^\/\*/, /^\*/],
+        postcss: [/^\/\*/, /^\*/],
+
+        // ---------- Lua ----------
+        lua: [/^--/, /^--\[\[/],
+
+        // ---------- SQL ----------
+        sql: [/^--/, /^\/\*/],
+        mysql: [/^--/, /^\/\*/],
+        postgresql: [/^--/, /^\/\*/],
+        sqlite: [/^--/, /^\/\*/],
+
+        // ---------- Haskell / Elm ----------
+        haskell: [/^--/, /^{-/],
+        elm: [/^--/, /^{-/],
+
+        // ---------- Lisp family ----------
+        lisp: [/^;/],
+        scheme: [/^;/],
+        clojure: [/^;/],
+
+        // ---------- Assembly ----------
+        asm: [/^;/, /^#/],
+        assembly: [/^;/, /^#/],
+
+        // ---------- MATLAB / Octave ----------
+        matlab: [/^%/],
+        octave: [/^%/]
+    };
+
+    /**
      * Gets regex patterns for comments in different languages
      * 
      * @param languageId - Programming language identifier
@@ -277,91 +381,7 @@ export class CodeTracker {
      * @private
      */
     private getCommentPatterns(languageId: string): RegExp[] {
-        const patterns: RegExp[] = [];
-
-        // ---------- C-style (// and /* */) ----------
-        if ([
-            'javascript', 'typescript', 'javascriptreact', 'typescriptreact',
-            'java', 'c', 'cpp', 'csharp',
-            'go', 'rust', 'php',
-            'swift', 'kotlin', 'scala',
-            'objective-c', 'zig'
-        ].includes(languageId)) {
-            patterns.push(/^\/\//); // single-line
-            patterns.push(/^\/\*/); // block start
-            patterns.push(/^\*/);   // block continuation
-        }
-
-        // ---------- Hash-style (#) ----------
-        if ([
-            'python', 'ruby', 'shellscript',
-            'bash', 'zsh',
-            'powershell', 'makefile',
-            'perl', 'r', 'julia',
-            'yaml', 'toml'
-        ].includes(languageId)) {
-            patterns.push(/^#/);
-        }
-
-        // ---------- HTML / XML / Markdown ----------
-        if ([
-            'html', 'xml',
-            'markdown', 'mdx',
-            'xhtml', 'svg'
-        ].includes(languageId)) {
-            patterns.push(/^<!--/);
-        }
-
-        // ---------- CSS & Preprocessors ----------
-        if ([
-            'css', 'scss', 'sass',
-            'less', 'stylus', 'postcss'
-        ].includes(languageId)) {
-            patterns.push(/^\/\*/);
-            patterns.push(/^\*/);
-        }
-
-        // ---------- Lua ----------
-        if (languageId === 'lua') {
-            patterns.push(/^--/);
-            patterns.push(/^--\[\[/);
-        }
-
-        // ---------- SQL ----------
-        if ([
-            'sql', 'mysql', 'postgresql', 'sqlite'
-        ].includes(languageId)) {
-            patterns.push(/^--/);
-            patterns.push(/^\/\*/);
-        }
-
-        // ---------- Haskell / Elm ----------
-        if (['haskell', 'elm'].includes(languageId)) {
-            patterns.push(/^--/);
-            patterns.push(/^{-/);
-        }
-
-        // ---------- Lisp / Scheme / Clojure ----------
-        if ([
-            'lisp', 'scheme', 'clojure'
-        ].includes(languageId)) {
-            patterns.push(/^;/);
-        }
-
-        // ---------- Assembly ----------
-        if ([
-            'asm', 'assembly'
-        ].includes(languageId)) {
-            patterns.push(/^;/);
-            patterns.push(/^#/);
-        }
-
-        // ---------- MATLAB / Octave ----------
-        if (['matlab', 'octave'].includes(languageId)) {
-            patterns.push(/^%/);
-        }
-
-        return patterns;
+        return this.commentPatternMap[languageId] ?? [];
     }
 
 
