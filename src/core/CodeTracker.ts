@@ -279,30 +279,91 @@ export class CodeTracker {
     private getCommentPatterns(languageId: string): RegExp[] {
         const patterns: RegExp[] = [];
 
-        // C-style languages (JS, TS, Java, C++, C#, etc.)
-        if (['javascript', 'typescript', 'java', 'cpp', 'c', 'csharp', 'go', 'rust', 'php'].includes(languageId)) {
-            patterns.push(/^\/\//);  // Single-line comment
-            patterns.push(/^\/\*/);  // Multi-line comment start
-            patterns.push(/^\*/);    // Multi-line comment continuation
+        // ---------- C-style (// and /* */) ----------
+        if ([
+            'javascript', 'typescript', 'javascriptreact', 'typescriptreact',
+            'java', 'c', 'cpp', 'csharp',
+            'go', 'rust', 'php',
+            'swift', 'kotlin', 'scala',
+            'objective-c', 'zig'
+        ].includes(languageId)) {
+            patterns.push(/^\/\//); // single-line
+            patterns.push(/^\/\*/); // block start
+            patterns.push(/^\*/);   // block continuation
         }
 
-        // Python, Ruby, Shell
-        if (['python', 'ruby', 'shellscript', 'powershell'].includes(languageId)) {
-            patterns.push(/^#/);     // Python/Ruby/Shell comment
+        // ---------- Hash-style (#) ----------
+        if ([
+            'python', 'ruby', 'shellscript',
+            'bash', 'zsh',
+            'powershell', 'makefile',
+            'perl', 'r', 'julia',
+            'yaml', 'toml'
+        ].includes(languageId)) {
+            patterns.push(/^#/);
         }
 
-        // HTML/XML comments
-        if (['html', 'xml', 'markdown'].includes(languageId)) {
-            patterns.push(/^<!--/);  // HTML comment
+        // ---------- HTML / XML / Markdown ----------
+        if ([
+            'html', 'xml',
+            'markdown', 'mdx',
+            'xhtml', 'svg'
+        ].includes(languageId)) {
+            patterns.push(/^<!--/);
         }
 
-        // CSS comments
-        if (['css', 'scss', 'less'].includes(languageId)) {
-            patterns.push(/^\/\*/);  // CSS comment
+        // ---------- CSS & Preprocessors ----------
+        if ([
+            'css', 'scss', 'sass',
+            'less', 'stylus', 'postcss'
+        ].includes(languageId)) {
+            patterns.push(/^\/\*/);
+            patterns.push(/^\*/);
+        }
+
+        // ---------- Lua ----------
+        if (languageId === 'lua') {
+            patterns.push(/^--/);
+            patterns.push(/^--\[\[/);
+        }
+
+        // ---------- SQL ----------
+        if ([
+            'sql', 'mysql', 'postgresql', 'sqlite'
+        ].includes(languageId)) {
+            patterns.push(/^--/);
+            patterns.push(/^\/\*/);
+        }
+
+        // ---------- Haskell / Elm ----------
+        if (['haskell', 'elm'].includes(languageId)) {
+            patterns.push(/^--/);
+            patterns.push(/^{-/);
+        }
+
+        // ---------- Lisp / Scheme / Clojure ----------
+        if ([
+            'lisp', 'scheme', 'clojure'
+        ].includes(languageId)) {
+            patterns.push(/^;/);
+        }
+
+        // ---------- Assembly ----------
+        if ([
+            'asm', 'assembly'
+        ].includes(languageId)) {
+            patterns.push(/^;/);
+            patterns.push(/^#/);
+        }
+
+        // ---------- MATLAB / Octave ----------
+        if (['matlab', 'octave'].includes(languageId)) {
+            patterns.push(/^%/);
         }
 
         return patterns;
     }
+
 
     /**
      * Determines if a document should be tracked based on config
