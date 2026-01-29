@@ -1,0 +1,31 @@
+@font-face {
+    font-family: 'Press Start 2P';
+    src: url('#{webviewUri}/media/fonts/PressStart2P.woff2') format('woff2'),
+         url('#{webviewUri}/media/fonts/PressStart2P-Regular.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Orbitron';
+    src: url('#{webviewUri}/media/fonts/Orbitron.woff2') format('woff2'),
+         url('#{webviewUri}/media/fonts/Orbitron-Regular.ttf') format('truetype');
+    font-weight: 400;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Orbitron';
+    src: url('#{webviewUri}/media/fonts/Orbitron-Bold.ttf') format('truetype');
+    font-weight: 700;
+    font-style: normal;
+}
+
+/* Base styles for all games */
+body {
+    font-family: 'Orbitron', sans-serif;
+}
+
+h1, h2 {
+    font-family: 'Press Start 2P', cursive;
+}

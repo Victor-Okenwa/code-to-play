@@ -3,6 +3,11 @@
   "displayName": "Code to Play",
   "description": "Play games in VS Code - earn playtime by writing code!",
   "version": "0.0.1",
+  "publisher": "morse-code",
+  "author": {
+    "name": "Victor Okenwa",
+    "email": "okenwavictor003@gmail.com"
+  },
   "engines": {
     "vscode": "^1.108.0"
   },
@@ -12,10 +17,32 @@
   "activationEvents": [],
   "main": "./dist/extension.js",
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "codeToPlay",
+          "title": "Code to Play",
+          "icon": "media/icons/game-controller.svg"
+        }
+      ]
+    },
+    "views": {
+      "codeToPlay": [
+        {
+          "id": "gameList",
+          "name": "Available Games",
+          "icon": "media/icons/game-controller.svg"
+        }
+      ]
+    },
     "commands": [
       {
-        "command": "code-to-play.helloWorld",
-        "title": "Hello World"
+        "command": "codeToPlay.playGame",
+        "title": "Play Game"
+      },
+      {
+        "command": "codeToPlay.refreshGames",
+        "title": "Refresh Games"
       }
     ]
   },
