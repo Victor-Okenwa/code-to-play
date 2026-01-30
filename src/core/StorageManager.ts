@@ -18,7 +18,7 @@ import {
  * Manages persistent storage for the extension
  * Uses VS Code's Memento API for global and workspace-specific storage
  */
-export class StorageManager {
+export class StorageManager implements vscode.Disposable {
     /**
      * Global storage (persists across all workspaces)
      */
@@ -303,5 +303,13 @@ export class StorageManager {
             totalLinesWritten: this.getTotalLinesWritten(),
             hasConfig: this.globalState.get(StorageKey.CONFIG) !== undefined
         };
+    }
+
+    /**
+     * Disposes resources used by StorageManager
+     * Implements vscode.Disposable so it can be added to subscriptions
+     */
+    dispose(): void {
+        // Currently no resources to clean up. Implement cleanup here if needed later.
     }
 }
