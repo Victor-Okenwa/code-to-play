@@ -1,67 +1,950 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Debug Snake</title>
-</head>
-<body>
+    <style>
+      /* ========================================
+           GLOBAL RESET
+           Remove default margins and paddings
+           ======================================== */
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      /* ========================================
+           BODY - VS Code Dark Theme
+           Mimics VS Code's dark theme colors
+           ======================================== */
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        /* Gradient background matching VS Code dark theme */
+        background: linear-gradient(135deg, #1e1e1e 0%, #2d2d30 100%);
+        display: flex;
+        justify-content: center;
+        /* align-items: center; */
+        min-height: 100vh;
+        color: #d4d4d4; /* VS Code default text color */
+        overflow-y: auto;
+      }
+
+      /* ========================================
+           GAME CONTAINER - Main wrapper
+           Contains all game elements
+           ======================================== */
+      .game-container {
+        background: #252526; /* VS Code sidebar background */
+        border-radius: 12px;
+        padding: 30px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        max-width: 600px;
+        height: auto;
+        overflow-y: auto;
+      }
+
+      /* ========================================
+           GAME HEADER - Title and subtitle
+           ======================================== */
+      .game-header {
+        text-align: center;
+        margin-bottom: 20px;
+      }
+
+      .game-header h1 {
+        color: #4ec9b0; /* VS Code teal accent color */
+        font-size: 2em;
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+      }
+
+      .bug-icon {
+        font-size: 1.2em;
+      }
+
+      /* ========================================
+           GAME INFO - Score display panel
+           Shows current score, high score, and speed level
+           ======================================== */
+      .game-info {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 20px;
+        padding: 15px;
+        background: #1e1e1e; /* Darker background for contrast */
+        border-radius: 8px;
+      }
+
+      .info-item {
+        text-align: center;
+      }
+
+      .info-label {
+        color: #858585; /* Muted gray for labels */
+        font-size: 0.9em;
+        margin-bottom: 5px;
+      }
+
+      .info-value {
+        color: #4ec9b0; /* Teal accent for numeric values */
+        font-size: 1.5em;
+        font-weight: bold;
+      }
+
+      /* ========================================
+           CANVAS - Game board
+           Where the actual game is rendered
+           ======================================== */
+      #gameCanvas {
+        background: #1e1e1e; /* Dark background matching VS Code editor */
+        border: 3px solid #3e3e42; /* VS Code border color */
+        border-radius: 8px;
+        display: block;
+        margin: 0 auto;
+      }
+
+      /* ========================================
+           CONTROLS - Button container
+           ======================================== */
+      .controls {
+        margin-top: 20px;
+        text-align: center;
+      }
+
+      /* Button styling matching VS Code's button component */
+      .btn {
+        background: #0e639c; /* VS Code button blue */
+        color: white;
+        border: none;
+        padding: 12px 30px;
+        border-radius: 6px;
+        font-size: 1em;
+        cursor: pointer;
+        transition: background 0.3s ease;
+        font-weight: 600;
+      }
+
+      .btn:hover {
+        background: #1177bb; /* Lighter blue on hover */
+      }
+
+      .btn:disabled {
+        background: #3e3e42; /* Gray when disabled */
+        cursor: not-allowed;
+        opacity: 0.5;
+      }
+
+      /* ========================================
+           GAME OVER SCREEN
+           Displayed when player loses
+           ======================================== */
+      .game-over {
+        display: none; /* Hidden by default */
+        text-align: center;
+        margin-top: 20px;
+        padding: 20px;
+        background: #3e3e42;
+        border-radius: 8px;
+      }
+
+      /* Show game over screen when .show class is added */
+      .game-over.show {
+        display: block;
+      }
+
+      .game-over h2 {
+        color: #f48771; /* Red/orange for game over message */
+        margin-bottom: 10px;
+      }
+
+      .game-over p {
+        margin-bottom: 15px;
+        font-size: 1.1em;
+      }
+
+      /* ========================================
+           GAME OVER ALERT OVERLAY
+           Full screen alert that appears when game ends
+           ======================================== */
+      .game-over-alert {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(204, 0, 0, 0.6); /* Red with 60% opacity */
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.5s ease-in-out;
+      }
+
+      /* Show alert with fade-in animation */
+      .game-over-alert.show {
+        opacity: 1;
+        pointer-events: all;
+      }
+
+      /* Alert content styling */
+      .game-over-alert h2 {
+        color: #ffffff;
+        font-size: 4em;
+        margin: 0;
+        text-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+        animation: alertPulse 0.5s ease-in-out;
+      }
+
+      .game-over-alert p {
+        color: #ffffff;
+        font-size: 1.5em;
+        margin-top: 20px;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+      }
+
+      /* Pulse animation for alert text */
+      @keyframes alertPulse {
+        0% {
+          transform: scale(0.5);
+          opacity: 0;
+        }
+        50% {
+          transform: scale(1.1);
+        }
+        100% {
+          transform: scale(1);
+          opacity: 1;
+        }
+      }
+
+      /* ========================================
+           INSTRUCTIONS PANEL
+           How to play guide
+           ======================================== */
+      .instructions {
+        margin-top: 20px;
+        padding: 15px;
+        background: #1e1e1e;
+        border-radius: 8px;
+        font-size: 0.9em;
+        color: #858585; /* Muted text for secondary info */
+      }
+
+      .instructions h3 {
+        color: #4ec9b0; /* Teal accent for heading */
+        margin-bottom: 10px;
+      }
+
+      .instructions ul {
+        list-style: none;
+        padding-left: 0;
+      }
+
+      .instructions li {
+        margin-bottom: 5px;
+      }
+
+      /* Custom bullet point using teal arrow */
+      .instructions li::before {
+        content: "▸ ";
+        color: #4ec9b0;
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body>
     <div class="game-container">
-        <!-- Game Over Alert Overlay (Full Screen) -->
-        <div class="game-over-alert" id="gameOverAlert">
-            <h2>GAME OVER!</h2>
-            <p id="alertScore">Bugs Fixed: 0</p>
-        </div>
+      <!-- Game Over Alert Overlay (Full Screen) -->
+      <div class="game-over-alert" id="gameOverAlert">
+        <h2>GAME OVER!</h2>
+        <p id="alertScore">Bugs Fixed: 0</p>
+      </div>
 
-        <!-- Game title and description -->
-        <div class="game-header">
-            <h1><span class="bug-icon">🐍</span> Debug Snake</h1>
-            <p>Catch the bugs before they escape!</p>
-        </div>
+      <!-- Game title and description -->
+      <div class="game-header">
+        <h1><span class="bug-icon">🐍</span> Debug Snake</h1>
+        <p>Catch the bugs before they escape!</p>
+      </div>
 
-        <!-- Score display panel -->
-        <div class="game-info">
-            <div class="info-item">
-                <div class="info-label">Bugs Fixed</div>
-                <div class="info-value" id="score">0</div>
-            </div>
-            <div class="info-item">
-                <div class="info-label">High Score</div>
-                <div class="info-value" id="highScore">0</div>
-            </div>
-            <div class="info-item">
-                <div class="info-label">Speed</div>
-                <div class="info-value" id="speed">1</div>
-            </div>
+      <!-- Score display panel -->
+      <div class="game-info">
+        <div class="info-item">
+          <div class="info-label">Bugs Fixed</div>
+          <div class="info-value" id="score">0</div>
         </div>
-
-        <!-- Game canvas where gameplay happens -->
-        <canvas id="gameCanvas" width="400" height="400"></canvas>
-
-        <!-- Game over overlay (hidden until game ends) -->
-        <div class="game-over" id="gameOver">
-            <h2>Game Over!</h2>
-            <p>Final Score: <span id="finalScore">0</span> bugs fixed</p>
-            <button class="btn" onclick="restartGame()">Debug Again</button>
+        <div class="info-item">
+          <div class="info-label">High Score</div>
+          <div class="info-value" id="highScore">0</div>
         </div>
-
-        <!-- Control buttons -->
-        <div class="controls">
-            <button class="btn" id="startBtn" onclick="startGame()">Start Debugging</button>
-            <button class="btn" id="pauseBtn" onclick="togglePause()" style="display: none;">Pause</button>
+        <div class="info-item">
+          <div class="info-label">Speed</div>
+          <div class="info-value" id="speed">1</div>
         </div>
+      </div>
 
-        <!-- Instructions for players -->
-        <div class="instructions">
-            <h3>How to Play</h3>
-            <ul>
-                <li>Use Arrow Keys to move the debugger</li>
-                <li>Press Space to pause/resume the game</li>
-                <li>Catch ladybugs (🐞) to fix them and grow longer</li>
-                <li>Avoid hitting walls or yourself</li>
-                <li>Speed increases every 5 bugs fixed</li>
-            </ul>
-        </div>
+      <!-- Game canvas where gameplay happens -->
+      <canvas id="gameCanvas" width="400" height="400"></canvas>
+
+      <!-- Game over overlay (hidden until game ends) -->
+      <div class="game-over" id="gameOver">
+        <h2>Game Over!</h2>
+        <p>Final Score: <span id="finalScore">0</span> bugs fixed</p>
+        <button class="btn" onclick="restartGame()">Debug Again</button>
+      </div>
+
+      <!-- Control buttons -->
+      <div class="controls">
+        <button class="btn" id="startBtn" onclick="startGame()">
+          Start Debugging
+        </button>
+        <button
+          class="btn"
+          id="pauseBtn"
+          onclick="togglePause()"
+          style="display: none"
+        >
+          Pause
+        </button>
+      </div>
+
+      <!-- Instructions for players -->
+      <div class="instructions">
+        <h3>How to Play</h3>
+        <ul>
+          <li>Use Arrow Keys to move the debugger</li>
+          <li>Press Space to pause/resume the game</li>
+          <li>Catch ladybugs (🐞) to fix them and grow longer</li>
+          <li>Avoid hitting walls or yourself</li>
+          <li>Speed increases every 5 bugs fixed</li>
+        </ul>
+      </div>
     </div>
-</body>
+
+    <script>
+      /**
+       * ========================================
+       * TYPE DEFINITIONS (TypeScript-friendly)
+       * ========================================
+       */
+
+      /**
+       * @typedef {Object} SnakeSegment
+       * @property {number} x - X coordinate on grid
+       * @property {number} y - Y coordinate on grid
+       */
+
+      /**
+       * @typedef {Object} Position
+       * @property {number} x - X coordinate
+       * @property {number} y - Y coordinate
+       */
+
+      /**
+       * ========================================
+       * DOM ELEMENT REFERENCES
+       * Cache DOM elements for better performance
+       * ========================================
+       */
+
+      /** @type {HTMLCanvasElement} */
+      const canvas = document.getElementById("gameCanvas");
+
+      /** @type {CanvasRenderingContext2D} */
+      const ctx = canvas.getContext("2d");
+
+      /** @type {HTMLElement} */
+      const scoreElement = document.getElementById("score");
+
+      /** @type {HTMLElement} */
+      const highScoreElement = document.getElementById("highScore");
+
+      /** @type {HTMLElement} */
+      const speedElement = document.getElementById("speed");
+
+      /** @type {HTMLElement} */
+      const gameOverElement = document.getElementById("gameOver");
+
+      /** @type {HTMLElement} */
+      const finalScoreElement = document.getElementById("finalScore");
+
+      /** @type {HTMLButtonElement} */
+      const startBtn = document.getElementById("startBtn");
+
+      /** @type {HTMLButtonElement} */
+      const pauseBtn = document.getElementById("pauseBtn");
+
+      /** @type {HTMLElement} */
+      const gameOverAlert = document.getElementById("gameOverAlert");
+
+      /** @type {HTMLElement} */
+      const alertScore = document.getElementById("alertScore");
+
+      /**
+       * ========================================
+       * GAME CONSTANTS
+       * Configuration values for the game
+       * ========================================
+       */
+
+      /** Size of each grid tile in pixels */
+      const gridSize = 20;
+
+      /** Number of tiles across the canvas */
+      const tileCount = canvas.width / gridSize;
+
+      /**
+       * ========================================
+       * GAME STATE VARIABLES
+       * Tracks current game status and properties
+       * ========================================
+       */
+
+      /** @type {SnakeSegment[]} Array of snake body segments */
+      let snake = [];
+
+      /** Current length of the snake */
+      let snakeLength = 3;
+
+      /** Current X position of snake head */
+      let snakeX = 10;
+
+      /** Current Y position of snake head */
+      let snakeY = 10;
+
+      /** X velocity (-1 = left, 0 = none, 1 = right) */
+      let velocityX = 0;
+
+      /** Y velocity (-1 = up, 0 = none, 1 = down) */
+      let velocityY = 0;
+
+      /** Current X position of the bug */
+      let bugX = 15;
+
+      /** Current Y position of the bug */
+      let bugY = 15;
+
+      /** Current player score */
+      let score = 0;
+
+      /** Highest score achieved (persisted in localStorage) */
+      let highScore = localStorage.getItem("debugSnakeHighScore") || 0;
+
+      /** Current speed level (increases every 5 bugs) */
+      let speed = 1;
+
+      /** Interval ID for game loop */
+      let gameLoop = null;
+
+      /** Whether game is currently running */
+      let isRunning = false;
+
+      /** Whether game is paused */
+      let isPaused = false;
+
+      /** Base game speed in milliseconds (lower = faster) */
+      let baseSpeed = 200;
+
+      /**
+       * ========================================
+       * INITIALIZATION
+       * Set up initial game state
+       * ========================================
+       */
+
+      // Display stored high score
+      highScoreElement.textContent = highScore;
+
+      /**
+       * ========================================
+       * EVENT LISTENERS
+       * ========================================
+       */
+
+      // Listen for keyboard input
+      document.addEventListener("keydown", handleKeyPress);
+
+      /**
+       * Handles keyboard input for snake movement and game controls
+       * Prevents snake from reversing into itself
+       * Prevents default browser behavior (scrolling) for arrow keys
+       *
+       * @param {KeyboardEvent} e - Keyboard event
+       * @returns {void}
+       */
+      function handleKeyPress(e) {
+        // Handle space key for pause/play (works even when paused)
+        if (e.key === " " || e.key === "Spacebar") {
+          e.preventDefault(); // Prevent page scroll on space
+          if (isRunning) {
+            togglePause();
+          }
+          return;
+        }
+
+        // Ignore movement input if game not running or paused
+        if (!isRunning || isPaused) return;
+
+        // Handle arrow keys for movement
+        switch (e.key) {
+          case "ArrowUp":
+            e.preventDefault(); // Prevent page scroll
+            // Can't go up if currently moving down
+            if (velocityY !== 1) {
+              velocityX = 0;
+              velocityY = -1;
+            }
+            break;
+          case "ArrowDown":
+            e.preventDefault(); // Prevent page scroll
+            // Can't go down if currently moving up
+            if (velocityY !== -1) {
+              velocityX = 0;
+              velocityY = 1;
+            }
+            break;
+          case "ArrowLeft":
+            e.preventDefault(); // Prevent page scroll
+            // Can't go left if currently moving right
+            if (velocityX !== 1) {
+              velocityX = -1;
+              velocityY = 0;
+            }
+            break;
+          case "ArrowRight":
+            e.preventDefault(); // Prevent page scroll
+            // Can't go right if currently moving left
+            if (velocityX !== -1) {
+              velocityX = 1;
+              velocityY = 0;
+            }
+            break;
+        }
+      }
+
+      /**
+       * Initializes a new game
+       * Resets all game state variables and starts the game loop
+       *
+       * @returns {void}
+       */
+      function startGame() {
+        // Reset all game state
+        snake = [];
+        snakeLength = 3;
+        snakeX = 10;
+        snakeY = 10;
+        velocityX = 1; // Start moving right
+        velocityY = 0;
+        score = 0;
+        speed = 1;
+        isPaused = false;
+        isRunning = true;
+
+        // Update UI
+        scoreElement.textContent = score;
+        speedElement.textContent = speed;
+        gameOverElement.classList.remove("show");
+        startBtn.style.display = "none";
+        pauseBtn.style.display = "inline-block";
+
+        // Place first bug
+        placeBug();
+
+        // Start game loop
+        if (gameLoop) clearInterval(gameLoop);
+        gameLoop = setInterval(updateGame, baseSpeed);
+      }
+
+      /**
+       * Toggles game pause state
+       * Stops/resumes the game loop
+       *
+       * @returns {void}
+       */
+      function togglePause() {
+        isPaused = !isPaused;
+        pauseBtn.textContent = isPaused ? "Resume" : "Pause";
+
+        // Resume game loop if unpausing
+        if (!isPaused && isRunning) {
+          if (gameLoop) clearInterval(gameLoop);
+          // Calculate current speed based on level
+          const newSpeed = baseSpeed * Math.pow(0.85, speed - 1);
+          gameLoop = setInterval(updateGame, newSpeed);
+        }
+      }
+
+      /**
+       * Restarts the game after game over
+       * Wrapper for startGame function
+       *
+       * @returns {void}
+       */
+      function restartGame() {
+        startGame();
+      }
+
+      /**
+       * Main game loop - updates game state each frame
+       * Handles movement, collisions, scoring, and rendering
+       *
+       * @returns {void}
+       */
+      function updateGame() {
+        // Skip update if paused
+        if (isPaused) return;
+
+        // Move snake head based on current velocity
+        snakeX += velocityX;
+        snakeY += velocityY;
+
+        // Check for wall collision
+        if (
+          snakeX < 0 ||
+          snakeX >= tileCount ||
+          snakeY < 0 ||
+          snakeY >= tileCount
+        ) {
+          gameOver();
+          return;
+        }
+
+        // Check for self collision (snake eating itself)
+        for (let i = 0; i < snake.length; i++) {
+          if (snake[i].x === snakeX && snake[i].y === snakeY) {
+            gameOver();
+            return;
+          }
+        }
+
+        // Add new head position to snake array
+        snake.push({ x: snakeX, y: snakeY });
+
+        // Check if bug was caught
+        if (snakeX === bugX && snakeY === bugY) {
+          // Increase score and length
+          score++;
+          snakeLength++;
+          scoreElement.textContent = score;
+
+          // Spawn new bug
+          placeBug();
+
+          // Increase speed every 5 bugs caught
+          if (score % 5 === 0) {
+            speed++;
+            speedElement.textContent = speed;
+
+            // Restart game loop with new speed
+            clearInterval(gameLoop);
+            // Speed increases by 15% each level (multiply by 0.85)
+            const newSpeed = baseSpeed * Math.pow(0.85, speed - 1);
+            gameLoop = setInterval(updateGame, newSpeed);
+          }
+
+          // Update high score if needed
+          if (score > highScore) {
+            highScore = score;
+            highScoreElement.textContent = highScore;
+            // Persist to localStorage
+            localStorage.setItem("debugSnakeHighScore", highScore);
+          }
+        }
+
+        // Remove tail segments if snake isn't growing
+        while (snake.length > snakeLength) {
+          snake.shift(); // Remove oldest segment
+        }
+
+        // Render current game state
+        draw();
+      }
+
+      /**
+       * Places a bug at a random position
+       * Ensures bug doesn't spawn on the snake
+       *
+       * @returns {void}
+       */
+      function placeBug() {
+        // Generate random position
+        bugX = Math.floor(Math.random() * tileCount);
+        bugY = Math.floor(Math.random() * tileCount);
+
+        // Check if bug spawned on snake body
+        for (let i = 0; i < snake.length; i++) {
+          if (snake[i].x === bugX && snake[i].y === bugY) {
+            // Recursively try again if collision detected
+            placeBug();
+            return;
+          }
+        }
+      }
+
+      /**
+       * Renders the current game state to the canvas
+       * Draws grid, snake (as ladybug), and bug
+       *
+       * @returns {void}
+       */
+      function draw() {
+        // Clear canvas with dark background
+        ctx.fillStyle = "#1e1e1e";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Draw grid lines for visual reference
+        ctx.strokeStyle = "#2d2d30";
+        ctx.lineWidth = 1;
+        for (let i = 0; i <= tileCount; i++) {
+          // Vertical lines
+          ctx.beginPath();
+          ctx.moveTo(i * gridSize, 0);
+          ctx.lineTo(i * gridSize, canvas.height);
+          ctx.stroke();
+
+          // Horizontal lines
+          ctx.beginPath();
+          ctx.moveTo(0, i * gridSize);
+          ctx.lineTo(canvas.width, i * gridSize);
+          ctx.stroke();
+        }
+
+        // Draw snake (green snake)
+        for (let i = 0; i < snake.length; i++) {
+          const segment = snake[i];
+          const isHead = i === snake.length - 1;
+
+          // Create radial gradient for green snake body
+          const gradient = ctx.createRadialGradient(
+            segment.x * gridSize + gridSize / 2,
+            segment.y * gridSize + gridSize / 2,
+            2, // Inner radius
+            segment.x * gridSize + gridSize / 2,
+            segment.y * gridSize + gridSize / 2,
+            gridSize / 2, // Outer radius
+          );
+
+          // Head is brighter green
+          if (isHead) {
+            gradient.addColorStop(0, "#4ec9b0"); // VS Code teal/green
+            gradient.addColorStop(1, "#2d9678");
+          } else {
+            // Body segments fade towards tail
+            const opacity = 0.6 + (i / snake.length) * 0.4;
+            gradient.addColorStop(0, `rgba(78, 201, 176, ${opacity})`);
+            gradient.addColorStop(1, `rgba(45, 150, 120, ${opacity})`);
+          }
+
+          // Draw circular segment
+          ctx.fillStyle = gradient;
+          ctx.beginPath();
+          ctx.arc(
+            segment.x * gridSize + gridSize / 2,
+            segment.y * gridSize + gridSize / 2,
+            gridSize / 2 - 2, // Slightly smaller than grid
+            0,
+            Math.PI * 2,
+          );
+          ctx.fill();
+
+          // Add darker green pattern on body segments
+          if (!isHead && i % 2 === 0) {
+            ctx.fillStyle = "rgba(30, 100, 80, 0.6)";
+
+            // First marking
+            ctx.beginPath();
+            ctx.arc(
+              segment.x * gridSize + gridSize / 2 - 3,
+              segment.y * gridSize + gridSize / 2 - 3,
+              2,
+              0,
+              Math.PI * 2,
+            );
+            ctx.fill();
+
+            // Second marking
+            ctx.beginPath();
+            ctx.arc(
+              segment.x * gridSize + gridSize / 2 + 3,
+              segment.y * gridSize + gridSize / 2 + 3,
+              2,
+              0,
+              Math.PI * 2,
+            );
+            ctx.fill();
+          }
+
+          // Add white shine effect to head only
+          if (isHead) {
+            ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
+            ctx.beginPath();
+            ctx.arc(
+              segment.x * gridSize + gridSize / 2 - 3,
+              segment.y * gridSize + gridSize / 2 - 3,
+              3,
+              0,
+              Math.PI * 2,
+            );
+            ctx.fill();
+          }
+        }
+
+        // Draw bug (red ladybug)
+
+        // Ladybug body with gradient
+        const bugGradient = ctx.createRadialGradient(
+          bugX * gridSize + gridSize / 2,
+          bugY * gridSize + gridSize / 2,
+          2,
+          bugX * gridSize + gridSize / 2,
+          bugY * gridSize + gridSize / 2,
+          gridSize / 2 - 2,
+        );
+        bugGradient.addColorStop(0, "#ff4444"); // Bright red
+        bugGradient.addColorStop(1, "#cc0000"); // Darker red
+
+        ctx.fillStyle = bugGradient;
+        ctx.beginPath();
+        ctx.arc(
+          bugX * gridSize + gridSize / 2,
+          bugY * gridSize + gridSize / 2,
+          gridSize / 2 - 3,
+          0,
+          Math.PI * 2,
+        );
+        ctx.fill();
+
+        // Add black spots on ladybug body
+        ctx.fillStyle = "#000000";
+
+        // Top-left spot
+        ctx.beginPath();
+        ctx.arc(
+          bugX * gridSize + gridSize / 2 - 3,
+          bugY * gridSize + gridSize / 2 - 2,
+          1.5,
+          0,
+          Math.PI * 2,
+        );
+        ctx.fill();
+
+        // Top-right spot
+        ctx.beginPath();
+        ctx.arc(
+          bugX * gridSize + gridSize / 2 + 3,
+          bugY * gridSize + gridSize / 2 - 2,
+          1.5,
+          0,
+          Math.PI * 2,
+        );
+        ctx.fill();
+
+        // Bottom-left spot
+        ctx.beginPath();
+        ctx.arc(
+          bugX * gridSize + gridSize / 2 - 2,
+          bugY * gridSize + gridSize / 2 + 3,
+          1.5,
+          0,
+          Math.PI * 2,
+        );
+        ctx.fill();
+
+        // Bottom-right spot
+        ctx.beginPath();
+        ctx.arc(
+          bugX * gridSize + gridSize / 2 + 2,
+          bugY * gridSize + gridSize / 2 + 3,
+          1.5,
+          0,
+          Math.PI * 2,
+        );
+        ctx.fill();
+
+        // Ladybug antennae (two lines at top)
+        ctx.strokeStyle = "#000000";
+        ctx.lineWidth = 1.5;
+
+        // Left antenna
+        ctx.beginPath();
+        ctx.moveTo(
+          bugX * gridSize + gridSize / 2 - 3,
+          bugY * gridSize + gridSize / 2 - 5,
+        );
+        ctx.lineTo(
+          bugX * gridSize + gridSize / 2 - 5,
+          bugY * gridSize + gridSize / 2 - 8,
+        );
+        ctx.stroke();
+
+        // Right antenna
+        ctx.beginPath();
+        ctx.moveTo(
+          bugX * gridSize + gridSize / 2 + 3,
+          bugY * gridSize + gridSize / 2 - 5,
+        );
+        ctx.lineTo(
+          bugX * gridSize + gridSize / 2 + 5,
+          bugY * gridSize + gridSize / 2 - 8,
+        );
+        ctx.stroke();
+
+        // Ladybug highlight (white dot for shine)
+        ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
+        ctx.beginPath();
+        ctx.arc(
+          bugX * gridSize + gridSize / 2 - 2,
+          bugY * gridSize + gridSize / 2 - 3,
+          2,
+          0,
+          Math.PI * 2,
+        );
+        ctx.fill();
+      }
+
+      /**
+       * Handles game over state
+       * Stops the game loop and shows game over alert
+       *
+       * @returns {void}
+       */
+      function gameOver() {
+        isRunning = false;
+        clearInterval(gameLoop);
+
+        // Update UI to show game over alert with fade-in animation
+        alertScore.textContent = `Bugs Fixed: ${score}`;
+        gameOverAlert.classList.add("show");
+
+        // Hide alert after 2 seconds with fade-out
+        setTimeout(() => {
+          gameOverAlert.classList.remove("show");
+
+          // Show game over screen after alert fades out
+          setTimeout(() => {
+            finalScoreElement.textContent = score;
+            gameOverElement.classList.add("show");
+            startBtn.style.display = "inline-block";
+            pauseBtn.style.display = "none";
+          }, 500); // Wait for fade-out animation to complete
+        }, 2000);
+      }
+
+      /**
+       * ========================================
+       * INITIAL RENDER
+       * Draw empty game board on page load
+       * ========================================
+       */
+      draw();
+    </script>
+  </body>
 </html>

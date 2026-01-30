@@ -26,10 +26,6 @@ export interface IGame {
     /** Whether this game requires premium/paid access */
     isPremium: boolean;
 
-
-    /** Whether this game requires internet */
-    isOnline: boolean;
-
     /** Relative path to the game's HTML file */
     htmlPath: string;
 
@@ -44,15 +40,6 @@ export interface IGame {
  * Tracks the current state of a game for a user
  */
 export interface GameState {
-    /** Number of play sessions remaining before lock */
-    playsRemaining: number;
-
-    /** Total lines of meaningful code written since last unlock */
-    linesWritten: number;
-
-    /** Whether the game is currently unlocked and playable */
-    isUnlocked: boolean;
-
     /** High score achieved in this game */
     highScore: number;
 
@@ -61,6 +48,20 @@ export interface GameState {
 
     /** Timestamp of last play session */
     lastPlayed?: number;
+}
+
+/**
+ * Global play state shared across all games
+ */
+export interface GlobalPlayState {
+    /** Number of play sessions remaining before lock */
+    playsRemaining: number;
+
+    /** Total lines of meaningful code written since last unlock */
+    linesWritten: number;
+
+    /** Whether games are currently unlocked and playable */
+    isUnlocked: boolean;
 }
 
 /**
@@ -109,6 +110,9 @@ export interface CodeChange {
 export enum StorageKey {
     /** Prefix for game state storage */
     GAME_STATE_PREFIX = 'codeToPlay.gameState.',
+
+    /** Global play state (shared across all games) */
+    GLOBAL_PLAY_STATE = 'codeToPlay.globalPlayState',
 
     /** Total lines of code written across all time */
     TOTAL_LINES_WRITTEN = 'codeToPlay.totalLinesWritten',
@@ -217,10 +221,16 @@ export const DEFAULT_CONFIG: ExtensionConfig = {
  * Default game state for new games
  */
 export const DEFAULT_GAME_STATE: GameState = {
-    playsRemaining: DEFAULT_CONFIG.unlock.initialPlays,
-    linesWritten: 0,
-    isUnlocked: true,
     highScore: 0,
     totalPlays: 0,
     lastPlayed: undefined
+};
+
+/**
+ * Default global play state
+ */
+export const DEFAULT_GLOBAL_PLAY_STATE: GlobalPlayState = {
+    playsRemaining: DEFAULT_CONFIG.unlock.initialPlays,
+    linesWritten: 0,
+    isUnlocked: true
 };

@@ -98,10 +98,10 @@ export class WebviewManager {
         const panel = vscode.window.createWebviewPanel(
             `codeToPlay.${game.id}`,
             `🎮 ${game.name}`,
-            vscode.ViewColumn.One,
+            vscode.ViewColumn.Eight,
             {
                 enableScripts: true,
-                retainContextWhenHidden: true,
+                // retainContextWhenHidden: true,
                 localResourceRoots: [
                     vscode.Uri.file(path.join(this.context.extensionPath, 'media')),
                     vscode.Uri.file(path.join(this.context.extensionPath, 'src', 'games'))

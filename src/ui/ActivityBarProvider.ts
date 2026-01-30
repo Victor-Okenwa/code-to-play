@@ -17,6 +17,7 @@ class GameTreeItem extends vscode.TreeItem {
     constructor(
         public readonly game: IGame,
         public readonly state: GameState,
+        public readonly globalState: any,
         public readonly collapsibleState: vscode.TreeItemCollapsibleState
     ) {
         super(game.name, collapsibleState);
@@ -27,7 +28,7 @@ class GameTreeItem extends vscode.TreeItem {
         this.contextValue = this.getContextValue();
 
         // Make playable games clickable
-        if (state.isUnlocked && state.playsRemaining > 0) {
+        if (globalState.isUnlocked && globalState.playsRemaining > 0) {
             this.command = {
                 command: 'codeToPlay.playGame',
                 title: 'Play Game',
@@ -50,12 +51,12 @@ class GameTreeItem extends vscode.TreeItem {
             ``,
         ];
 
-        if (this.state.isUnlocked) {
+        if (this.globalState.isUnlocked) {
             lines.push(`✅ Unlocked`);
-            lines.push(`🎯 Plays remaining: ${this.state.playsRemaining}`);
+            lines.push(`🎯 Plays remaining: ${this.globalState.playsRemaining}`);
         } else {
             const manager = (this as any).manager;
-            const remaining = manager?.getRemainingLinesToUnlock(this.game.id) || 0;
+            const remaining = manager?.getRemainingLinesToUnlock() || 0;
             lines.push(`🔒 Locked`);
             lines.push(`📝 Write ${remaining} more lines to unlock`);
         }
@@ -78,9 +79,9 @@ class GameTreeItem extends vscode.TreeItem {
      * @private
      */
     private createDescription(): string {
-        if (this.state.isUnlocked) {
-            if (this.state.playsRemaining > 0) {
-                return `${this.state.playsRemaining} plays`;
+        if (this.globalState.isUnlocked) {
+            if (this.globalState.playsRemaining > 0) {
+                return `${this.globalState.playsRemaining} plays`;
             } else {
                 return 'No plays';
             }
@@ -95,9 +96,9 @@ class GameTreeItem extends vscode.TreeItem {
      * @returns Icon path or ThemeIcon
      * @private
      */
-    private getIcon(): vscode.ThemeIcon | undefined {
-        if (this.state.isUnlocked) {
-            if (this.state.playsRemaining > 0) {
+    private getIcon(): vscode.ThemeIcon | { light: string; dark: string } | undefined {
+        if (this.globalState.isUnlocked) {
+            if (this.globalState.playsRemaining > 0) {
                 return new vscode.ThemeIcon('play-circle',
                     new vscode.ThemeColor('terminal.ansiGreen'));
             } else {
@@ -117,9 +118,9 @@ class GameTreeItem extends vscode.TreeItem {
      * @private
      */
     private getContextValue(): string {
-        if (this.state.isUnlocked && this.state.playsRemaining > 0) {
+        if (this.globalState.isUnlocked && this.globalState.playsRemaining > 0) {
             return 'gameUnlocked';
-        } else if (this.state.isUnlocked && this.state.playsRemaining === 0) {
+        } else if (this.globalState.isUnlocked && this.globalState.playsRemaining === 0) {
             return 'gameNoPlays';
         } else {
             return 'gameLocked';
@@ -194,13 +195,91 @@ export class ActivityBarProvider implements vscode.TreeDataProvider<GameTreeItem
      * @returns Array of child tree items
      */
     getChildren(element?: GameTreeItem): Thenable<GameTreeItem[]> {
-        // If no element provided, return root level (all games)
+        // If no element provided, return root level
         if (!element) {
-            return Promise.resolve(this.getGameTreeItems());
+            const items: GameTreeItem[] = [];
+            const globalState = this.storageManager.getGlobalPlayState();
+
+            // Add header showing plays remaining
+            const headerItem = this.createPlaysHeader(globalState);
+            items.push(headerItem);
+
+            // Add spacer for visual separation
+            items.push(this.createSpacer());
+
+            // Add "Free Games" category header
+            const categoryHeader = this.createCategoryHeader('Free Games');
+            items.push(categoryHeader);
+
+            // Add all games
+            const gameItems = this.getGameTreeItems();
+            items.push(...gameItems);
+
+            return Promise.resolve(items);
         }
 
-        // Games have no children
+        // Items have no children
         return Promise.resolve([]);
+    }
+
+    /**
+     * Creates a header item showing plays remaining
+     * 
+     * @param globalState - Global play state
+     * @returns Tree item for plays header
+     * @private
+     */
+    private createPlaysHeader(globalState: any): GameTreeItem {
+        const playsText = `Plays remaining: ${globalState.playsRemaining}`;
+        const headerItem = new vscode.TreeItem(playsText, vscode.TreeItemCollapsibleState.None);
+
+        // Use larger icon for emphasis
+        headerItem.iconPath = globalState.isUnlocked
+            ? new vscode.ThemeIcon('play-circle', new vscode.ThemeColor('terminal.ansiGreen'))
+            : new vscode.ThemeIcon('lock', new vscode.ThemeColor('terminal.ansiRed'));
+
+
+        headerItem.contextValue = 'playsHeader';
+
+        // Tooltip
+        headerItem.tooltip = globalState.isUnlocked
+            ? `✅ You have ${globalState.playsRemaining} plays available`
+            : `🔒 Write ${this.gameManager.getRemainingLinesToUnlock()} more lines to unlock`;
+
+        // Not clickable
+        headerItem.command = undefined;
+
+        return headerItem as any;
+    }
+
+    /**
+     * Creates a category header item
+     * 
+     * @param label - Category label
+     * @returns Tree item for category
+     * @private
+     */
+    private createCategoryHeader(label: string): GameTreeItem {
+        const categoryItem = new vscode.TreeItem(label, vscode.TreeItemCollapsibleState.None);
+        categoryItem.contextValue = 'categoryHeader';
+        categoryItem.iconPath = new vscode.ThemeIcon('folder-opened');
+
+        return categoryItem as any;
+    }
+
+    /**
+     * Creates a spacer item for visual separation
+     * 
+     * @returns Tree item for spacer
+     * @private
+     */
+    private createSpacer(): GameTreeItem {
+        const spacerItem = new vscode.TreeItem('', vscode.TreeItemCollapsibleState.None);
+        spacerItem.contextValue = 'spacer';
+        spacerItem.iconPath = undefined;
+        spacerItem.command = undefined;
+
+        return spacerItem as any;
     }
 
     /**
@@ -227,6 +306,7 @@ export class ActivityBarProvider implements vscode.TreeDataProvider<GameTreeItem
      */
     private getGameTreeItems(): GameTreeItem[] {
         const games = this.gameManager.getAllGames();
+        const globalState = this.storageManager.getGlobalPlayState();
         const items: GameTreeItem[] = [];
 
         for (const game of games) {
@@ -234,6 +314,7 @@ export class ActivityBarProvider implements vscode.TreeDataProvider<GameTreeItem
             const item = new GameTreeItem(
                 game,
                 state,
+                globalState,
                 vscode.TreeItemCollapsibleState.None
             );
 
@@ -243,19 +324,8 @@ export class ActivityBarProvider implements vscode.TreeDataProvider<GameTreeItem
             items.push(item);
         }
 
-        // Sort: unlocked first, then by name
-        items.sort((a, b) => {
-            // Unlocked games first
-            if (a.state.isUnlocked && !b.state.isUnlocked) {
-                return -1;
-            }
-            if (!a.state.isUnlocked && b.state.isUnlocked) {
-                return 1;
-            }
-
-            // Then by name
-            return a.game.name.localeCompare(b.game.name);
-        });
+        // Sort by name (all games have same unlock status now)
+        items.sort((a, b) => a.game.name.localeCompare(b.game.name));
 
         return items;
     }

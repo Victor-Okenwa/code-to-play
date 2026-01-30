@@ -27,7 +27,7 @@ export class StatusBarManager {
     /**
      * Timer for periodic updates
      */
-    private updateTimer: NodeJS.Timeout | undefined;
+    private updateTimer: NodeJS.Timer | null = null;
 
     /**
      * Creates a new StatusBarManager instance
@@ -95,57 +95,25 @@ export class StatusBarManager {
 
     /**
      * Determines which game to track in the status bar
-     * Priority: locked games closest to unlock > unlocked games with plays
+     * Now tracks global state instead of individual games
      * 
      * @private
      */
     private determineTrackedGame(): void {
-        const games = this.gameManager.getAllGames();
-
-        if (games.length === 0) {
-            this.trackedGameId = null;
-            return;
-        }
-
-        // Find locked games sorted by progress
-        const lockedGames = this.gameManager.getLockedGames();
-        if (lockedGames.length > 0) {
-            // Track the locked game closest to unlock
-            const sorted = lockedGames.sort((a, b) => {
-                const progressA = this.gameManager.getUnlockProgress(a.id);
-                const progressB = this.gameManager.getUnlockProgress(b.id);
-                return progressB - progressA; // Highest progress first
-            });
-
-            this.trackedGameId = sorted[0].id;
-            return;
-        }
-
-        // All games unlocked - track first unlocked game with plays
-        const unlockedGames = this.gameManager.getUnlockedGames();
-        const gamesWithPlays = unlockedGames.filter(g =>
-            this.gameManager.getPlaysRemaining(g.id) > 0
-        );
-
-        if (gamesWithPlays.length > 0) {
-            this.trackedGameId = gamesWithPlays[0].id;
-        } else {
-            // No games with plays - track first game
-            this.trackedGameId = games[0].id;
-        }
+        // We don't track individual games anymore
+        // Status bar shows global "Code to Play" status
+        this.trackedGameId = null;
     }
 
     /**
      * Sets which game to track manually
      * 
-     * @param gameId - ID of game to track
+     * @param gameId - ID of game to track (ignored now)
      */
     setTrackedGame(gameId: string): void {
-        const game = this.gameManager.getGame(gameId);
-        if (game) {
-            this.trackedGameId = gameId;
-            this.update();
-        }
+        // No longer needed - we show global status
+        this.trackedGameId = null;
+        this.update();
     }
 
     // ========================================
@@ -158,26 +126,14 @@ export class StatusBarManager {
      * @private
      */
     private update(): void {
-        if (!this.trackedGameId) {
-            this.showNoGamesStatus();
-            return;
-        }
+        const globalState = this.storageManager.getGlobalPlayState();
 
-        const game = this.gameManager.getGame(this.trackedGameId);
-        if (!game) {
-            this.showNoGamesStatus();
-            return;
-        }
-
-        const state = this.storageManager.getGameState(this.trackedGameId);
-
-        if (state.isUnlocked) {
-            this.showUnlockedStatus(game.name, state.playsRemaining);
+        if (globalState.isUnlocked) {
+            this.showUnlockedStatus(globalState.playsRemaining);
         } else {
             this.showLockedStatus(
-                game.name,
-                this.gameManager.getRemainingLinesToUnlock(this.trackedGameId),
-                this.gameManager.getUnlockProgress(this.trackedGameId)
+                this.gameManager.getRemainingLinesToUnlock(),
+                this.gameManager.getUnlockProgress()
             );
         }
     }
@@ -194,53 +150,45 @@ export class StatusBarManager {
     }
 
     /**
-     * Shows status for an unlocked game
+     * Shows status for unlocked games
      * 
-     * @param gameName - Name of the game
      * @param playsRemaining - Number of plays remaining
      * @private
      */
-    private showUnlockedStatus(gameName: string, playsRemaining: number): void {
+    private showUnlockedStatus(playsRemaining: number): void {
         if (playsRemaining > 0) {
-            // Game ready to play
-            this.statusBarItem.text = `$(play-circle) ${gameName} (${playsRemaining})`;
-            this.statusBarItem.tooltip = this.createUnlockedTooltip(gameName, playsRemaining);
-            this.statusBarItem.backgroundColor = undefined;
+            // Games ready to play
+            this.statusBarItem.text = `$(game) Code to Play (${playsRemaining})`;
+            this.statusBarItem.tooltip = this.createUnlockedTooltip(playsRemaining);
+            this.statusBarItem.backgroundColor = undefined; // Transparent background
         } else {
             // No plays remaining
-            this.statusBarItem.text = `$(circle-slash) ${gameName}`;
-            this.statusBarItem.tooltip = this.createNoPlaysTooltip(gameName);
-            this.statusBarItem.backgroundColor = new vscode.ThemeColor(
-                'statusBarItem.warningBackground'
-            );
+            this.statusBarItem.text = `$(circle-slash) Code to Play`;
+            this.statusBarItem.tooltip = this.createNoPlaysTooltip();
+            this.statusBarItem.backgroundColor = undefined; // Transparent background
         }
     }
 
     /**
-     * Shows status for a locked game
+     * Shows status for locked games
      * 
-     * @param gameName - Name of the game
      * @param linesRemaining - Lines needed to unlock
      * @param progress - Progress percentage (0-100)
      * @private
      */
     private showLockedStatus(
-        gameName: string,
         linesRemaining: number,
         progress: number
     ): void {
         // Show progress bar in status
         const progressBar = this.createProgressBar(progress);
 
-        this.statusBarItem.text = `$(lock) ${gameName}: ${linesRemaining} lines ${progressBar}`;
+        this.statusBarItem.text = `$(lock) Code to Play: ${linesRemaining} lines ${progressBar}`;
         this.statusBarItem.tooltip = this.createLockedTooltip(
-            gameName,
             linesRemaining,
             progress
         );
-        this.statusBarItem.backgroundColor = new vscode.ThemeColor(
-            'statusBarItem.errorBackground'
-        );
+        this.statusBarItem.backgroundColor = undefined; // Transparent background
     }
 
     // ========================================
@@ -248,18 +196,17 @@ export class StatusBarManager {
     // ========================================
 
     /**
-     * Creates tooltip for unlocked game
+     * Creates tooltip for unlocked games
      * 
-     * @param gameName - Name of the game
      * @param playsRemaining - Number of plays remaining
      * @returns Formatted tooltip
      * @private
      */
-    private createUnlockedTooltip(gameName: string, playsRemaining: number): string {
+    private createUnlockedTooltip(playsRemaining: number): string {
         const config = this.storageManager.getConfig();
 
         return [
-            `🎮 ${gameName}`,
+            `🎮 Code to Play`,
             ``,
             `✅ Unlocked and ready to play!`,
             `🎯 Plays remaining: ${playsRemaining}`,
@@ -271,17 +218,16 @@ export class StatusBarManager {
     }
 
     /**
-     * Creates tooltip for game with no plays
+     * Creates tooltip for games with no plays
      * 
-     * @param gameName - Name of the game
      * @returns Formatted tooltip
      * @private
      */
-    private createNoPlaysTooltip(gameName: string): string {
+    private createNoPlaysTooltip(): string {
         const config = this.storageManager.getConfig();
 
         return [
-            `🎮 ${gameName}`,
+            `🎮 Code to Play`,
             ``,
             `⚠️ No plays remaining`,
             `📝 Write ${config.unlock.linesToUnlock} lines of code to unlock ${config.unlock.playsPerUnlock} new plays`,
@@ -291,16 +237,14 @@ export class StatusBarManager {
     }
 
     /**
-     * Creates tooltip for locked game
+     * Creates tooltip for locked games
      * 
-     * @param gameName - Name of the game
      * @param linesRemaining - Lines needed to unlock
      * @param progress - Progress percentage
      * @returns Formatted tooltip
      * @private
      */
     private createLockedTooltip(
-        gameName: string,
         linesRemaining: number,
         progress: number
     ): string {
@@ -308,7 +252,7 @@ export class StatusBarManager {
         const totalLines = this.storageManager.getTotalLinesWritten();
 
         return [
-            `🎮 ${gameName}`,
+            `🎮 Code to Play`,
             ``,
             `🔒 Locked`,
             `📊 Progress: ${Math.floor(progress)}%`,

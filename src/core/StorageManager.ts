@@ -11,7 +11,9 @@ import {
     StorageKey,
     ExtensionConfig,
     DEFAULT_GAME_STATE,
-    DEFAULT_CONFIG
+    DEFAULT_CONFIG,
+    DEFAULT_GLOBAL_PLAY_STATE,
+    GlobalPlayState
 } from './types';
 
 /**
@@ -20,8 +22,8 @@ import {
  */
 export class StorageManager implements vscode.Disposable {
     /**
-     * Global storage (persists across all workspaces)
-     */
+       * Global storage (persists across all workspaces)
+       */
     private globalState: vscode.Memento;
 
     /**
@@ -37,6 +39,10 @@ export class StorageManager implements vscode.Disposable {
     constructor(private context: vscode.ExtensionContext) {
         this.globalState = context.globalState;
         this.workspaceState = context.workspaceState;
+    }
+    dispose() {
+        // No resources need to be cleaned up as we're only using VS Code's Memento API
+        // which is managed by the extension context
     }
 
     // ========================================
@@ -119,6 +125,57 @@ export class StorageManager implements vscode.Disposable {
         }
 
         return states;
+    }
+
+    // ========================================
+    // GLOBAL PLAY STATE MANAGEMENT
+    // ========================================
+
+    /**
+     * Gets the global play state (shared across all games)
+     * Returns default state if no saved state exists
+     * 
+     * @returns The global play state
+     */
+    getGlobalPlayState(): GlobalPlayState {
+        const savedState = this.globalState.get<GlobalPlayState>(
+            StorageKey.GLOBAL_PLAY_STATE
+        );
+
+        return savedState || { ...DEFAULT_GLOBAL_PLAY_STATE };
+    }
+
+    /**
+     * Saves the global play state
+     * 
+     * @param state - Global play state to save
+     * @returns Promise that resolves when save is complete
+     */
+    async saveGlobalPlayState(state: GlobalPlayState): Promise<void> {
+        await this.globalState.update(StorageKey.GLOBAL_PLAY_STATE, state);
+    }
+
+    /**
+     * Updates specific properties of global play state
+     * 
+     * @param updates - Partial state object with properties to update
+     * @returns Promise that resolves when update is complete
+     */
+    async updateGlobalPlayState(
+        updates: Partial<GlobalPlayState>
+    ): Promise<void> {
+        const currentState = this.getGlobalPlayState();
+        const newState = { ...currentState, ...updates };
+        await this.saveGlobalPlayState(newState);
+    }
+
+    /**
+     * Resets global play state to default values
+     * 
+     * @returns Promise that resolves when reset is complete
+     */
+    async resetGlobalPlayState(): Promise<void> {
+        await this.saveGlobalPlayState({ ...DEFAULT_GLOBAL_PLAY_STATE });
     }
 
     // ========================================
@@ -303,13 +360,5 @@ export class StorageManager implements vscode.Disposable {
             totalLinesWritten: this.getTotalLinesWritten(),
             hasConfig: this.globalState.get(StorageKey.CONFIG) !== undefined
         };
-    }
-
-    /**
-     * Disposes resources used by StorageManager
-     * Implements vscode.Disposable so it can be added to subscriptions
-     */
-    dispose(): void {
-        // Currently no resources to clean up. Implement cleanup here if needed later.
     }
 }
