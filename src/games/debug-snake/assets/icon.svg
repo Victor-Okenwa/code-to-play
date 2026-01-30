@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- Snake icon with coding/debug theme -->
+  
+  <!-- Snake body segments -->
+  <circle cx="20" cy="32" r="8" fill="#4ec9b0" stroke="#2d2d30" stroke-width="2"/>
+  <circle cx="32" cy="32" r="8" fill="#4ec9b0" stroke="#2d2d30" stroke-width="2"/>
+  
+  <!-- Snake head -->
+  <circle cx="44" cy="32" r="10" fill="#4ec9b0" stroke="#2d2d30" stroke-width="2"/>
+  
+  <!-- Eyes -->
+  <circle cx="42" cy="28" r="2" fill="#1e1e1e"/>
+  <circle cx="48" cy="28" r="2" fill="#1e1e1e"/>
+  
+  <!-- Tongue -->
+  <path d="M 50 36 L 54 36 M 54 34 L 54 38" stroke="#f48771" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+  
+  <!-- Bug/ladybug being chased -->
+  <g transform="translate(8, 20)">
+    <ellipse cx="0" cy="0" rx="4" ry="5" fill="#cc0000"/>
+    <circle cx="-1" cy="-1" r="1" fill="#1e1e1e"/>
+    <circle cx="1" cy="1" r="1" fill="#1e1e1e"/>
+  </g>
+</svg>

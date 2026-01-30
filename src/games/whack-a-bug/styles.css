@@ -1,0 +1,466 @@
+/* ========================================
+    GLOBAL RESET
+    Remove default margins and paddings
+======================================== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* ========================================
+    BODY - VS Code Dark Theme
+    Mimics VS Code's dark theme colors
+======================================== */
+body {
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  /* Gradient background matching VS Code dark theme */
+  background: linear-gradient(135deg, #1e1e1e 0%, #2d2d30 100%);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  color: #d4d4d4; /* VS Code default text color */
+}
+
+/* ========================================
+    GAME CONTAINER - Main wrapper
+    Contains all game elements
+======================================== */
+.game-container {
+  background: #252526; /* VS Code sidebar background */
+  border-radius: 12px;
+  padding: 30px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  max-width: 600px;
+  width: 100%;
+}
+
+/* ========================================
+    GAME HEADER - Title and subtitle
+======================================== */
+.game-header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.game-header h1 {
+  color: #4ec9b0; /* VS Code teal accent color */
+  font-size: 2em;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.bug-icon {
+  font-size: 1.2em;
+}
+
+/* ========================================
+    DIFFICULTY SELECTION SCREEN
+    Shows before game starts
+======================================== */
+.difficulty-selection {
+  display: block; /* Shown by default */
+}
+
+.difficulty-selection.hidden {
+  display: none;
+}
+
+.difficulty-title {
+  text-align: center;
+  margin-bottom: 30px;
+  color: #d4d4d4;
+  font-size: 1.3em;
+}
+
+.difficulty-options {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.difficulty-card {
+  background: #1e1e1e;
+  border: 2px solid #3e3e42;
+  border-radius: 8px;
+  padding: 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.difficulty-card:hover {
+  border-color: #4ec9b0;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(78, 201, 176, 0.2);
+}
+
+.difficulty-card.active {
+  border-color: #4ec9b0;
+  background: #1e3a35;
+}
+
+.difficulty-card.locked {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.difficulty-card.locked:hover {
+  border-color: #3e3e42;
+  transform: none;
+  box-shadow: none;
+}
+
+.difficulty-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.difficulty-indicator {
+  font-size: 1.5em;
+}
+
+.difficulty-name {
+  font-size: 1.2em;
+  font-weight: 600;
+  color: #4ec9b0;
+}
+
+.difficulty-description {
+  color: #858585;
+  font-size: 0.9em;
+  line-height: 1.5;
+  margin-left: 35px;
+}
+
+.coming-soon-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: #3e3e42;
+  color: #858585;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 0.75em;
+  font-weight: 600;
+}
+
+.start-game-btn {
+  margin-top: 20px;
+  width: 100%;
+  background: #0e639c;
+  color: white;
+  border: none;
+  padding: 15px;
+  border-radius: 8px;
+  font-size: 1.1em;
+  cursor: pointer;
+  transition: background 0.3s;
+  font-weight: 600;
+}
+
+.start-game-btn:hover {
+  background: #1177bb;
+}
+
+.start-game-btn:disabled {
+  background: #3e3e42;
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* ========================================
+    GAME AREA - Where gameplay happens
+    Hidden until game starts
+======================================== */
+.game-area {
+  display: none; /* Hidden by default */
+}
+
+.game-area.active {
+  display: block;
+}
+
+/* ========================================
+    GAME INFO - Score and timer display
+======================================== */
+.game-info {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  padding: 15px;
+  background: #1e1e1e;
+  border-radius: 8px;
+}
+
+.info-item {
+  text-align: center;
+}
+
+.info-label {
+  color: #858585;
+  font-size: 0.9em;
+  margin-bottom: 5px;
+}
+
+.info-value {
+  color: #4ec9b0;
+  font-size: 1.5em;
+  font-weight: bold;
+}
+
+.info-value.timer {
+  color: #f48771; /* Orange/red for urgency */
+}
+
+/* ========================================
+    GAME GRID - 3x3 grid of holes
+======================================== */
+.game-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 15px;
+  margin-bottom: 20px;
+  padding: 20px;
+  background: #1e1e1e;
+  border-radius: 8px;
+}
+
+/* Individual hole container */
+.hole {
+  aspect-ratio: 1;
+  background: #0d0d0d;
+  border: 3px solid #3e3e42;
+  border-radius: 50%;
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.hole:hover {
+  border-color: #4ec9b0;
+}
+
+/* Bug that pops up from hole */
+.bug {
+  position: absolute;
+  width: 80%;
+  height: 80%;
+  left: 10%;
+  top: 100%; /* Start below hole */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: top 0.3s ease-out;
+  cursor: pointer;
+}
+
+/* Bug is visible when active */
+.bug.active {
+  top: 10%;
+}
+
+/* Bug being squashed animation */
+.bug.squashed {
+  animation: squash 0.3s ease-out;
+}
+
+@keyframes squash {
+  0% {
+    transform: scale(1) rotate(0deg);
+  }
+  50% {
+    transform: scale(1.3, 0.7) rotate(10deg);
+  }
+  100% {
+    transform: scale(0) rotate(45deg);
+    opacity: 0;
+  }
+}
+
+/* Score popup animation */
+.score-popup {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #4ec9b0;
+  font-size: 1.5em;
+  font-weight: bold;
+  pointer-events: none;
+  animation: scoreFloat 0.8s ease-out;
+}
+
+@keyframes scoreFloat {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -150%) scale(1.5);
+  }
+}
+
+/* ========================================
+    CONTROLS - Buttons
+======================================== */
+.controls {
+  text-align: center;
+}
+
+.btn {
+  background: #0e639c;
+  color: white;
+  border: none;
+  padding: 12px 30px;
+  border-radius: 6px;
+  font-size: 1em;
+  cursor: pointer;
+  transition: background 0.3s;
+  font-weight: 600;
+  margin: 0 5px;
+}
+
+.btn:hover {
+  background: #1177bb;
+}
+
+.btn:disabled {
+  background: #3e3e42;
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* ========================================
+    GAME OVER SCREEN
+======================================== */
+.game-over {
+  display: none;
+  text-align: center;
+  margin-top: 20px;
+  padding: 20px;
+  background: #3e3e42;
+  border-radius: 8px;
+}
+
+.game-over.show {
+  display: block;
+}
+
+.game-over h2 {
+  color: #f48771;
+  margin-bottom: 10px;
+}
+
+.game-over p {
+  margin-bottom: 15px;
+  font-size: 1.1em;
+}
+
+/* ========================================
+    GAME OVER ALERT OVERLAY
+    Full screen alert that appears when game ends
+======================================== */
+.game-over-alert {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(204, 0, 0, 0.6); /* Red with 60% opacity */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.5s ease-in-out;
+}
+
+/* Show alert with fade-in animation */
+.game-over-alert.show {
+  opacity: 1;
+  pointer-events: all;
+}
+
+/* Alert content styling */
+.game-over-alert h2 {
+  color: #ffffff;
+  font-size: 4em;
+  margin: 0;
+  text-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+  animation: alertPulse 0.5s ease-in-out;
+}
+
+.game-over-alert p {
+  color: #ffffff;
+  font-size: 1.5em;
+  margin-top: 20px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+/* Pulse animation for alert text */
+@keyframes alertPulse {
+  0% {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* ========================================
+    INSTRUCTIONS PANEL
+======================================== */
+.instructions {
+  margin-top: 20px;
+  padding: 15px;
+  background: #1e1e1e;
+  border-radius: 8px;
+  font-size: 0.9em;
+  color: #858585;
+}
+
+.instructions h3 {
+  color: #4ec9b0;
+  margin-bottom: 10px;
+}
+
+.instructions ul {
+  list-style: none;
+  padding-left: 0;
+}
+
+.instructions li {
+  margin-bottom: 5px;
+}
+
+.instructions li::before {
+  content: "▸ ";
+  color: #4ec9b0;
+  font-weight: bold;
+}
+
+/* Back button styling */
+.back-btn {
+  background: #3e3e42;
+  margin-top: 15px;
+}
+
+.back-btn:hover {
+  background: #4e4e52;
+}

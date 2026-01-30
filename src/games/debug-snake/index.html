@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Snake</title>
+</head>
+<body>
+    <div class="game-container">
+        <!-- Game Over Alert Overlay (Full Screen) -->
+        <div class="game-over-alert" id="gameOverAlert">
+            <h2>GAME OVER!</h2>
+            <p id="alertScore">Bugs Fixed: 0</p>
+        </div>
+
+        <!-- Game title and description -->
+        <div class="game-header">
+            <h1><span class="bug-icon">🐍</span> Debug Snake</h1>
+            <p>Catch the bugs before they escape!</p>
+        </div>
+
+        <!-- Score display panel -->
+        <div class="game-info">
+            <div class="info-item">
+                <div class="info-label">Bugs Fixed</div>
+                <div class="info-value" id="score">0</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">High Score</div>
+                <div class="info-value" id="highScore">0</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Speed</div>
+                <div class="info-value" id="speed">1</div>
+            </div>
+        </div>
+
+        <!-- Game canvas where gameplay happens -->
+        <canvas id="gameCanvas" width="400" height="400"></canvas>
+
+        <!-- Game over overlay (hidden until game ends) -->
+        <div class="game-over" id="gameOver">
+            <h2>Game Over!</h2>
+            <p>Final Score: <span id="finalScore">0</span> bugs fixed</p>
+            <button class="btn" onclick="restartGame()">Debug Again</button>
+        </div>
+
+        <!-- Control buttons -->
+        <div class="controls">
+            <button class="btn" id="startBtn" onclick="startGame()">Start Debugging</button>
+            <button class="btn" id="pauseBtn" onclick="togglePause()" style="display: none;">Pause</button>
+        </div>
+
+        <!-- Instructions for players -->
+        <div class="instructions">
+            <h3>How to Play</h3>
+            <ul>
+                <li>Use Arrow Keys to move the debugger</li>
+                <li>Press Space to pause/resume the game</li>
+                <li>Catch ladybugs (🐞) to fix them and grow longer</li>
+                <li>Avoid hitting walls or yourself</li>
+                <li>Speed increases every 5 bugs fixed</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>
