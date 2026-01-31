@@ -181,6 +181,7 @@ function setupEventListeners(): void {
  * Start a new game
  * Resets all game state to initial values
  */
+console.log("Debug Game starting")
 function startGame(): void {
     // Prevent starting if already running
     if (isRunning) {

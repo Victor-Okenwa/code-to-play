@@ -1,29 +1,19 @@
 {
-  "label": "pnpm: watch",
-  "type": "shell",
-  "command": "pnpm run watch",
-  "isBackground": true,
-  "problemMatcher": {
-    "owner": "custom",
-    "pattern": [
-      {
-        "regexp": "^(.*):(\\d+):(.*)$",
-        "file": 1,
-        "line": 2,
-        "message": 3
-      }
-    ],
-    "background": {
-      "activeOnStart": true,
-      "beginsPattern": ".*",
-      "endsPattern": "(Watching for file changes|Watching\\.|Build complete|Compiled successfully)"
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "build",
+      "type": "shell",
+      "command": "pnpm build",
+      "problemMatcher": "$tsc",
+      "group": "build"
+    },
+    {
+      "label": "watch",
+      "type": "shell",
+      "command": "pnpm watch",
+      "isBackground": true,
+      "problemMatcher": []
     }
-  },
-  "presentation": {
-    "reveal": "never"
-  },
-  "group": {
-    "kind": "build",
-    "isDefault": true
-  }
+  ]
 }
