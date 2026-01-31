@@ -81,7 +81,7 @@ export function activate(context: vscode.ExtensionContext) {
 					label: game.name,
 					description: game.description,
 					gameId: game.id
-				}))
+				}));
 
 
 				const selected = await vscode.window.showQuickPick(items, {
@@ -137,11 +137,13 @@ export function activate(context: vscode.ExtensionContext) {
 		stats += `Games Unlocked: ${unlocked} / ${games.length}\n\n`;
 
 		stats += `Games:\n`;
-		games.map(game => {
+		games.forEach(game => {
 			const state = storageManager.getGameState(game.id);
-			const status = state.isUnlocked ? '✅' : '🔒';
+			const unlocked = gameManager.isGameUnlocked(game.id);
+			const playsRemaining = gameManager.getPlaysRemaining(game.id);
+			const status = unlocked ? '✅' : '🔒';
 			stats += `${status} ${game.name}\n`;
-			stats += `   Plays: ${state.playsRemaining}\n`;
+			stats += `   Plays Remaining: ${playsRemaining}\n`;
 			stats += `   High Score: ${state.highScore}\n`;
 			stats += `   Total Plays: ${state.totalPlays}\n\n`;
 		});
@@ -159,7 +161,7 @@ export function activate(context: vscode.ExtensionContext) {
 					label: game.name,
 					description: game.description,
 					gameId: game.id
-				}))
+				}));
 
 				const selected = await vscode.window.showQuickPick(items, {
 					placeHolder: 'Select a game to unlock'

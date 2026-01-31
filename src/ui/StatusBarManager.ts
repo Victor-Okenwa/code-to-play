@@ -382,7 +382,7 @@ export class StatusBarManager {
      */
     dispose(): void {
         if (this.updateTimer) {
-            clearInterval(this.updateTimer);
+            clearInterval(this.updateTimer as unknown as number);
         }
         this.statusBarItem.dispose();
     }

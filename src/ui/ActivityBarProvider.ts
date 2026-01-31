@@ -93,10 +93,10 @@ class GameTreeItem extends vscode.TreeItem {
     /**
      * Gets the appropriate icon for the game's current state
      * 
-     * @returns Icon path or ThemeIcon
+     * @returns ThemeIcon, Uri, or light/dark Uri pair (IconPath)
      * @private
      */
-    private getIcon(): vscode.ThemeIcon | { light: string; dark: string } | undefined {
+    private getIcon(): vscode.ThemeIcon | vscode.Uri | { light: vscode.Uri; dark: vscode.Uri } | undefined {
         if (this.globalState.isUnlocked) {
             if (this.globalState.playsRemaining > 0) {
                 return new vscode.ThemeIcon('play-circle',

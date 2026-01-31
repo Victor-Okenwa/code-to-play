@@ -15,7 +15,7 @@ export const WhackABugGame: IGame = {
     description: 'Test your reflexes! Squash the bugs as they pop up before time runs out!',
     iconPath: 'assets/icon.svg',
     isPremium: false,
-    // isOnline: false,
+    isOnline: false,
     htmlPath: 'index.html',
     jsPath: 'game.ts',  // TypeScript file
     cssPath: 'styles.css'

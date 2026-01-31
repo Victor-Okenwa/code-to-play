@@ -12,10 +12,10 @@ import { IGame } from '../../core/types';
 export const DebugSnakeGame: IGame = {
     id: 'debug-snake',
     name: 'Debug Snake',
-    description: 'Classic Snake game with a coding twist! Navigate the snake to destroy bugs before their disappear.',
+    description: 'Classic snake game with a debugging twist. Catch red ladybugs to grow your green snake!',
     iconPath: 'assets/icon.svg',
     isPremium: false,
-    // isOnline: false,
+    isOnline: false,
     htmlPath: 'index.html',
     jsPath: 'game.ts',  // TypeScript file
     cssPath: 'styles.css'

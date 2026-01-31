@@ -26,6 +26,9 @@ export interface IGame {
     /** Whether this game requires premium/paid access */
     isPremium: boolean;
 
+    /** Whether the game requires an online connection */
+    isOnline?: boolean;
+
     /** Relative path to the game's HTML file */
     htmlPath: string;
 
@@ -39,7 +42,7 @@ export interface IGame {
 /**
  * Tracks the current state of a game for a user
  */
-export interface GameState {
+export interface GameState  {
     /** High score achieved in this game */
     highScore: number;
 

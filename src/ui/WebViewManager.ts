@@ -98,7 +98,7 @@ export class WebviewManager {
         const panel = vscode.window.createWebviewPanel(
             `codeToPlay.${game.id}`,
             `🎮 ${game.name}`,
-            vscode.ViewColumn.Eight,
+            vscode.ViewColumn.One,
             {
                 enableScripts: true,
                 // retainContextWhenHidden: true,
