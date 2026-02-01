@@ -5,6 +5,8 @@
  * Activates and deactivates the extension, setting up core components.
  */
 
+
+
 import * as vscode from 'vscode';
 import { StorageManager } from './core/StorageManager';
 import { CodeTracker } from './core/CodeTracker';
