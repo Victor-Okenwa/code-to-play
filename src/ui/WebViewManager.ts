@@ -104,6 +104,7 @@ export class WebviewManager {
                 // retainContextWhenHidden: true,
                 localResourceRoots: [
                     vscode.Uri.file(path.join(this.context.extensionPath, 'media')),
+                    vscode.Uri.file(path.join(this.context.extensionPath, 'dist', 'games')),
                     vscode.Uri.file(path.join(this.context.extensionPath, 'src', 'games'))
                 ]
             }
@@ -157,21 +158,32 @@ export class WebviewManager {
         game: IGame
     ): Promise<void> {
         try {
-            // Get paths to game files
-            const gameDir = path.join(
+            // Get paths to game files (prefer built assets in dist if available)
+            const srcGameDir = path.join(
                 this.context.extensionPath,
                 'src',
                 'games',
                 game.id
             );
+            const distGameDir = path.join(
+                this.context.extensionPath,
+                'dist',
+                'games',
+                game.id
+            );
 
-            const htmlPath = path.join(gameDir, game.htmlPath);
-            const jsPath = path.join(gameDir, game.jsPath);
-            const cssPath = path.join(gameDir, game.cssPath);
+            const htmlPath = path.join(srcGameDir, game.htmlPath);
+            const srcJsPath = path.join(srcGameDir, game.jsPath);
+            const builtJsPath = path.join(distGameDir, 'game.js');
+            const cssPath = path.join(srcGameDir, game.cssPath);
 
-            // Read game files
+            // Read game files, prefer built JS from dist
             let html = fs.readFileSync(htmlPath, 'utf8');
-            const js = fs.existsSync(jsPath) ? fs.readFileSync(jsPath, 'utf8') : '';
+            const js = fs.existsSync(builtJsPath)
+                ? fs.readFileSync(builtJsPath, 'utf8')
+                : fs.existsSync(srcJsPath)
+                    ? fs.readFileSync(srcJsPath, 'utf8')
+                    : '';
             const css = fs.existsSync(cssPath) ? fs.readFileSync(cssPath, 'utf8') : '';
 
             // Get font URIs

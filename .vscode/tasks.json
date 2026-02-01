@@ -4,16 +4,12 @@
     {
       "label": "build",
       "type": "shell",
-      "command": "pnpm build",
+      "command": "pnpm run compile",
       "problemMatcher": "$tsc",
-      "group": "build"
-    },
-    {
-      "label": "watch",
-      "type": "shell",
-      "command": "pnpm watch",
-      "isBackground": true,
-      "problemMatcher": []
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
     }
   ]
 }

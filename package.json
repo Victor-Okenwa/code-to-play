@@ -4,6 +4,7 @@
   "description": "Play games in VS Code - earn playtime by writing code!",
   "version": "0.0.1",
   "publisher": "morse-code",
+  "main": "./dist/extension.js",
   "author": {
     "name": "Victor Okenwa",
     "email": "okenwavictor003@gmail.com"
@@ -15,7 +16,6 @@
     "Other"
   ],
   "activationEvents": [],
-  "main": "./dist/extension.js",
   "contributes": {
     "viewsContainers": {
       "activitybar": [
@@ -52,12 +52,18 @@
   },
   "scripts": {
     "vscode:prepublish": "pnpm run package",
-    "compile": "webpack",
-    "watch": "webpack --watch",
-    "dev": "pnpm watch & node scripts/reload-dev-host.js",
-    "package": "webpack --mode production --devtool hidden-source-map",
+    "build:extension": "node scripts/build-extension.js",
+    "watch:extension": "node scripts/build-extension.js --watch",
+    "build:webviews": "node scripts/build-webviews.js",
+    "watch:webviews": "node scripts/build-webviews.js --watch",
+    "build": "pnpm run build:extension && pnpm run build:webviews && pnpm run copy-games",
+    "compile": "pnpm run build:extension",
+    "watch": "concurrently \"pnpm run watch:extension\" \"pnpm run watch:webviews\"",
+    "dev": "concurrently \"pnpm run watch:extension\" \"pnpm run watch:webviews\" \"pnpm run copy-games\" \"node scripts/reload-dev-host.js\"",
+    "package": "pnpm run build",
     "compile-tests": "tsc -p . --outDir out",
     "watch-tests": "tsc -p . -w --outDir out",
+    "copy-games": "copyfiles -u 1 \"src/games/**/*.html\" \"src/games/**/*.css\" \"src/games/**/*.svg\" dist && copyfiles -u 0 \"media/**/*\" dist",
     "pretest": "pnpm run compile-tests && pnpm run compile && pnpm run lint",
     "lint": "eslint src",
     "test": "vscode-test"
@@ -71,9 +77,12 @@
     "@vscode/test-cli": "^0.0.11",
     "@vscode/test-electron": "^2.5.2",
     "chokidar": "^5.0.0",
+    "copyfiles": "^2.4.1",
+    "concurrently": "^8.2.0",
     "eslint": "^9.32.0",
     "ts-loader": "^9.5.2",
     "typescript": "^5.9.2",
+    "esbuild": "^0.19.0",
     "webpack": "^5.101.0",
     "webpack-cli": "^6.0.1"
   }

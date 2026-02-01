@@ -12,7 +12,7 @@
       "args": ["--extensionDevelopmentPath=${workspaceFolder}"],
       "outFiles": ["${workspaceFolder}/dist/**/*.js"],
       "preLaunchTask": "build",
-      "internalConsoleOptions": "openOnSessionStart"
+      "sourceMaps": false
     }
   ]
 }
