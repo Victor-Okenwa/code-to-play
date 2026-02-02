@@ -1,10 +1,9 @@
 /**
- * WebviewManager.ts - OPTIMIZED for Event Listeners
+ * WebviewManager.ts - FIXED: No double-decrement of plays
  * 
- * Changes from previous version:
- * 1. Removed 'unsafe-inline' from CSP (no longer needed!)
- * 2. Scripts now use ONLY nonce
- * 3. Cleaner, more secure CSP
+ * Changes:
+ * 1. Don't call endPlay on panel dispose
+ * 2. Only decrement when game actually ends (via gameOver message)
  */
 
 import * as vscode from 'vscode';
@@ -76,7 +75,8 @@ export class WebviewManager {
     private setupPanelHandlers(gameId: string, panel: vscode.WebviewPanel): void {
         panel.onDidDispose(() => {
             this.activePanels.delete(gameId);
-            this.gameManager.endPlay(gameId);
+            // ✅ FIX: Don't call endPlay here!
+            // The game will call it via postMessage when it actually ends
         });
 
         panel.webview.onDidReceiveMessage(
@@ -101,7 +101,6 @@ export class WebviewManager {
         game: IGame
     ): Promise<void> {
         try {
-            // Load from dist (compiled output)
             const distGameDir = path.join(
                 this.context.extensionPath,
                 'dist',
@@ -118,7 +117,6 @@ export class WebviewManager {
             console.log(`[WebviewManager] JS: ${fs.existsSync(jsPath)}`);
             console.log(`[WebviewManager] CSS: ${fs.existsSync(cssPath)}`);
 
-            // Read files
             let html = fs.readFileSync(htmlPath, 'utf8');
             const js = fs.existsSync(jsPath) ? fs.readFileSync(jsPath, 'utf8') : '';
             const css = fs.existsSync(cssPath) ? fs.readFileSync(cssPath, 'utf8') : '';
@@ -127,24 +125,18 @@ export class WebviewManager {
                 console.warn(`[WebviewManager] ⚠️ No JavaScript file found for ${game.id}!`);
             }
 
-            // Generate nonce ONCE
             const nonce = this.getNonce();
-
-            // Get font URIs
             const fontUris = this.getFontUris(panel.webview);
-
-            // Create tags
             const commonStyles = this.getCommonStyles(fontUris, nonce);
             const styleTag = this.createStyleTag(css, nonce);
+
+            // ✅ Add VS Code API for postMessage
+            const vscodeApiScript = this.createVSCodeApiScript(nonce);
             const scriptTag = this.createScriptTag(js, nonce);
 
-            // Inject into HTML
-            html = this.injectContent(html, commonStyles + styleTag, scriptTag);
-
-            // Apply CSP
+            html = this.injectContent(html, commonStyles + styleTag, vscodeApiScript + scriptTag);
             html = this.applyContentSecurityPolicy(html, panel.webview, nonce);
 
-            // Set HTML
             panel.webview.html = html;
 
             console.log(`[WebviewManager] ✅ ${game.id} loaded successfully!`);
@@ -229,6 +221,13 @@ export class WebviewManager {
         return `<style nonce="${nonce}">${css}</style>`;
     }
 
+    /**
+     * Creates VS Code API script for postMessage
+     */
+    private createVSCodeApiScript(nonce: string): string {
+        return `<script nonce="${nonce}">const vscode = acquireVsCodeApi();</script>`;
+    }
+
     private createScriptTag(js: string, nonce: string): string {
         if (!js) {
             return '';
@@ -237,12 +236,10 @@ export class WebviewManager {
     }
 
     private injectContent(html: string, styles: string, scripts: string): string {
-        // Inject styles before </head>
         if (styles && html.includes('</head>')) {
             html = html.replace('</head>', `${styles}</head>`);
         }
 
-        // Inject scripts before </body>
         if (scripts && html.includes('</body>')) {
             html = html.replace('</body>', `${scripts}</body>`);
         }
@@ -250,10 +247,6 @@ export class WebviewManager {
         return html;
     }
 
-    /**
-     * ✅ CLEAN CSP - No unsafe-inline needed!
-     * Event listeners in JS file with nonce = secure ✅
-     */
     private applyContentSecurityPolicy(
         html: string,
         webview: vscode.Webview,
@@ -291,8 +284,11 @@ export class WebviewManager {
     // ========================================
 
     private async handleWebviewMessage(gameId: string, message: any): Promise<void> {
+        console.log(`[WebviewManager] Received message from ${gameId}:`, message.command);
+
         switch (message.command) {
             case 'gameOver':
+                console.log(`[WebviewManager] Game over for ${gameId}, score: ${message.score}`);
                 await this.handleGameOver(gameId, message.score);
                 break;
 
@@ -314,7 +310,9 @@ export class WebviewManager {
     }
 
     private async handleGameOver(gameId: string, score?: number): Promise<void> {
+        // ✅ This is where plays are decremented!
         await this.gameManager.endPlay(gameId, score);
+        console.log(`[WebviewManager] endPlay called for ${gameId}`);
 
         const state = this.gameManager.getGame(gameId);
         if (score && state) {

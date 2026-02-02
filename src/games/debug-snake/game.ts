@@ -1,18 +1,9 @@
 /**
  * game.ts - Debug Snake Game Logic
  * 
- * Classic Snake game with debugging theme
- * - Control green snake to catch red ladybugs
- * - Snake grows longer with each bug caught
- * - Speed increases every 5 bugs
- * - Avoid walls and self-collision
- * 
- * Controls:
- * - Arrow Keys: Move snake
- * - Space: Pause/Resume
- * 
- * @author Code to Play Extension
- * @version 1.0.0
+ * FIXED VERSION - Addresses:
+ * 1. Grid lines not visible before game starts
+ * 2. Game instantly ending when Start clicked
  */
 
 // ========================================
@@ -84,10 +75,18 @@ let isPaused: boolean = false;
 // ========================================
 
 function init(): void {
+    console.log('[Debug Snake] Initializing game...');
+    
     loadHighScore();
     updateScoreDisplay();
+    updateSpeedDisplay();
     placeBug();
     setupEventListeners();
+    
+    // ✅ FIX 1: Draw initial state so grid lines are visible
+    drawInitialState();
+    
+    console.log('[Debug Snake] Initialization complete - grid should be visible');
 }
 
 function loadHighScore(): void {
@@ -106,6 +105,72 @@ function setupEventListeners(): void {
 }
 
 // ========================================
+// INITIAL STATE DRAWING
+// ========================================
+
+/**
+ * ✅ FIX: Draw the initial state BEFORE game starts
+ * This shows grid lines, the bug, and initial snake position
+ */
+function drawInitialState(): void {
+    console.log('[Debug Snake] Drawing initial state...');
+    
+    // Clear canvas
+    ctx.fillStyle = '#1e1e1e';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Draw grid lines
+    ctx.strokeStyle = '#2d2d2d';
+    ctx.lineWidth = 1;
+
+    for (let i = 0; i <= TILE_COUNT; i++) {
+        // Vertical lines
+        ctx.beginPath();
+        ctx.moveTo(i * GRID_SIZE, 0);
+        ctx.lineTo(i * GRID_SIZE, canvas.height);
+        ctx.stroke();
+
+        // Horizontal lines
+        ctx.beginPath();
+        ctx.moveTo(0, i * GRID_SIZE);
+        ctx.lineTo(canvas.width, i * GRID_SIZE);
+        ctx.stroke();
+    }
+
+    // Draw initial snake (just the head)
+    const centerX = INITIAL_SNAKE_X * GRID_SIZE + GRID_SIZE / 2;
+    const centerY = INITIAL_SNAKE_Y * GRID_SIZE + GRID_SIZE / 2;
+    const radius = GRID_SIZE * 0.95 / 2;
+
+    const gradient = ctx.createRadialGradient(
+        centerX - radius / 3,
+        centerY - radius / 3,
+        0,
+        centerX,
+        centerY,
+        radius
+    );
+    gradient.addColorStop(0, '#5dd9b8');
+    gradient.addColorStop(1, '#4ec9b0');
+
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+    ctx.fillStyle = gradient;
+    ctx.fill();
+
+    // Shine effect
+    ctx.beginPath();
+    ctx.arc(centerX - radius / 3, centerY - radius / 3, radius / 4, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+    ctx.fill();
+
+    // Draw the bug
+    drawBug();
+    
+    console.log('[Debug Snake] Initial state drawn');
+}
+
+// ========================================
 // GAME LIFECYCLE CONTROL
 // ========================================
 
@@ -113,16 +178,20 @@ function startGame(): void {
     console.log('[Debug Snake] Starting game...');
 
     if (isRunning) {
+        console.log('[Debug Snake] Game already running');
         return;
     }
 
-    // Reset all game state
+    // Reset game state
     snake = [];
     snakeLength = INITIAL_SNAKE_LENGTH;
     snakeX = INITIAL_SNAKE_X;
     snakeY = INITIAL_SNAKE_Y;
-    velocityX = 0;
+    
+    // ✅ FIX 2: Start with initial velocity so snake moves right away
+    velocityX = 1;  // Move right
     velocityY = 0;
+    
     score = 0;
     gameSpeed = INITIAL_SPEED;
     isPaused = false;
@@ -137,14 +206,14 @@ function startGame(): void {
     startBtn.style.display = 'none';
     pauseBtn.style.display = 'inline-block';
 
-    // Place first bug
+    // Place bug
     placeBug();
 
-    // Start the game loop
+    // Start game loop
     isRunning = true;
     runGameLoop();
 
-    console.log('[Debug Snake] Game started!');
+    console.log('[Debug Snake] Game started - snake should be moving right');
 }
 
 function runGameLoop(): void {
@@ -181,6 +250,8 @@ function restartGame(): void {
 }
 
 function endGame(): void {
+    console.log('[Debug Snake] Game over! Final score:', score);
+    
     isRunning = false;
     isPaused = false;
 
@@ -219,17 +290,21 @@ function showGameOverAlert(): void {
 // ========================================
 
 function update(): void {
+    // Move snake head
     snakeX += velocityX;
     snakeY += velocityY;
 
     // Check wall collision
     if (snakeX < 0 || snakeX >= TILE_COUNT || snakeY < 0 || snakeY >= TILE_COUNT) {
+        console.log('[Debug Snake] Wall collision!');
         endGame();
         return;
     }
 
+    // Add new head position
     snake.push({ x: snakeX, y: snakeY });
 
+    // Remove tail to maintain length
     while (snake.length > snakeLength) {
         snake.shift();
     }
@@ -237,6 +312,7 @@ function update(): void {
     // Check self collision
     for (let i = 0; i < snake.length - 1; i++) {
         if (snake[i].x === snakeX && snake[i].y === snakeY) {
+            console.log('[Debug Snake] Self collision!');
             endGame();
             return;
         }
@@ -244,6 +320,7 @@ function update(): void {
 
     // Check bug collision
     if (snakeX === bugX && snakeY === bugY) {
+        console.log('[Debug Snake] Bug caught! Score:', score + 1);
         score++;
         snakeLength++;
         updateScoreDisplay();
@@ -252,6 +329,7 @@ function update(): void {
         if (score % BUGS_PER_SPEED_INCREASE === 0) {
             gameSpeed = Math.max(MIN_SPEED, gameSpeed * SPEED_MULTIPLIER);
             updateSpeedDisplay();
+            console.log('[Debug Snake] Speed increased! Level:', Math.floor(score / BUGS_PER_SPEED_INCREASE) + 1);
         }
     }
 }
@@ -393,11 +471,18 @@ function placeBug(): void {
         bugY = Math.floor(Math.random() * TILE_COUNT);
 
         validPosition = true;
+        
+        // Check if bug overlaps with snake
         for (const segment of snake) {
             if (segment.x === bugX && segment.y === bugY) {
                 validPosition = false;
                 break;
             }
+        }
+        
+        // Also check current head position
+        if (bugX === snakeX && bugY === snakeY) {
+            validPosition = false;
         }
     }
 }
@@ -466,31 +551,27 @@ function updateSpeedDisplay(): void {
 }
 
 // ========================================
-// EVENT LISTENERS - NO INLINE ONCLICK
+// EVENT LISTENERS
 // ========================================
 
 function setupButtons(): void {
     console.log('[Debug Snake] Setting up event listeners...');
 
-    // Initialize game
     init();
 
-    // Start button
     if (startBtn) {
         startBtn.addEventListener('click', startGame);
-        console.log('[Debug Snake] Start button listener attached');
+        console.log('[Debug Snake] ✅ Start button listener attached');
     }
 
-    // Pause button
     if (pauseBtn) {
         pauseBtn.addEventListener('click', togglePause);
-        console.log('[Debug Snake] Pause button listener attached');
+        console.log('[Debug Snake] ✅ Pause button listener attached');
     }
 
-    // Restart button
     if (restartBtn) {
         restartBtn.addEventListener('click', restartGame);
-        console.log('[Debug Snake] Restart button listener attached');
+        console.log('[Debug Snake] ✅ Restart button listener attached');
     }
 
     console.log('[Debug Snake] ✅ All event listeners attached');

@@ -1,6 +1,5 @@
 /* ========================================
            GLOBAL RESET
-           Remove default margins and paddings
            ======================================== */
 * {
   margin: 0;
@@ -10,36 +9,32 @@
 
 /* ========================================
            BODY - VS Code Dark Theme
-           Mimics VS Code's dark theme colors
            ======================================== */
 body {
-  font-family: "Orbitron", "Segoe UI", sans-serif; /* Gaming font */
-  /* Gradient background matching VS Code dark theme */
+  font-family: "Orbitron", "Segoe UI", sans-serif;
   background: linear-gradient(135deg, #1e1e1e 0%, #2d2d30 100%);
-  /* Changed from flex centering to allow scrolling */
   padding: 20px 0;
   min-height: 100vh;
-  color: #d4d4d4; /* VS Code default text color */
-  overflow-y: auto; /* Enable vertical scrolling */
-  overflow-x: hidden; /* Prevent horizontal scrolling */
+  color: #d4d4d4;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 /* ========================================
-           GAME CONTAINER - Main wrapper
-           Contains all game elements
+           GAME CONTAINER
            ======================================== */
 .game-container {
-  background: #252526; /* VS Code sidebar background */
+  background: #252526;
   border-radius: 12px;
   padding: 30px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
   max-width: 600px;
-  margin: 0 auto; /* Center horizontally */
+  margin: 0 auto;
   width: 100%;
 }
 
 /* ========================================
-           GAME HEADER - Title and subtitle
+           GAME HEADER
            ======================================== */
 .game-header {
   text-align: center;
@@ -47,75 +42,76 @@ body {
 }
 
 .game-header h1 {
-  color: #4ec9b0; /* VS Code teal accent color */
+  color: #4ec9b0;
   font-size: 2em;
   margin-bottom: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
-  font-family: "Press Start 2P", cursive; /* Retro gaming font */
+  font-family: "Press Start 2P", cursive;
   letter-spacing: 2px;
 }
 
-.bug-icon {
+.snake-icon {
   font-size: 1.2em;
 }
 
+.game-header p {
+  color: #858585;
+  font-size: 1em;
+}
+
 /* ========================================
-           GAME INFO - Score display panel
-           Shows current score, high score, and speed level
+           SCORE PANEL - Fixed from game-info
            ======================================== */
-.game-info {
+.score-panel {
   display: flex;
   justify-content: space-between;
   margin-bottom: 20px;
   padding: 15px;
-  background: #1e1e1e; /* Darker background for contrast */
+  background: #1e1e1e;
   border-radius: 8px;
 }
 
-.info-item {
+.score-item {
   text-align: center;
 }
 
-.info-label {
-  color: #858585; /* Muted gray for labels */
+.score-label {
+  color: #858585;
   font-size: 0.9em;
   margin-bottom: 5px;
 }
 
-.info-value {
-  color: #4ec9b0; /* Teal accent for numeric values */
+.score-value {
+  color: #4ec9b0;
   font-size: 1.5em;
   font-weight: bold;
   font-family: "Orbitron", sans-serif;
-  font-weight: 700;
 }
 
 /* ========================================
-           CANVAS - Game board
-           Where the actual game is rendered
+           CANVAS
            ======================================== */
 #gameCanvas {
-  background: #1e1e1e; /* Dark background matching VS Code editor */
-  border: 3px solid #3e3e42; /* VS Code border color */
+  background: #1e1e1e;
+  border: 3px solid #3e3e42;
   border-radius: 8px;
   display: block;
-  margin: 0 auto;
+  margin: 0 auto 20px auto;
 }
 
 /* ========================================
-           CONTROLS - Button container
+           CONTROLS
            ======================================== */
 .controls {
   margin-top: 20px;
   text-align: center;
 }
 
-/* Button styling matching VS Code's button component */
 .btn {
-  background: #0e639c; /* VS Code button blue */
+  background: #0e639c;
   color: white;
   border: none;
   padding: 12px 30px;
@@ -124,24 +120,24 @@ body {
   cursor: pointer;
   transition: background 0.3s ease;
   font-weight: 600;
+  margin: 0 5px;
 }
 
 .btn:hover {
-  background: #1177bb; /* Lighter blue on hover */
+  background: #1177bb;
 }
 
 .btn:disabled {
-  background: #3e3e42; /* Gray when disabled */
+  background: #3e3e42;
   cursor: not-allowed;
   opacity: 0.5;
 }
 
 /* ========================================
            GAME OVER SCREEN
-           Displayed when player loses
            ======================================== */
 .game-over {
-  display: none; /* Hidden by default */
+  display: none;
   text-align: center;
   margin-top: 20px;
   padding: 20px;
@@ -149,14 +145,15 @@ body {
   border-radius: 8px;
 }
 
-/* Show game over screen when .show class is added */
 .game-over.show {
   display: block;
 }
 
 .game-over h2 {
-  color: #f48771; /* Red/orange for game over message */
+  color: #f48771;
   margin-bottom: 10px;
+  font-family: "Press Start 2P", cursive;
+  font-size: 1.5em;
 }
 
 .game-over p {
@@ -166,7 +163,6 @@ body {
 
 /* ========================================
            GAME OVER ALERT OVERLAY
-           Full screen alert that appears when game ends
            ======================================== */
 .game-over-alert {
   position: fixed;
@@ -174,7 +170,7 @@ body {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(204, 0, 0, 0.6); /* Red with 60% opacity */
+  background: rgba(204, 0, 0, 0.6);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -185,20 +181,18 @@ body {
   transition: opacity 0.5s ease-in-out;
 }
 
-/* Show alert with fade-in animation */
 .game-over-alert.show {
   opacity: 1;
   pointer-events: all;
 }
 
-/* Alert content styling */
 .game-over-alert h2 {
   color: #ffffff;
   font-size: 3em;
   margin: 0;
   text-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
   animation: alertPulse 0.5s ease-in-out;
-  font-family: "Press Start 2P", cursive; /* Retro gaming font */
+  font-family: "Press Start 2P", cursive;
   letter-spacing: 3px;
 }
 
@@ -211,7 +205,6 @@ body {
   font-weight: 600;
 }
 
-/* Pulse animation for alert text */
 @keyframes alertPulse {
   0% {
     transform: scale(0.5);
@@ -227,8 +220,7 @@ body {
 }
 
 /* ========================================
-           INSTRUCTIONS PANEL
-           How to play guide
+           INSTRUCTIONS
            ======================================== */
 .instructions {
   margin-top: 20px;
@@ -236,12 +228,14 @@ body {
   background: #1e1e1e;
   border-radius: 8px;
   font-size: 0.9em;
-  color: #858585; /* Muted text for secondary info */
+  color: #858585;
 }
 
 .instructions h3 {
-  color: #4ec9b0; /* Teal accent for heading */
+  color: #4ec9b0;
   margin-bottom: 10px;
+  font-family: "Press Start 2P", cursive;
+  font-size: 1em;
 }
 
 .instructions ul {
@@ -253,7 +247,6 @@ body {
   margin-bottom: 5px;
 }
 
-/* Custom bullet point using teal arrow */
 .instructions li::before {
   content: "▸ ";
   color: #4ec9b0;
