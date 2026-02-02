@@ -6,6 +6,9 @@
  * 2. Game instantly ending when Start clicked
  */
 
+
+import vscode from 'vscode';
+
 // ========================================
 // TYPE DEFINITIONS
 // ========================================
@@ -76,16 +79,16 @@ let isPaused: boolean = false;
 
 function init(): void {
     console.log('[Debug Snake] Initializing game...');
-    
+
     loadHighScore();
     updateScoreDisplay();
     updateSpeedDisplay();
     placeBug();
     setupEventListeners();
-    
+
     // ✅ FIX 1: Draw initial state so grid lines are visible
     drawInitialState();
-    
+
     console.log('[Debug Snake] Initialization complete - grid should be visible');
 }
 
@@ -114,7 +117,7 @@ function setupEventListeners(): void {
  */
 function drawInitialState(): void {
     console.log('[Debug Snake] Drawing initial state...');
-    
+
     // Clear canvas
     ctx.fillStyle = '#1e1e1e';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -166,7 +169,7 @@ function drawInitialState(): void {
 
     // Draw the bug
     drawBug();
-    
+
     console.log('[Debug Snake] Initial state drawn');
 }
 
@@ -187,11 +190,11 @@ function startGame(): void {
     snakeLength = INITIAL_SNAKE_LENGTH;
     snakeX = INITIAL_SNAKE_X;
     snakeY = INITIAL_SNAKE_Y;
-    
+
     // ✅ FIX 2: Start with initial velocity so snake moves right away
     velocityX = 1;  // Move right
     velocityY = 0;
-    
+
     score = 0;
     gameSpeed = INITIAL_SPEED;
     isPaused = false;
@@ -251,7 +254,8 @@ function restartGame(): void {
 
 function endGame(): void {
     console.log('[Debug Snake] Game over! Final score:', score);
-    
+
+
     isRunning = false;
     isPaused = false;
 
@@ -267,6 +271,12 @@ function endGame(): void {
     }
 
     showGameOverAlert();
+
+    (vscode as any).postMessage({
+        command: 'gameOver',
+        score
+    });
+
 
     setTimeout(() => {
         finalScoreElement.textContent = score.toString();
@@ -471,7 +481,7 @@ function placeBug(): void {
         bugY = Math.floor(Math.random() * TILE_COUNT);
 
         validPosition = true;
-        
+
         // Check if bug overlaps with snake
         for (const segment of snake) {
             if (segment.x === bugX && segment.y === bugY) {
@@ -479,7 +489,7 @@ function placeBug(): void {
                 break;
             }
         }
-        
+
         // Also check current head position
         if (bugX === snakeX && bugY === snakeY) {
             validPosition = false;

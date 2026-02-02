@@ -1,9 +1,10 @@
 /**
- * WebviewManager.ts - FIXED: No double-decrement of plays
+ * WebviewManager.ts - FIXED: Properly decrements plays on game over
  * 
  * Changes:
- * 1. Don't call endPlay on panel dispose
- * 2. Only decrement when game actually ends (via gameOver message)
+ * 1. Injects VS Code API so games can send messages
+ * 2. Handles 'gameOver' message to decrement plays
+ * 3. Removed endPlay from panel dispose (was causing issues)
  */
 
 import * as vscode from 'vscode';
@@ -75,8 +76,7 @@ export class WebviewManager {
     private setupPanelHandlers(gameId: string, panel: vscode.WebviewPanel): void {
         panel.onDidDispose(() => {
             this.activePanels.delete(gameId);
-            // ✅ FIX: Don't call endPlay here!
-            // The game will call it via postMessage when it actually ends
+            // ✅ DON'T call endPlay here - only when game actually ends
         });
 
         panel.webview.onDidReceiveMessage(
@@ -112,34 +112,35 @@ export class WebviewManager {
             const jsPath = path.join(distGameDir, 'game.js');
             const cssPath = path.join(distGameDir, game.cssPath);
 
-            console.log(`[WebviewManager] Loading game: ${game.id}`);
-            console.log(`[WebviewManager] HTML: ${fs.existsSync(htmlPath)}`);
-            console.log(`[WebviewManager] JS: ${fs.existsSync(jsPath)}`);
-            console.log(`[WebviewManager] CSS: ${fs.existsSync(cssPath)}`);
+            console.log(`[WebviewManager] Loading ${game.id}...`);
+            console.log(`[WebviewManager] JS exists: ${fs.existsSync(jsPath)}`);
 
             let html = fs.readFileSync(htmlPath, 'utf8');
             const js = fs.existsSync(jsPath) ? fs.readFileSync(jsPath, 'utf8') : '';
             const css = fs.existsSync(cssPath) ? fs.readFileSync(cssPath, 'utf8') : '';
 
             if (!js) {
-                console.warn(`[WebviewManager] ⚠️ No JavaScript file found for ${game.id}!`);
+                console.warn(`[WebviewManager] ⚠️ No JS file for ${game.id}!`);
             }
 
             const nonce = this.getNonce();
             const fontUris = this.getFontUris(panel.webview);
+
+            // Create content
             const commonStyles = this.getCommonStyles(fontUris, nonce);
             const styleTag = this.createStyleTag(css, nonce);
 
-            // ✅ Add VS Code API for postMessage
+            // ✅ CRITICAL: Inject VS Code API first, then game code
             const vscodeApiScript = this.createVSCodeApiScript(nonce);
             const scriptTag = this.createScriptTag(js, nonce);
 
+            // Inject into HTML
             html = this.injectContent(html, commonStyles + styleTag, vscodeApiScript + scriptTag);
             html = this.applyContentSecurityPolicy(html, panel.webview, nonce);
 
             panel.webview.html = html;
 
-            console.log(`[WebviewManager] ✅ ${game.id} loaded successfully!`);
+            console.log(`[WebviewManager] ✅ ${game.id} loaded`);
 
         } catch (error) {
             console.error(`[WebviewManager] ❌ Error:`, error);
@@ -147,6 +148,17 @@ export class WebviewManager {
                 `Failed to load game: ${error instanceof Error ? error.message : 'Unknown error'}`
             );
         }
+    }
+
+    /**
+     * ✅ Creates the VS Code API script that games will use
+     */
+    private createVSCodeApiScript(nonce: string): string {
+        return `<script nonce="${nonce}">
+            // Make VS Code API globally available
+            const vscode = acquireVsCodeApi();
+            console.log('[Webview] VS Code API ready');
+        </script>`;
     }
 
     private getFontUris(webview: vscode.Webview): Map<string, vscode.Uri> {
@@ -221,13 +233,6 @@ export class WebviewManager {
         return `<style nonce="${nonce}">${css}</style>`;
     }
 
-    /**
-     * Creates VS Code API script for postMessage
-     */
-    private createVSCodeApiScript(nonce: string): string {
-        return `<script nonce="${nonce}">const vscode = acquireVsCodeApi();</script>`;
-    }
-
     private createScriptTag(js: string, nonce: string): string {
         if (!js) {
             return '';
@@ -283,12 +288,16 @@ export class WebviewManager {
     // MESSAGE HANDLING
     // ========================================
 
+    /**
+     * ✅ Handles messages from games
+     */
     private async handleWebviewMessage(gameId: string, message: any): Promise<void> {
-        console.log(`[WebviewManager] Received message from ${gameId}:`, message.command);
+        console.log(`[WebviewManager] Message from ${gameId}:`, message.command);
 
         switch (message.command) {
             case 'gameOver':
-                console.log(`[WebviewManager] Game over for ${gameId}, score: ${message.score}`);
+                // ✅ THIS IS WHERE PLAYS ARE DECREMENTED!
+                console.log(`[WebviewManager] Game over - Score: ${message.score}`);
                 await this.handleGameOver(gameId, message.score);
                 break;
 
@@ -301,7 +310,7 @@ export class WebviewManager {
                 break;
 
             case 'ready':
-                console.log(`[${gameId}] Game ready`);
+                console.log(`[${gameId}] Ready`);
                 break;
 
             default:
@@ -309,10 +318,16 @@ export class WebviewManager {
         }
     }
 
+    /**
+     * ✅ Handles game over - decrements plays and updates high score
+     */
     private async handleGameOver(gameId: string, score?: number): Promise<void> {
-        // ✅ This is where plays are decremented!
+        console.log(`[WebviewManager] Calling endPlay for ${gameId}...`);
+
+        // This decrements the play counter!
         await this.gameManager.endPlay(gameId, score);
-        console.log(`[WebviewManager] endPlay called for ${gameId}`);
+
+        console.log(`[WebviewManager] ✅ Plays decremented`);
 
         const state = this.gameManager.getGame(gameId);
         if (score && state) {

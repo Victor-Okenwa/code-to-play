@@ -5,6 +5,8 @@
  * Runs in VS Code webview with full type safety.
  */
 
+import vscode from 'vscode';
+
 // ========================================
 // TYPE DEFINITIONS
 // ========================================
@@ -252,6 +254,11 @@ function endGame(): void {
     }
 
     showGameOverAlert();
+
+    (vscode as any).postMessage({
+        command: 'gameOver',
+        score
+    });
 
     setTimeout(() => {
         finalScoreElement.textContent = score.toString();
