@@ -151,7 +151,9 @@ function createBugSVG(): string {
 
 function selectDifficulty(difficulty: string): void {
     // Only allow easy for now
-    if (difficulty !== 'easy') return;
+    if (difficulty !== 'easy') {
+        return;
+    }
 
     selectedDifficulty = difficulty;
 
@@ -286,7 +288,9 @@ function startCountdown(): void {
 }
 
 function scheduleNextBug(): void {
-    if (!isPlaying) return;
+    if (!isPlaying) {
+        return;
+    }
 
     const spawnDelay = getSpawnDelay();
 
@@ -308,13 +312,17 @@ function getSpawnDelay(): number {
 }
 
 function spawnBug(): void {
-    if (!isPlaying) return;
+    if (!isPlaying) {
+        return;
+    }
 
     const availableHoles = bugs
         .map((bug, index) => ({ bug, index }))
         .filter(({ bug }) => !bug.active);
 
-    if (availableHoles.length === 0) return;
+    if (availableHoles.length === 0) {
+        return;
+    }
 
     const randomHole = availableHoles[Math.floor(Math.random() * availableHoles.length)];
     const holeIndex = randomHole.index;
@@ -349,7 +357,9 @@ function hideBug(holeIndex: number): void {
 function whackBug(holeIndex: number): void {
     const bug = bugs[holeIndex];
 
-    if (!isPlaying || !bug.active) return;
+    if (!isPlaying || !bug.active) {
+        return;
+    }
 
     score += currentDifficulty.pointsPerBug;
     updateScoreDisplay();
@@ -400,16 +410,60 @@ function updateTimerDisplay(): void {
 }
 
 // ========================================
+// EVENT LISTENERS - NO INLINE ONCLICK
+// ========================================
+
+function setupButtons(): void {
+    console.log('[Whack-a-Bug] Setting up event listeners...');
+
+    // Initialize game
+    init();
+
+    // Difficulty cards
+    const easyCard = document.getElementById('easyCard');
+    if (easyCard) {
+        easyCard.addEventListener('click', () => selectDifficulty('easy'));
+        console.log('[Whack-a-Bug] Easy card listener attached');
+    }
+
+    const mediumCard = document.getElementById('mediumCard');
+    if (mediumCard) {
+        mediumCard.addEventListener('click', () => selectDifficulty('medium'));
+    }
+
+    const hardCard = document.getElementById('hardCard');
+    if (hardCard) {
+        hardCard.addEventListener('click', () => selectDifficulty('hard'));
+    }
+
+    // Start game button
+    const startGameBtn = document.querySelector('.start-game-btn');
+    if (startGameBtn) {
+        startGameBtn.addEventListener('click', startGameMode);
+        console.log('[Whack-a-Bug] Start button listener attached');
+    }
+
+    // Restart buttons (multiple)
+    const restartButtons = document.querySelectorAll('[data-action="restart"]');
+    restartButtons.forEach(btn => {
+        btn.addEventListener('click', restartGame);
+    });
+
+    // Back to menu buttons (multiple)
+    const backButtons = document.querySelectorAll('[data-action="back"]');
+    backButtons.forEach(btn => {
+        btn.addEventListener('click', backToMenu);
+    });
+
+    console.log('[Whack-a-Bug] ✅ All event listeners attached');
+}
+
+// ========================================
 // INITIALIZE ON LOAD
 // ========================================
 
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
+    document.addEventListener('DOMContentLoaded', setupButtons);
 } else {
-    init();
+    setupButtons();
 }
-
-(window as any).selectDifficulty = selectDifficulty;
-(window as any).startGameMode = startGameMode;
-(window as any).backToMenu = backToMenu;
-(window as any).restartGame = restartGame;

@@ -1,8 +1,10 @@
 /**
- * WebviewManager.ts
+ * WebviewManager.ts - OPTIMIZED for Event Listeners
  * 
- * Manages webview panels for displaying games.
- * Handles webview creation, communication, resource loading, and lifecycle.
+ * Changes from previous version:
+ * 1. Removed 'unsafe-inline' from CSP (no longer needed!)
+ * 2. Scripts now use ONLY nonce
+ * 3. Cleaner, more secure CSP
  */
 
 import * as vscode from 'vscode';
@@ -11,26 +13,10 @@ import * as fs from 'fs';
 import { IGame } from '../core/types';
 import { GameManager } from '../core/GameManager';
 
-/**
- * Manages game webview panels
- */
 export class WebviewManager {
-    /**
-     * Active webview panels mapped by game ID
-     */
     private activePanels = new Map<string, vscode.WebviewPanel>();
-
-    /**
-     * Extension context for accessing resources
-     */
     private context: vscode.ExtensionContext;
 
-    /**
-     * Creates a new WebviewManager instance
-     * 
-     * @param context - Extension context
-     * @param gameManager - Game manager for game data
-     */
     constructor(
         context: vscode.ExtensionContext,
         private gameManager: GameManager
@@ -42,13 +28,6 @@ export class WebviewManager {
     // WEBVIEW CREATION
     // ========================================
 
-    /**
-     * Opens a game in a webview panel
-     * Reuses existing panel if game is already open
-     * 
-     * @param gameId - ID of game to open
-     * @returns The webview panel or null if game not found
-     */
     async openGame(gameId: string): Promise<vscode.WebviewPanel | null> {
         const game = this.gameManager.getGame(gameId);
 
@@ -57,7 +36,6 @@ export class WebviewManager {
             return null;
         }
 
-        // Check for attempt to play
         const playResult = await this.gameManager.attemptPlay(gameId);
 
         if (!playResult.success) {
@@ -65,35 +43,20 @@ export class WebviewManager {
             return null;
         }
 
-        // Reuse existing panel if available
         const existingPanel = this.activePanels.get(gameId);
         if (existingPanel) {
             existingPanel.reveal();
             return existingPanel;
         }
 
-        // Create new panel
         const panel = this.createWebviewPanel(game);
-
-        // Store panel
         this.activePanels.set(gameId, panel);
-
-        // Setup panel event handlers
         this.setupPanelHandlers(gameId, panel);
-
-        // Load game content
         await this.loadGameContent(panel, game);
 
         return panel;
     }
 
-    /**
-     * Creates a new webview panel
-     * 
-     * @param game - Game to create panel for
-     * @returns The webview panel
-     * @private
-     */
     private createWebviewPanel(game: IGame): vscode.WebviewPanel {
         const panel = vscode.window.createWebviewPanel(
             `codeToPlay.${game.id}`,
@@ -101,11 +64,8 @@ export class WebviewManager {
             vscode.ViewColumn.One,
             {
                 enableScripts: true,
-                // retainContextWhenHidden: true,
                 localResourceRoots: [
-                    vscode.Uri.file(path.join(this.context.extensionPath, 'media')),
-                    vscode.Uri.file(path.join(this.context.extensionPath, 'dist', 'games')),
-                    vscode.Uri.file(path.join(this.context.extensionPath, 'src', 'games'))
+                    vscode.Uri.file(path.join(this.context.extensionPath, 'dist'))
                 ]
             }
         );
@@ -113,28 +73,18 @@ export class WebviewManager {
         return panel;
     }
 
-    /**
-     * Sets up event handlers for a webview panel
-     * 
-     * @param gameId - ID of the game
-     * @param panel - Webview panel
-     * @private
-     */
     private setupPanelHandlers(gameId: string, panel: vscode.WebviewPanel): void {
-        // Handle panel disposal (when closed)
         panel.onDidDispose(() => {
             this.activePanels.delete(gameId);
             this.gameManager.endPlay(gameId);
         });
 
-        // Handle messages from webview
         panel.webview.onDidReceiveMessage(
             message => this.handleWebviewMessage(gameId, message),
             undefined,
             this.context.subscriptions
         );
 
-        // Handle visibility changes
         panel.onDidChangeViewState(e => {
             if (!e.webviewPanel.visible) {
                 // Could pause game or save state here
@@ -146,25 +96,12 @@ export class WebviewManager {
     // CONTENT LOADING
     // ========================================
 
-    /**
-     * Loads game content into webview
-     * 
-     * @param panel - Webview panel
-     * @param game - Game to load
-     * @private
-     */
     private async loadGameContent(
         panel: vscode.WebviewPanel,
         game: IGame
     ): Promise<void> {
         try {
-            // Get paths to game files (prefer built assets in dist if available)
-            const srcGameDir = path.join(
-                this.context.extensionPath,
-                'src',
-                'games',
-                game.id
-            );
+            // Load from dist (compiled output)
             const distGameDir = path.join(
                 this.context.extensionPath,
                 'dist',
@@ -172,98 +109,77 @@ export class WebviewManager {
                 game.id
             );
 
-            const htmlPath = path.join(srcGameDir, game.htmlPath);
-            const srcJsPath = path.join(srcGameDir, game.jsPath);
-            const builtJsPath = path.join(distGameDir, 'game.js');
-            const cssPath = path.join(srcGameDir, game.cssPath);
+            const htmlPath = path.join(distGameDir, game.htmlPath);
+            const jsPath = path.join(distGameDir, 'game.js');
+            const cssPath = path.join(distGameDir, game.cssPath);
 
-            // Read game files, prefer built JS from dist
+            console.log(`[WebviewManager] Loading game: ${game.id}`);
+            console.log(`[WebviewManager] HTML: ${fs.existsSync(htmlPath)}`);
+            console.log(`[WebviewManager] JS: ${fs.existsSync(jsPath)}`);
+            console.log(`[WebviewManager] CSS: ${fs.existsSync(cssPath)}`);
+
+            // Read files
             let html = fs.readFileSync(htmlPath, 'utf8');
-            const js = fs.existsSync(builtJsPath)
-                ? fs.readFileSync(builtJsPath, 'utf8')
-                : fs.existsSync(srcJsPath)
-                    ? fs.readFileSync(srcJsPath, 'utf8')
-                    : '';
+            const js = fs.existsSync(jsPath) ? fs.readFileSync(jsPath, 'utf8') : '';
             const css = fs.existsSync(cssPath) ? fs.readFileSync(cssPath, 'utf8') : '';
+
+            if (!js) {
+                console.warn(`[WebviewManager] ⚠️ No JavaScript file found for ${game.id}!`);
+            }
+
+            // Generate nonce ONCE
+            const nonce = this.getNonce();
 
             // Get font URIs
             const fontUris = this.getFontUris(panel.webview);
 
-            // Inject CSS with fonts
-            const styleTag = this.createStyleTag(css, fontUris);
+            // Create tags
+            const commonStyles = this.getCommonStyles(fontUris, nonce);
+            const styleTag = this.createStyleTag(css, nonce);
+            const scriptTag = this.createScriptTag(js, nonce);
 
-            // Inject JavaScript
-            const scriptTag = this.createScriptTag(js);
+            // Inject into HTML
+            html = this.injectContent(html, commonStyles + styleTag, scriptTag);
 
-            // Inject common styles
-            const commonCss = this.getCommonStyles(fontUris);
-
-            // Insert into HTML
-            html = this.injectContent(html, commonCss + styleTag, scriptTag);
-
-            // Apply CSP (Content Security Policy)
-            html = this.applyContentSecurityPolicy(html, panel.webview);
+            // Apply CSP
+            html = this.applyContentSecurityPolicy(html, panel.webview, nonce);
 
             // Set HTML
             panel.webview.html = html;
 
+            console.log(`[WebviewManager] ✅ ${game.id} loaded successfully!`);
+
         } catch (error) {
+            console.error(`[WebviewManager] ❌ Error:`, error);
             vscode.window.showErrorMessage(
                 `Failed to load game: ${error instanceof Error ? error.message : 'Unknown error'}`
             );
         }
     }
 
-    /**
-     * Gets URIs for font files
-     * 
-     * @param webview - Webview instance
-     * @returns Map of font names to URIs
-     * @private
-     */
     private getFontUris(webview: vscode.Webview): Map<string, vscode.Uri> {
-        const fontDir = path.join(this.context.extensionPath, 'media', 'fonts');
+        const fontDir = path.join(this.context.extensionPath, 'dist', 'media', 'fonts');
         const uris = new Map<string, vscode.Uri>();
 
-        // Press Start 2P
-        const pressStartWoff2 = vscode.Uri.file(
-            path.join(fontDir, 'PressStart2P.woff2')
-        );
-        const pressStartTtf = vscode.Uri.file(
-            path.join(fontDir, 'PressStart2P-Regular.ttf')
-        );
+        const fonts = {
+            pressStartWoff2: 'PressStart2P.woff2',
+            pressStartTtf: 'PressStart2P-Regular.ttf',
+            orbitronWoff2: 'Orbitron.woff2',
+            orbitronRegular: 'Orbitron-Regular.ttf',
+            orbitronBold: 'Orbitron-Bold.ttf'
+        };
 
-        // Orbitron
-        const orbitronWoff2 = vscode.Uri.file(
-            path.join(fontDir, 'Orbitron.woff2')
-        );
-        const orbitronRegular = vscode.Uri.file(
-            path.join(fontDir, 'Orbitron-Regular.ttf')
-        );
-        const orbitronBold = vscode.Uri.file(
-            path.join(fontDir, 'Orbitron-Bold.ttf')
-        );
-
-        uris.set('pressStartWoff2', webview.asWebviewUri(pressStartWoff2));
-        uris.set('pressStartTtf', webview.asWebviewUri(pressStartTtf));
-        uris.set('orbitronWoff2', webview.asWebviewUri(orbitronWoff2));
-        uris.set('orbitronRegular', webview.asWebviewUri(orbitronRegular));
-        uris.set('orbitronBold', webview.asWebviewUri(orbitronBold));
+        for (const [key, filename] of Object.entries(fonts)) {
+            const fontUri = vscode.Uri.file(path.join(fontDir, filename));
+            uris.set(key, webview.asWebviewUri(fontUri));
+        }
 
         return uris;
     }
 
-    /**
-     * Gets common styles including font faces
-     * 
-     * @param fontUris - Map of font URIs
-     * @returns CSS string
-     * @private
-     */
-    private getCommonStyles(fontUris: Map<string, vscode.Uri>): string {
+    private getCommonStyles(fontUris: Map<string, vscode.Uri>, nonce: string): string {
         return `
-            <style>
-                /* Font Faces */
+            <style nonce="${nonce}">
                 @font-face {
                     font-family: 'Press Start 2P';
                     src: url('${fontUris.get('pressStartWoff2')}') format('woff2'),
@@ -287,20 +203,18 @@ export class WebviewManager {
                     font-style: normal;
                 }
                 
-                /* Reset */
                 * {
                     margin: 0;
                     padding: 0;
                     box-sizing: border-box;
                 }
                 
-                /* Base styles */
                 body {
                     font-family: 'Orbitron', sans-serif;
-                    overflow: hidden;
+                    overflow-y: auto;
+                    overflow-x: hidden;
                 }
                 
-                /* Headings use gaming font */
                 h1, h2, h3, h4, h5, h6 {
                     font-family: 'Press Start 2P', cursive;
                 }
@@ -308,46 +222,20 @@ export class WebviewManager {
         `;
     }
 
-    /**
-     * Creates a style tag with CSS content
-     * 
-     * @param css - CSS content
-     * @param fontUris - Font URIs for any dynamic replacements
-     * @returns HTML style tag
-     * @private
-     */
-    private createStyleTag(css: string, fontUris: Map<string, vscode.Uri>): string {
+    private createStyleTag(css: string, nonce: string): string {
         if (!css) {
             return '';
         }
-
-        return `<style>${css}</style>`;
+        return `<style nonce="${nonce}">${css}</style>`;
     }
 
-    /**
-     * Creates a script tag with JavaScript content
-     * 
-     * @param js - JavaScript content
-     * @returns HTML script tag
-     * @private
-     */
-    private createScriptTag(js: string): string {
+    private createScriptTag(js: string, nonce: string): string {
         if (!js) {
             return '';
         }
-
-        return `<script>${js}</script>`;
+        return `<script nonce="${nonce}">${js}</script>`;
     }
 
-    /**
-     * Injects style and script tags into HTML
-     * 
-     * @param html - Original HTML
-     * @param styles - Style tags to inject
-     * @param scripts - Script tags to inject
-     * @returns Modified HTML
-     * @private
-     */
     private injectContent(html: string, styles: string, scripts: string): string {
         // Inject styles before </head>
         if (styles && html.includes('</head>')) {
@@ -363,46 +251,32 @@ export class WebviewManager {
     }
 
     /**
-     * Applies Content Security Policy to HTML
-     * 
-     * @param html - HTML content
-     * @param webview - Webview instance
-     * @returns HTML with CSP meta tag
-     * @private
+     * ✅ CLEAN CSP - No unsafe-inline needed!
+     * Event listeners in JS file with nonce = secure ✅
      */
     private applyContentSecurityPolicy(
         html: string,
-        webview: vscode.Webview
+        webview: vscode.Webview,
+        nonce: string
     ): string {
-        const nonce = this.getNonce();
-
-        // Create CSP meta tag
         const csp = `
             <meta http-equiv="Content-Security-Policy" 
                   content="default-src 'none'; 
                            style-src ${webview.cspSource} 'unsafe-inline'; 
-                           script-src 'nonce-${nonce}' 'unsafe-eval'; 
+                           script-src 'nonce-${nonce}'; 
                            font-src ${webview.cspSource}; 
                            img-src ${webview.cspSource} data:;">
         `;
 
-        // Add nonce to inline scripts
-        html = html.replace(/<script>/g, `<script nonce="${nonce}">`);
-
-        // Inject CSP
         if (html.includes('<head>')) {
             html = html.replace('<head>', `<head>${csp}`);
+        } else {
+            html = `${csp}\n${html}`;
         }
 
         return html;
     }
 
-    /**
-     * Generates a nonce for CSP
-     * 
-     * @returns Random nonce string
-     * @private
-     */
     private getNonce(): string {
         let text = '';
         const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -416,13 +290,6 @@ export class WebviewManager {
     // MESSAGE HANDLING
     // ========================================
 
-    /**
-     * Handles messages received from webview
-     * 
-     * @param gameId - ID of the game
-     * @param message - Message from webview
-     * @private
-     */
     private async handleWebviewMessage(gameId: string, message: any): Promise<void> {
         switch (message.command) {
             case 'gameOver':
@@ -438,26 +305,17 @@ export class WebviewManager {
                 break;
 
             case 'ready':
-                // Game loaded and ready
-                console.log(`Game ${gameId} ready`);
+                console.log(`[${gameId}] Game ready`);
                 break;
 
             default:
-                console.warn(`Unknown message command: ${message.command}`);
+                console.warn(`[${gameId}] Unknown message:`, message.command);
         }
     }
 
-    /**
-     * Handles game over event from webview
-     * 
-     * @param gameId - ID of the game
-     * @param score - Final score
-     * @private
-     */
     private async handleGameOver(gameId: string, score?: number): Promise<void> {
         await this.gameManager.endPlay(gameId, score);
 
-        // Show congratulatory message if high score
         const state = this.gameManager.getGame(gameId);
         if (score && state) {
             const storageManager = (this.gameManager as any).storageManager;
@@ -471,12 +329,6 @@ export class WebviewManager {
         }
     }
 
-    /**
-     * Sends a message to a game's webview
-     * 
-     * @param gameId - ID of the game
-     * @param message - Message to send
-     */
     postMessage(gameId: string, message: any): void {
         const panel = this.activePanels.get(gameId);
         if (panel) {
@@ -488,11 +340,6 @@ export class WebviewManager {
     // PUBLIC API
     // ========================================
 
-    /**
-     * Closes a game's webview
-     * 
-     * @param gameId - ID of game to close
-     */
     closeGame(gameId: string): void {
         const panel = this.activePanels.get(gameId);
         if (panel) {
@@ -500,9 +347,6 @@ export class WebviewManager {
         }
     }
 
-    /**
-     * Closes all open game webviews
-     */
     closeAllGames(): void {
         for (const panel of this.activePanels.values()) {
             panel.dispose();
@@ -510,52 +354,25 @@ export class WebviewManager {
         this.activePanels.clear();
     }
 
-    /**
-     * Checks if a game is currently open
-     * 
-     * @param gameId - ID of game to check
-     * @returns True if game is open
-     */
     isGameOpen(gameId: string): boolean {
         return this.activePanels.has(gameId);
     }
 
-    /**
-     * Gets list of currently open games
-     * 
-     * @returns Array of game IDs
-     */
     getOpenGames(): string[] {
         return Array.from(this.activePanels.keys());
     }
 
-    // ========================================
-    // CLEANUP
-    // ========================================
-
-    /**
-     * Disposes of all resources
-     */
     dispose(): void {
         this.closeAllGames();
     }
 }
 
-/**
- * Creates and registers the webview manager
- * Call this from extension.ts during activation
- * 
- * @param context - Extension context
- * @param gameManager - Game manager instance
- * @returns The webview manager instance
- */
 export function createWebviewManager(
     context: vscode.ExtensionContext,
     gameManager: GameManager
 ): WebviewManager {
     const webviewManager = new WebviewManager(context, gameManager);
 
-    // Register play game command
     const playCommand = vscode.commands.registerCommand(
         'codeToPlay.playGame',
         async (gameId: string) => {

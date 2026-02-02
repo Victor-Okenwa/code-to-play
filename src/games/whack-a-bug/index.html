@@ -25,11 +25,7 @@
 
         <div class="difficulty-options">
           <!-- Easy Mode - Available -->
-          <div
-            class="difficulty-card active"
-            id="easyCard"
-            onclick="selectDifficulty('easy')"
-          >
+          <div class="difficulty-card active" id="easyCard">
             <div class="difficulty-header">
               <span class="difficulty-indicator">🟢</span>
               <span class="difficulty-name">EASY - Simple & Clean</span>
@@ -66,9 +62,7 @@
           </div>
         </div>
 
-        <button class="start-game-btn" onclick="startGameMode()">
-          Start Game
-        </button>
+        <button class="start-game-btn">Start Game</button>
       </div>
 
       <!-- Game Area (Hidden until game starts) -->
@@ -98,17 +92,13 @@
         <div class="game-over" id="gameOver">
           <h2>Time's Up!</h2>
           <p>Final Score: <span id="finalScore">0</span> bugs squashed</p>
-          <button class="btn" onclick="restartGame()">Play Again</button>
-          <button class="btn back-btn" onclick="backToMenu()">
-            Back to Menu
-          </button>
+          <button class="btn" data-action="restart">Play Again</button>
+          <button class="btn back-btn" data-action="back">Back to Menu</button>
         </div>
 
         <!-- Control button -->
         <div class="controls">
-          <button class="btn back-btn" onclick="backToMenu()">
-            Back to Menu
-          </button>
+          <button class="btn back-btn" data-action="back">Back to Menu</button>
         </div>
       </div>
 

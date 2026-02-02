@@ -5,8 +5,6 @@
  * Activates and deactivates the extension, setting up core components.
  */
 
-
-
 import * as vscode from 'vscode';
 import { StorageManager } from './core/StorageManager';
 import { CodeTracker } from './core/CodeTracker';
@@ -16,7 +14,6 @@ import { createStatusBar } from './ui/StatusBarManager';
 import { createWebviewManager } from './ui/WebViewManager';
 import { AllGames } from './games/registry';
 import { GameEvent } from './core/types';
-
 
 /** * Activates the extension
  * 
