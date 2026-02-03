@@ -5,7 +5,14 @@
  * Runs in VS Code webview with full type safety.
  */
 
-import vscode from 'vscode';
+// ========================================
+// DECLARE GLOBAL VSCODE API
+// This is injected by WebviewManager, not imported
+// ========================================
+
+declare const vscode: {
+    postMessage(message: any): void;
+};
 
 // ========================================
 // TYPE DEFINITIONS
@@ -253,12 +260,10 @@ function endGame(): void {
         updateScoreDisplay();
     }
 
-    showGameOverAlert();
+    // ✅ Send game over message to extension
+    sendGameOver(score);
 
-    (vscode as any).postMessage({
-        command: 'gameOver',
-        score
-    });
+    showGameOverAlert();
 
     setTimeout(() => {
         finalScoreElement.textContent = score.toString();
@@ -413,6 +418,26 @@ function updateTimerDisplay(): void {
         timerElement.classList.add('warning');
     } else {
         timerElement.classList.remove('warning');
+    }
+}
+
+// ========================================
+// VS CODE COMMUNICATION
+// ========================================
+
+/**
+ * Send game over message to VS Code extension
+ * This decrements the play counter
+ */
+function sendGameOver(finalScore: number): void {
+    try {
+        vscode.postMessage({
+            command: 'gameOver',
+            score: finalScore
+        });
+        console.log('[Whack-a-Bug] Game over message sent, score:', finalScore);
+    } catch (error) {
+        console.warn('[Whack-a-Bug] Could not send message:', error);
     }
 }
 

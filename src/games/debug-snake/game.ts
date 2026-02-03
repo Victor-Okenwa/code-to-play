@@ -1,13 +1,10 @@
 /**
  * game.ts - Debug Snake Game Logic
  * 
- * FIXED VERSION - Addresses:
- * 1. Grid lines not visible before game starts
- * 2. Game instantly ending when Start clicked
+ * Fixed version with proper VS Code API usage
+ * - No vscode imports (this runs in browser, not Node.js)
+ * - Uses global vscode variable injected by WebviewManager
  */
-
-
-import vscode from 'vscode';
 
 // ========================================
 // TYPE DEFINITIONS
@@ -22,6 +19,15 @@ interface Position {
     x: number;
     y: number;
 }
+
+// ========================================
+// DECLARE GLOBAL VSCODE API
+// This is injected by WebviewManager, not imported
+// ========================================
+
+declare const vscode: {
+    postMessage(message: any): void;
+};
 
 // ========================================
 // DOM ELEMENT REFERENCES
@@ -86,7 +92,7 @@ function init(): void {
     placeBug();
     setupEventListeners();
 
-    // ✅ FIX 1: Draw initial state so grid lines are visible
+    // Draw initial state so grid lines are visible
     drawInitialState();
 
     console.log('[Debug Snake] Initialization complete - grid should be visible');
@@ -111,10 +117,6 @@ function setupEventListeners(): void {
 // INITIAL STATE DRAWING
 // ========================================
 
-/**
- * ✅ FIX: Draw the initial state BEFORE game starts
- * This shows grid lines, the bug, and initial snake position
- */
 function drawInitialState(): void {
     console.log('[Debug Snake] Drawing initial state...');
 
@@ -127,13 +129,11 @@ function drawInitialState(): void {
     ctx.lineWidth = 1;
 
     for (let i = 0; i <= TILE_COUNT; i++) {
-        // Vertical lines
         ctx.beginPath();
         ctx.moveTo(i * GRID_SIZE, 0);
         ctx.lineTo(i * GRID_SIZE, canvas.height);
         ctx.stroke();
 
-        // Horizontal lines
         ctx.beginPath();
         ctx.moveTo(0, i * GRID_SIZE);
         ctx.lineTo(canvas.width, i * GRID_SIZE);
@@ -161,13 +161,11 @@ function drawInitialState(): void {
     ctx.fillStyle = gradient;
     ctx.fill();
 
-    // Shine effect
     ctx.beginPath();
     ctx.arc(centerX - radius / 3, centerY - radius / 3, radius / 4, 0, Math.PI * 2);
     ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
     ctx.fill();
 
-    // Draw the bug
     drawBug();
 
     console.log('[Debug Snake] Initial state drawn');
@@ -190,29 +188,22 @@ function startGame(): void {
     snakeLength = INITIAL_SNAKE_LENGTH;
     snakeX = INITIAL_SNAKE_X;
     snakeY = INITIAL_SNAKE_Y;
-
-    // ✅ FIX 2: Start with initial velocity so snake moves right away
-    velocityX = 1;  // Move right
+    velocityX = 1;
     velocityY = 0;
-
     score = 0;
     gameSpeed = INITIAL_SPEED;
     isPaused = false;
 
-    // Hide game over screens
     gameOverElement.classList.remove('show');
     gameOverAlert.classList.remove('show');
 
-    // Update UI
     updateScoreDisplay();
     updateSpeedDisplay();
     startBtn.style.display = 'none';
     pauseBtn.style.display = 'inline-block';
 
-    // Place bug
     placeBug();
 
-    // Start game loop
     isRunning = true;
     runGameLoop();
 
@@ -255,7 +246,6 @@ function restartGame(): void {
 function endGame(): void {
     console.log('[Debug Snake] Game over! Final score:', score);
 
-
     isRunning = false;
     isPaused = false;
 
@@ -270,13 +260,10 @@ function endGame(): void {
         updateScoreDisplay();
     }
 
+    // ✅ Send game over message to extension (no import needed!)
+    sendGameOver(score);
+
     showGameOverAlert();
-
-    (vscode as any).postMessage({
-        command: 'gameOver',
-        score
-    });
-
 
     setTimeout(() => {
         finalScoreElement.textContent = score.toString();
@@ -300,26 +287,21 @@ function showGameOverAlert(): void {
 // ========================================
 
 function update(): void {
-    // Move snake head
     snakeX += velocityX;
     snakeY += velocityY;
 
-    // Check wall collision
     if (snakeX < 0 || snakeX >= TILE_COUNT || snakeY < 0 || snakeY >= TILE_COUNT) {
         console.log('[Debug Snake] Wall collision!');
         endGame();
         return;
     }
 
-    // Add new head position
     snake.push({ x: snakeX, y: snakeY });
 
-    // Remove tail to maintain length
     while (snake.length > snakeLength) {
         snake.shift();
     }
 
-    // Check self collision
     for (let i = 0; i < snake.length - 1; i++) {
         if (snake[i].x === snakeX && snake[i].y === snakeY) {
             console.log('[Debug Snake] Self collision!');
@@ -328,7 +310,6 @@ function update(): void {
         }
     }
 
-    // Check bug collision
     if (snakeX === bugX && snakeY === bugY) {
         console.log('[Debug Snake] Bug caught! Score:', score + 1);
         score++;
@@ -349,22 +330,18 @@ function update(): void {
 // ========================================
 
 function draw(): void {
-    // Clear canvas
     ctx.fillStyle = '#1e1e1e';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Draw grid lines
     ctx.strokeStyle = '#2d2d2d';
     ctx.lineWidth = 1;
 
     for (let i = 0; i <= TILE_COUNT; i++) {
-        // Vertical lines
         ctx.beginPath();
         ctx.moveTo(i * GRID_SIZE, 0);
         ctx.lineTo(i * GRID_SIZE, canvas.height);
         ctx.stroke();
 
-        // Horizontal lines
         ctx.beginPath();
         ctx.moveTo(0, i * GRID_SIZE);
         ctx.lineTo(canvas.width, i * GRID_SIZE);
@@ -482,7 +459,6 @@ function placeBug(): void {
 
         validPosition = true;
 
-        // Check if bug overlaps with snake
         for (const segment of snake) {
             if (segment.x === bugX && segment.y === bugY) {
                 validPosition = false;
@@ -490,7 +466,6 @@ function placeBug(): void {
             }
         }
 
-        // Also check current head position
         if (bugX === snakeX && bugY === snakeY) {
             validPosition = false;
         }
@@ -558,6 +533,27 @@ function updateScoreDisplay(): void {
 function updateSpeedDisplay(): void {
     const level = Math.floor(score / BUGS_PER_SPEED_INCREASE) + 1;
     speedElement.textContent = level.toString();
+}
+
+// ========================================
+// VS CODE COMMUNICATION
+// ========================================
+
+/**
+ * ✅ Sends game over message to VS Code extension
+ * Uses the global vscode variable (no import needed!)
+ */
+function sendGameOver(finalScore: number): void {
+    try {
+        // vscode is available globally (injected by WebviewManager)
+        vscode.postMessage({
+            command: 'gameOver',
+            score: finalScore
+        });
+        console.log('[Debug Snake] ✅ Game over message sent, score:', finalScore);
+    } catch (error) {
+        console.warn('[Debug Snake] Could not send message:', error);
+    }
 }
 
 // ========================================

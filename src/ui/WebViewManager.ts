@@ -157,7 +157,6 @@ export class WebviewManager {
         return `<script nonce="${nonce}">
             // Make VS Code API globally available
             const vscode = acquireVsCodeApi();
-            console.log('[Webview] VS Code API ready');
         </script>`;
     }
 
@@ -324,10 +323,26 @@ export class WebviewManager {
     private async handleGameOver(gameId: string, score?: number): Promise<void> {
         console.log(`[WebviewManager] Calling endPlay for ${gameId}...`);
 
+        // Get current plays before decrementing
+        const playsBefore = this.gameManager.getPlaysRemaining(gameId);
+
         // This decrements the play counter!
         await this.gameManager.endPlay(gameId, score);
 
-        console.log(`[WebviewManager] ✅ Plays decremented`);
+        // Get plays after decrementing
+        const playsAfter = this.gameManager.getPlaysRemaining(gameId);
+
+        console.log(`[WebviewManager] ✅ Plays: ${playsBefore} → ${playsAfter}`);
+
+        // ✅ Show custom message when plays exhausted
+        if (playsAfter === 0) {
+            const config = (this.gameManager as any).config;
+            const linesToUnlock = config.unlock.linesToUnlock;
+
+            vscode.window.showInformationMessage(
+                `🎮 Your play allowance has been exhausted! Write ${linesToUnlock} lines of code to unlock more plays. Happy coding! 🚀`
+            );
+        }
 
         const state = this.gameManager.getGame(gameId);
         if (score && state) {
