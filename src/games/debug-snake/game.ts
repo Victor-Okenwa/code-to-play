@@ -43,6 +43,7 @@ const finalScoreElement = document.getElementById('finalScore') as HTMLElement;
 const startBtn = document.getElementById('startBtn') as HTMLButtonElement;
 const pauseBtn = document.getElementById('pauseBtn') as HTMLButtonElement;
 const restartBtn = document.getElementById('restartBtn') as HTMLButtonElement;
+const resetBtn = document.getElementById('resetBtn') as HTMLButtonElement;
 const gameOverAlert = document.getElementById('gameOverAlert') as HTMLElement;
 const alertScore = document.getElementById('alertScore') as HTMLElement;
 
@@ -95,7 +96,9 @@ function init(): void {
     // Draw initial state so grid lines are visible
     drawInitialState();
 
-    console.log('[Debug Snake] Initialization complete - grid should be visible');
+    if (highScore > 0 && resetBtn) {
+        resetBtn.style.display = 'inline-block';
+    }
 }
 
 function loadHighScore(): void {

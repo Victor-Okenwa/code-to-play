@@ -441,6 +441,24 @@ function sendGameOver(finalScore: number): void {
     }
 }
 
+/**
+ * Resets the high score to 0
+ */
+function resetHighScore(): void {
+    if (isPlaying) {
+        console.warn('Cannot reset high score while game is running');
+        return;
+    }
+
+    if (confirm('Are you sure you want to reset your high score? This cannot be undone.')) {
+        highScore = 0;
+        saveHighScore();
+        updateScoreDisplay();
+        console.log('✅ High score reset');
+    }
+}
+
+
 // ========================================
 // EVENT LISTENERS - NO INLINE ONCLICK
 // ========================================
@@ -486,6 +504,11 @@ function setupButtons(): void {
     backButtons.forEach(btn => {
         btn.addEventListener('click', backToMenu);
     });
+    // Reset high score button
+    const resetHighScoreBtn = document.getElementById('resetHighScoreBtn') as HTMLButtonElement;
+    if (resetHighScoreBtn) {
+        resetHighScoreBtn.addEventListener('click', resetHighScore);
+    }
 
     console.log('[Whack-a-Bug] ✅ All event listeners attached');
 }
