@@ -3,3 +3,11 @@ dist
 node_modules
 .vscode-test/
 *.vsix
+
+# Ignore all source files except those in dist
+pnpm-lock,yaml
+.vscode-test.mjs
+.vscode/
+
+
+

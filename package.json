@@ -35,6 +35,20 @@
         }
       ]
     },
+    "menus": {
+      "view/title": [
+        {
+          "command": "codeToPlay.viewStats",
+          "when": "view == codeToPlayGames",
+          "group": "actions@1"
+        },
+        {
+          "command": "codeToPlay.exportData",
+          "when": "view == codeToPlayGames",
+          "group": "actions@2"
+        }
+      ]
+    },
     "commands": [
       {
         "command": "codeToPlay.playGame",
@@ -118,6 +132,7 @@
     "copyfiles": "^2.4.1",
     "esbuild": "^0.19.0",
     "eslint": "^9.32.0",
+    "ovsx": "^0.8.3",
     "rimraf": "^6.1.2",
     "typescript": "^5.9.2"
   }
