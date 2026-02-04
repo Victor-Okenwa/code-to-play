@@ -21,7 +21,7 @@ import { GameEvent } from './core/types';
  */
 
 export function activate(context: vscode.ExtensionContext) {
-	const isLocalDev = false;
+	const isLocalDev = context.extensionMode === vscode.ExtensionMode.Development;
 
 	if (isLocalDev) {
 		console.log('Code to Play extension is now active!');

@@ -9,5 +9,7 @@ pnpm-lock,yaml
 .vscode-test.mjs
 .vscode/
 
+.history
+
 
 
