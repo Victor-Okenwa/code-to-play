@@ -1,9 +1,14 @@
-# Change Log
+# Changelog
 
-All notable changes to the "code-to-play" extension will be documented in this file.
+## [0.0.1] - 2026-02-04
 
-Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
-
-## [Unreleased]
+### Added
 
 - Initial release
+- Debug Snake game
+- Whack-a-Bug game
+- Code tracking and unlock system
+- Statistics dashboard
+- Activity bar integration
+- Status bar integration
+- Configurable settings

@@ -10,9 +10,38 @@
     "email": "okenwavictor003@gmail.com"
   },
   "engines": {
-    "vscode": "^1.108.0"
+    "vscode": "^1.85.0"
+  },
+  "icon": "media/icons/extension-icon.png",
+  "galleryBanner": {
+    "color": "#1e1e1e",
+    "theme": "dark"
   },
   "license": "MIT",
+  "homepage": "https://github.com/Victor-Okenwa/code-to-play",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Victor-Okenwa/code-to-play"
+  },
+  "bugs": {
+    "url": "https://github.com/Victor-Okenwa/code-to-play/issues"
+  },
+  "keywords": [
+    "games",
+    "mini-games",
+    "productivity",
+    "break",
+    "coding",
+    "developer",
+    "play",
+    "siester",
+    "gamification",
+    "fun",
+    "code",
+    "burnout",
+    "focus",
+    "motivation"
+  ],
   "categories": [
     "Other"
   ],
@@ -86,24 +115,27 @@
         "category": "Code to Play"
       },
       {
+        "command": "codeToPlay.exportData",
+        "title": "Export Data",
+        "category": "Code to Play"
+      },
+      {
         "command": "codeToPlay.unlockAllGames",
         "title": "Unlock All Games",
-        "category": "Code to Play"
+        "category": "Code to Play",
+        "when": "codeToPlay:isDev"
       },
       {
         "command": "codeToPlay.lockAllGames",
         "title": "Lock All Games",
-        "category": "Code to Play"
+        "category": "Code to Play",
+        "when": "codeToPlay:isDev"
       },
       {
         "command": "codeToPlay.importData",
         "title": "Command to Import Data",
-        "category": "Code to Play"
-      },
-      {
-        "command": "codeToPlay.exportData",
-        "title": "Export Data",
-        "category": "Code to Play"
+        "category": "Code to Play",
+        "when": "codeToPlay:isDev"
       }
     ]
   },
@@ -118,7 +150,10 @@
     "lint": "eslint src --ext ts",
     "test": "vscode-test",
     "clean": "rimraf dist out",
-    "rebuild": "pnpm run clean && pnpm run compile"
+    "rebuild": "pnpm run clean && pnpm run compile",
+    "publish:vsce": "vsce publish",
+    "publish:ovsx": "ovsx publish",
+    "publish:both": "vsce publish && ovsx publish"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.10",

@@ -19,8 +19,13 @@ import { GameEvent } from './core/types';
  * 
  * @param context - VS Code extension context
  */
+
 export function activate(context: vscode.ExtensionContext) {
-	console.log('Code to Play extension is now active!');
+	const isLocalDev = false;
+
+	if (isLocalDev) {
+		console.log('Code to Play extension is now active!');
+	}
 
 	// ========================================
 	// INITIALIZE CORE COMPONENTS
@@ -34,6 +39,9 @@ export function activate(context: vscode.ExtensionContext) {
 
 	// Game manager to handle game logic
 	const gameManager = new GameManager(storageManager, codeTracker);
+
+	// Set the context key (controls the "when" clause)
+	vscode.commands.executeCommand('setContext', 'codeToPlay:isDev', isLocalDev);
 
 	// ========================================
 	// REGISTER GAMES
@@ -69,51 +77,11 @@ export function activate(context: vscode.ExtensionContext) {
 		vscode.commands.executeCommand("workbench.action.openSettings", "codeToPlay");
 	});
 
-
-	// Command to reset game state
-	const resetGameStateCommand = vscode.commands.registerCommand('codeToPlay.resetGame', async () => {
-		async (gameId: string) => {
-			if (!gameId) {
-				// Show quick pick to select game
-				const games = gameManager.getAllGames();
-				const items = games.map(game => ({
-					label: game.name,
-					description: game.description,
-					gameId: game.id
-				}));
-
-
-				const selected = await vscode.window.showQuickPick(items, {
-					placeHolder: 'Select a game to reset'
-				});
-
-				if (!selected) {
-					return;
-				}
-
-				gameId = selected.gameId;
-			}
-
-			// Confirm reset
-			const game = gameManager.getGame(gameId);
-			const confirm = await vscode.window.showWarningMessage(
-				`Reset ${game?.name}? This will clear your high score and plays`,
-				'Reset',
-				'Cancel'
-			);
-
-			if (confirm === 'Reset') {
-				await gameManager.resetGame(gameId);
-				vscode.window.showInformationMessage(`${game?.name} has been reset.`);
-			}
-		};
-	});
-
 	// Command to reset all games
 	const resetAllGamesCommand = vscode.commands.registerCommand('codeToPlay.resetAllGames', async () => {
 		// Confirm reset
 		const confirm = await vscode.window.showWarningMessage(
-			`Reset all games? This will clear all high scores and plays.`,
+			`Reset all games? This will clear all high scores.`,
 			'Reset All',
 			'Cancel'
 		);
@@ -165,28 +133,36 @@ export function activate(context: vscode.ExtensionContext) {
 	});
 
 
-
-
-
 	// ========================================
 	// TESTING / DEBUGGING COMMANDS
 	// ========================================
 
 	// Command to unlock games (for testing and debugging)
 	const unlockAllGames = vscode.commands.registerCommand('codeToPlay.unlockAllGames', async () => {
-		await gameManager.unlockAllGames();
+		if (!isLocalDev) {
+			return;
+		}
 
+		await gameManager.unlockAllGames();
 		vscode.window.showInformationMessage(`All games has been unlocked and number of plays reset! Enjoy playing!`);
 	});
 
 	// Command to lock games (for testing and debugging)
 	const lockAllGames = vscode.commands.registerCommand('codeToPlay.lockAllGames', async () => {
+		if (!isLocalDev) {
+			return;
+		}
+
 		await gameManager.lockAllGames();
 		vscode.window.showInformationMessage(`All games has been locked`);
 	});
 
 	// Command to import data
 	const importDataCommand = vscode.commands.registerCommand('codeToPlay.importData', async () => {
+		if (!isLocalDev) {
+			return;
+		}
+
 		const uris = await vscode.window.showOpenDialog({
 			canSelectFiles: true,
 			canSelectFolders: false,
@@ -205,6 +181,50 @@ export function activate(context: vscode.ExtensionContext) {
 				vscode.window.showErrorMessage('Failed to import Code to Play data. Please ensure the file is valid.');
 			}
 		}
+	});
+
+
+	// Command to reset game state
+	const resetGameStateCommand = vscode.commands.registerCommand('codeToPlay.resetGame', async () => {
+		if (!isLocalDev) {
+			return;
+		}
+
+		async (gameId: string) => {
+			if (!gameId) {
+				// Show quick pick to select game
+				const games = gameManager.getAllGames();
+				const items = games.map(game => ({
+					label: game.name,
+					description: game.description,
+					gameId: game.id
+				}));
+
+
+				const selected = await vscode.window.showQuickPick(items, {
+					placeHolder: 'Select a game to reset'
+				});
+
+				if (!selected) {
+					return;
+				}
+
+				gameId = selected.gameId;
+			}
+
+			// Confirm reset
+			const game = gameManager.getGame(gameId);
+			const confirm = await vscode.window.showWarningMessage(
+				`Reset ${game?.name}? This will clear your high score and plays`,
+				'Reset',
+				'Cancel'
+			);
+
+			if (confirm === 'Reset') {
+				await gameManager.resetGame(gameId);
+				vscode.window.showInformationMessage(`${game?.name} has been reset.`);
+			}
+		};
 	});
 
 	// ========================================
@@ -273,13 +293,13 @@ export function activate(context: vscode.ExtensionContext) {
 		openSettingsCommand,
 		viewStatsCommand,
 		exportDataCommand,
-
-		// Remove during publish
-		importDataCommand,
-		resetGameStateCommand,
 		resetAllGamesCommand,
+
+		// Admin Commands (in dev mode only)
 		unlockAllGames,
 		lockAllGames,
+		importDataCommand,
+		resetGameStateCommand
 	);
 
 }
