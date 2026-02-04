@@ -404,7 +404,21 @@ export class GameManager {
      */
     async unlockAllGames(): Promise<void> {
         // Reset global play state
+
+        const globalState: GlobalPlayState = {
+            isUnlocked: true,
+            playsRemaining: this.config.unlock.playsPerUnlock,
+            linesWritten: this.config.unlock.linesToUnlock
+        };
+
         await this.storageManager.resetGlobalPlayState();
+
+
+        this.eventEmitter.fire({
+            event: GameEvent.UNLOCKED,
+            gameId: '__global__',
+            data: globalState
+        });
     }
 
     /**
@@ -419,7 +433,7 @@ export class GameManager {
             linesWritten: 0
         };
 
-        await this.storageManager.saveGlobalPlayState(globalState);
+        await this.storageManager.updateGlobalPlayState(globalState);
 
         this.eventEmitter.fire({
             event: GameEvent.LOCKED,

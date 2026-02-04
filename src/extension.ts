@@ -149,22 +149,6 @@ export function activate(context: vscode.ExtensionContext) {
 		vscode.window.showInformationMessage(stats, { modal: true });
 	});
 
-	// Command to unlock games (for testing and debugging)
-	const unlockAllGames = vscode.commands.registerCommand('codeToPlay.unlockAllGames', async () => {
-		async () => {
-			vscode.window.showInformationMessage(`All games has been unlocked and number of plays reset! Enjoy playing!`);
-			await gameManager.unlockAllGames();
-		};
-	});
-
-	// Command to lock games (for testing and debugging)
-	const lockAllGames = vscode.commands.registerCommand('codeToPlay.lockAllGames', async () => {
-		async () => {
-			vscode.window.showInformationMessage(`All games has been locked`);
-			await gameManager.unlockAllGames();
-		};
-	});
-
 	// Command to export data
 	const exportDataCommand = vscode.commands.registerCommand('codeToPlay.exportData', async () => {
 		const data = storageManager.exportData();
@@ -178,6 +162,27 @@ export function activate(context: vscode.ExtensionContext) {
 			await vscode.workspace.fs.writeFile(uri, Buffer.from(data, 'utf8'));
 			vscode.window.showInformationMessage('Code to Play data exported successfully.');
 		}
+	});
+
+
+
+
+
+	// ========================================
+	// TESTING / DEBUGGING COMMANDS
+	// ========================================
+
+	// Command to unlock games (for testing and debugging)
+	const unlockAllGames = vscode.commands.registerCommand('codeToPlay.unlockAllGames', async () => {
+		await gameManager.unlockAllGames();
+
+		vscode.window.showInformationMessage(`All games has been unlocked and number of plays reset! Enjoy playing!`);
+	});
+
+	// Command to lock games (for testing and debugging)
+	const lockAllGames = vscode.commands.registerCommand('codeToPlay.lockAllGames', async () => {
+		await gameManager.lockAllGames();
+		vscode.window.showInformationMessage(`All games has been locked`);
 	});
 
 	// Command to import data
@@ -267,12 +272,12 @@ export function activate(context: vscode.ExtensionContext) {
 		webviewManager,
 		openSettingsCommand,
 		viewStatsCommand,
-		importDataCommand,
-		
+		exportDataCommand,
+
 		// Remove during publish
+		importDataCommand,
 		resetGameStateCommand,
 		resetAllGamesCommand,
-		exportDataCommand,
 		unlockAllGames,
 		lockAllGames,
 	);
