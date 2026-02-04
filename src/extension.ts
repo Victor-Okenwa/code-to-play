@@ -124,7 +124,6 @@ export function activate(context: vscode.ExtensionContext) {
 		};
 	});
 
-
 	// Command to view stats
 	const viewStatsCommand = vscode.commands.registerCommand('codeToPlay.viewStats', () => {
 		const totalLines = storageManager.getTotalLinesWritten();
@@ -150,32 +149,19 @@ export function activate(context: vscode.ExtensionContext) {
 		vscode.window.showInformationMessage(stats, { modal: true });
 	});
 
-	// Command to unlock game (for testind and debugging)
-	const unlockGameCommand = vscode.commands.registerCommand('codeToPlay.unlockGame', async () => {
-		async (gameId?: string) => {
-			if (!gameId) {
-				// Show quick pick to select game
-				const games = gameManager.getLockedGames();
-				const items = games.map(game => ({
-					label: game.name,
-					description: game.description,
-					gameId: game.id
-				}));
+	// Command to unlock games (for testing and debugging)
+	const unlockAllGames = vscode.commands.registerCommand('codeToPlay.unlockAllGames', async () => {
+		async () => {
+			vscode.window.showInformationMessage(`All games has been unlocked and number of plays reset! Enjoy playing!`);
+			await gameManager.unlockAllGames();
+		};
+	});
 
-				const selected = await vscode.window.showQuickPick(items, {
-					placeHolder: 'Select a game to unlock'
-				});
-
-				if (!selected) {
-					return;
-				}
-
-				gameId = selected.gameId;
-			}
-
-			await gameManager.unlockGame(gameId);
-			const game = gameManager.getGame(gameId);
-			vscode.window.showInformationMessage(`${game?.name} has been unlocked! Enjoy playing!`);
+	// Command to lock games (for testing and debugging)
+	const lockAllGames = vscode.commands.registerCommand('codeToPlay.lockAllGames', async () => {
+		async () => {
+			vscode.window.showInformationMessage(`All games has been locked`);
+			await gameManager.unlockAllGames();
 		};
 	});
 
@@ -280,12 +266,15 @@ export function activate(context: vscode.ExtensionContext) {
 		statusBar,
 		webviewManager,
 		openSettingsCommand,
+		viewStatsCommand,
+		importDataCommand,
+		
+		// Remove during publish
 		resetGameStateCommand,
 		resetAllGamesCommand,
-		viewStatsCommand,
-		unlockGameCommand,
 		exportDataCommand,
-		importDataCommand
+		unlockAllGames,
+		lockAllGames,
 	);
 
 }

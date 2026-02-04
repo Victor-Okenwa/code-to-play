@@ -398,24 +398,13 @@ export class GameManager {
     // ========================================
 
     /**
-     * Manually unlocks games (for testing/admin purposes)
+     * Manually unlocks all games and reset plays state (for testing/admin purposes)
      * 
      * @param gameId - ID of game to unlock (ignored, kept for compatibility)
      */
-    async unlockGame(gameId?: string): Promise<void> {
-        const globalState: GlobalPlayState = {
-            isUnlocked: true,
-            playsRemaining: this.config.unlock.playsPerUnlock,
-            linesWritten: 0
-        };
-
-        await this.storageManager.saveGlobalPlayState(globalState);
-
-        this.eventEmitter.fire({
-            event: GameEvent.UNLOCKED,
-            gameId: '__global__',
-            data: globalState
-        });
+    async unlockAllGames(): Promise<void> {
+        // Reset global play state
+        await this.storageManager.resetGlobalPlayState();
     }
 
     /**
@@ -423,7 +412,7 @@ export class GameManager {
      * 
      * @param gameId - ID of game to lock (ignored, kept for compatibility)
      */
-    async lockGame(gameId?: string): Promise<void> {
+    async lockAllGames(): Promise<void> {
         const globalState: GlobalPlayState = {
             isUnlocked: false,
             playsRemaining: 0,
@@ -456,9 +445,6 @@ export class GameManager {
         for (const game of this.games.values()) {
             await this.resetGame(game.id);
         }
-
-        // Reset global play state
-        await this.storageManager.resetGlobalPlayState();
     }
 
     /**

@@ -1,6 +1,6 @@
 /* ========================================
-           GLOBAL RESET
-           ======================================== */
+  GLOBAL RESET
+======================================== */
 * {
   margin: 0;
   padding: 0;
@@ -8,8 +8,8 @@
 }
 
 /* ========================================
-           BODY - VS Code Dark Theme
-           ======================================== */
+  BODY - VS Code Dark Theme
+======================================== */
 body {
   font-family: "Orbitron", "Segoe UI", sans-serif;
   background: linear-gradient(135deg, #1e1e1e 0%, #2d2d30 100%);
@@ -21,8 +21,8 @@ body {
 }
 
 /* ========================================
-           GAME CONTAINER
-           ======================================== */
+  GAME CONTAINER
+======================================== */
 .game-container {
   background: #252526;
   border-radius: 12px;
@@ -63,8 +63,8 @@ body {
 }
 
 /* ========================================
-           SCORE PANEL - Fixed from game-info
-           ======================================== */
+  SCORE PANEL - Fixed from game-info
+======================================== */
 .score-panel {
   display: flex;
   justify-content: space-between;
@@ -92,8 +92,13 @@ body {
 }
 
 /* ========================================
-           CANVAS
-           ======================================== */
+  CANVAS
+======================================== */
+
+.game-area {
+  position: relative;
+}
+
 #gameCanvas {
   background: #1e1e1e;
   border: 3px solid #3e3e42;
@@ -103,8 +108,8 @@ body {
 }
 
 /* ========================================
-           CONTROLS
-           ======================================== */
+  CONTROLS
+======================================== */
 .controls {
   margin-top: 20px;
   text-align: center;
@@ -134,8 +139,8 @@ body {
 }
 
 /* ========================================
-           GAME OVER SCREEN
-           ======================================== */
+  GAME OVER SCREEN
+======================================== */
 .game-over {
   display: none;
   text-align: center;
@@ -162,8 +167,8 @@ body {
 }
 
 /* ========================================
-           GAME OVER ALERT OVERLAY
-           ======================================== */
+  GAME OVER ALERT OVERLAY
+======================================== */
 .game-over-alert {
   position: fixed;
   top: 0;
@@ -220,8 +225,8 @@ body {
 }
 
 /* ========================================
-           INSTRUCTIONS
-           ======================================== */
+  INSTRUCTIONS
+======================================== */
 .instructions {
   margin-top: 20px;
   padding: 15px;

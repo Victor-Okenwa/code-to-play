@@ -38,15 +38,57 @@
     "commands": [
       {
         "command": "codeToPlay.playGame",
-        "title": "Play Game"
+        "title": "Play Game",
+        "category": "Code to Play"
       },
       {
         "command": "codeToPlay.refreshGames",
-        "title": "Refresh Games"
+        "title": "Refresh Games",
+        "category": "Code to Play"
       },
       {
         "command": "codeToPlay.showStatus",
         "title": "Show Game Status"
+      },
+      {
+        "command": "codeToPlay.openSettings",
+        "title": "Open Code to Play Settings",
+        "category": "Code to Play"
+      },
+      {
+        "command": "codeToPlay.resetGame",
+        "title": "Reset Game State",
+        "category": "Code to Play"
+      },
+      {
+        "command": "codeToPlay.resetAllGames",
+        "title": "Reset All Games",
+        "category": "Code to Play"
+      },
+      {
+        "command": "codeToPlay.viewStats",
+        "title": "View Stats",
+        "category": "Code to Play"
+      },
+      {
+        "command": "codeToPlay.unlockAllGames",
+        "title": "Unlock All Games",
+        "category": "Code to Play"
+      },
+      {
+        "command": "codeToPlay.lockAllGames",
+        "title": "Lock All Games",
+        "category": "Code to Play"
+      },
+      {
+        "command": "codeToPlay.importData",
+        "title": "Command to Import Data",
+        "category": "Code to Play"
+      },
+      {
+        "command": "codeToPlay.exportData",
+        "title": "Export Data",
+        "category": "Code to Play"
       }
     ]
   },
