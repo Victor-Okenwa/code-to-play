@@ -11,7 +11,16 @@ For example if there is an image subfolder under your extension project workspac
 
 \!\[feature X\]\(images/feature-x.png\)
 
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to fo
+
+
+## Installation
+
+1. Open VS Code Or any VS Code dependent IDE (e.g. cursor).
+2. Go to the Extensions view (`Ctrl+Shift+X` or `Cmd+Shift+X` on Mac).
+3. Search for "React Next.js Smart Snippets".
+4. Click Install.
+5. Reload the IDE if prompted.
 
 ## Requirements
 
