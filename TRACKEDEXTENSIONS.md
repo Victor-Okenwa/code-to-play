@@ -3,8 +3,6 @@
 This tool tracks and processes files with the following extensions.  
 The list is grouped by category for easier reading.
 
-Only **non-commented** extensions are actively tracked.
-
 ## Programming Languages
 
 - JavaScript & TypeScript family  

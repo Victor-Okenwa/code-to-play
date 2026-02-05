@@ -27,7 +27,7 @@ Play classic games with a coding twist:
 
 - Automatically counts meaningful lines of code
 - Excludes comments, blank lines, and trivial changes
-- Supports 13+ programming languages
+- Supports 13+ programming languages. [Click to check supported files](./TRACKEDEXTENSIONS.md)
 - Configurable file type tracking
 - Real-time progress updates
 
@@ -176,7 +176,7 @@ A: Yes! Everything runs locally. No internet required.
 A: No! Code to Play uses minimal resources and only tracks when you're actively coding.
 
 **Q: Why aren't my lines being counted?**  
-A: Check that your file type is in the tracked extensions list. Also ensure "Count Meaningful Lines Only" isn't excluding your code style.
+A: Check that your file type is in the [tracked extensions](./TRACKEDEXTENSIONS.md) list. Also ensure "Count Meaningful Lines Only" isn't excluding your code style.
 
 ---
 
@@ -226,3 +226,24 @@ This extension is licensed under the [MIT License](LICENSE).
 Special thanks to the font creators for making these available!
 
 ---
+
+## About the Author
+
+- Email: okenwavictor003@gmai.com
+
+- X: https://x.com/morse_code_001
+
+- LinkedIn: https://www.linkedin.com/in/victor-okenwa/
+
+- Support Me: Buy me a coffee on Patreon https://patreon.com/morse_code
+
+
+<div align="center">
+
+**Made with ❤️ by developers, for developers**
+
+[GitHub](https://github.com/yourusername/code-to-play) • [Report Issue](https://github.com/Victor-Okenwa/code-to-play/issues) • [Request Feature](https://github.com/Victor-Okenwa/code-to-play/issues/new)
+
+**Happy coding and gaming! 🎮💻**
+
+</div>
