@@ -16,7 +16,7 @@ Perfect for:
 - Tracking progress with automatic code line counting
 - Having fun while being productive
 - Reducing risk of burnout and stress
-  
+
 ![Game demonstration 2](./demo-assets/activity-bar.png)
 
 ## Features
@@ -47,7 +47,6 @@ Play classic games with a coding twist:
 ![Exhaust games](./demo-assets/exhaust%20plays.gif)
 ![Unlock games](./demo-assets/unlock-code-play.gif)
 
-
 ### High Score System
 
 - Track your best performances
@@ -71,6 +70,8 @@ Play classic games with a coding twist:
 - No internet required
 - No external API calls
 - Your code stays private
+
+![View stats](./demo-assets/view-stats.png)
 
 ## Installation
 
@@ -165,7 +166,7 @@ All data is stored locally using VS Code's storage API:
 A: Write code! Default is 100 meaningful lines = 5 plays. Watch the status bar for progress.
 
 **Q: What languages are supported?**  
-A: JavaScript, TypeScript, Python, Java, C/C++, C#, Go, Rust, PHP, Ruby, Swift, Kotlin, and more. Customize in settings.
+A: JavaScript, TypeScript, Python, Java, C/C++, C#, Go, Rust, PHP, Ruby, Swift, Kotlin, and more. [Click to check supported files](./TRACKEDEXTENSIONS.md)
 
 **Q: Can I adjust the unlock threshold?**  
 A: Yes! Settings → Code to Play → Adjust "Lines to Unlock" and "Plays Per Unlock"
@@ -215,7 +216,7 @@ No major issues currently reported.
 
 ## 📜 License
 
-This extension is licensed under the [MIT License](LICENSE).
+This extension is licensed under the [Apache License](LICENSE).
 
 ### Third-Party Assets
 
@@ -237,7 +238,6 @@ Special thanks to the font creators for making these available!
 - LinkedIn: https://www.linkedin.com/in/victor-okenwa/
 
 - Support Me: Buy me a coffee on Patreon https://patreon.com/morse_code
-
 
 <div align="center">
 
