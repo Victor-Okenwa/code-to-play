@@ -67,9 +67,9 @@ export const TRACKEDEXTENSION = [
     '.xhtml',
     '.xaml',
     '.opml',
-    '.org',
-    '.wiki',
-    '.txt',
+    // '.org',
+    // '.wiki',
+    // '.txt',
 
     // ---------- Styling / UI / Design ----------
     '.css',

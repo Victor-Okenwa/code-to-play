@@ -1,18 +1,75 @@
 # Code to Play - Unlock Games While You Code
 
-Turn coding into a game! Write code to unlock mini-games. Play Snake, 
+Turn coding into a game! Write code to unlock mini-games. Play Snake,
 Whack-a-Bug, and more as rewards for your productivity.
+
+## Why Code to Play?
+
+Coding sessions can be intense. Code to Play gamifies your workflow by rewarding your progress with classic mini-games. Write meaningful code, unlock plays, and enjoy guilt-free breaks—all within VS Code.
+Perfect for:
+
+- Staying motivated during long coding sessions
+- Taking mental breaks without context switching
+- Tracking progress with automatic code line counting
+- Having fun while being productive
+- Reducing risk of burnout and stress
 
 ## Features
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
+### Multiple Mini-Games
 
-For example if there is an image subfolder under your extension project workspace:
+Play classic games with a coding twist:
 
-\!\[feature X\]\(images/feature-x.png\)
+- **Debug Snake** - Catch bugs (ladybugs) and grow your debugging skills
+- **Whack-a-Bug** - Click bugs before they escape in this fast-paced game
 
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to fo
+### Smart Code Tracking
 
+- Automatically counts meaningful lines of code
+- Excludes comments, blank lines, and trivial changes
+- Supports 13+ programming languages
+- Configurable file type tracking
+- Real-time progress updates
+
+### Progressive Unlock System
+
+- Write code to unlock plays
+- Default: 100 lines = 5 plays (fully customizable)
+- Global play counter shared across all games
+- Visual progress in status bar
+- Unlock notifications to celebrate milestones
+
+### High Score System
+
+- Track your best performances
+- Local storage - your data stays private
+- Per-game high score tracking
+- Reset individual high scores anytime
+- Compete against yourself!
+
+### Detailed Statistics
+
+- Beautiful stats dashboard
+- Total lines written
+- Total plays across all games
+- Per-game breakdowns
+- Export your data as JSON
+
+### Fully Customizable
+
+- Adjust unlock thresholds
+- Choose which file types to track
+- Enable/disable notifications
+- Fine-tune debounce timing
+- Works your way!
+
+### Privacy First
+
+- **Zero telemetry** - no data collection
+- All data stored locally
+- No internet required
+- No external API calls
+- Your code stays private
 
 ## Installation
 
@@ -22,60 +79,150 @@ For example if there is an image subfolder under your extension project workspac
 4. Click Install.
 5. Reload the IDE if prompted.
 
-## Requirements
+### Getting Started in 3 Steps
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+#### Start Coding
 
-## Extension Settings
+Open any supported code file (`.ts`, `.js`, `.py`, `.java`, etc.) and start writing code.
 
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
+#### Watch Your Progress
 
-For example:
+Check the status bar (bottom of VS Code):
 
-This extension contributes the following settings:
+- **Locked:** `45/100 lines` - Keep coding!
+- **Unlocked:** `5 plays` - Ready to play!
 
-- `myExtension.enable`: Enable/disable this extension.
-- `myExtension.thing`: Set to `blah` to do something.
+#### 3️⃣ Play Games!
 
-## Known Issues
-
-Calling out known issues can help limit users opening duplicate issues against your extension.
-
-## Release Notes
-
-Users appreciate release notes as you update your extension.
-
-### 1.0.0
-
-Initial release of ...
-
-### 1.0.1
-
-Fixed issue #.
-
-### 1.1.0
-
-Added features X, Y, and Z.
+1. Click the 🎮 **Code to Play** icon in the Activity Bar (left sidebar)
+2. Choose a game from the list
+3. Click to play and enjoy your break!
 
 ---
 
-## Following extension guidelines
+## 🔧 How It Works
 
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
+### Code Tracking Algorithm
 
-- [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
+Code to Play uses a smart algorithm to count only meaningful code:
 
-## Working with Markdown
+**✅ Counted as Code:**
 
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
+- Function and class declarations
+- Variable assignments and declarations
+- Control flow statements (if, for, while, etc.)
+- Method calls and expressions
+- Import/export statements
 
-- Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-- Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-- Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
+**❌ Not Counted:**
 
-## For more information
+- Comments (single-line `//` and multi-line `/* */`)
+- JSDoc comments (`/** */`)
+- Blank lines
+- Lines with only braces `{` `}`
+- Whitespace-only lines
 
-- [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-- [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
+**Language Support:**
+JavaScript, TypeScript, Python, Java, C, C++, C#, Go, Rust, PHP, Ruby, Swift, Kotlin, and more!
 
-**Enjoy!**
+### Unlock Flow
+
+```
+Write Code → Track Lines → Reach Threshold → Unlock Games
+    ↓
+  Play → Use 1 Play → Repeat
+    ↓
+  No Plays Left → Lock → Write More Code
+```
+
+### Data Storage
+
+All data is stored locally using VS Code's storage API:
+
+**Stored Data:**
+
+- High scores per game
+- Total plays per game
+- Total lines written
+- Current unlock status
+- Plays remaining
+
+**Privacy:**
+
+- No data sent to external servers
+- No telemetry or tracking
+- Everything stays on your machine
+- Uninstall removes all data
+
+---
+
+## ❓ Frequently Asked Questions
+
+### General
+
+**Q: How do I unlock games?**  
+A: Write code! Default is 100 meaningful lines = 5 plays. Watch the status bar for progress.
+
+**Q: What languages are supported?**  
+A: JavaScript, TypeScript, Python, Java, C/C++, C#, Go, Rust, PHP, Ruby, Swift, Kotlin, and more. Customize in settings.
+
+**Q: Can I adjust the unlock threshold?**  
+A: Yes! Settings → Code to Play → Adjust "Lines to Unlock" and "Plays Per Unlock"
+
+**Q: Do games work offline?**  
+A: Yes! Everything runs locally. No internet required.
+
+**Q: Does this slow down VS Code?**  
+A: No! Code to Play uses minimal resources and only tracks when you're actively coding.
+
+**Q: Why aren't my lines being counted?**  
+A: Check that your file type is in the tracked extensions list. Also ensure "Count Meaningful Lines Only" isn't excluding your code style.
+
+---
+
+## 🗺️ Roadmap
+
+### Coming Soon
+
+- 🎮 More games (Tetris, Space Invaders, Pong)
+- 🎚️ Difficulty levels for existing games
+- 🏅 Achievements system
+- 📊 More detailed statistics
+- 🎨 Custom themes
+- 🔊 Sound effects (toggleable)
+- 📅 Daily challenges
+
+### Under Consideration
+
+- Multiplayer leaderboards (opt-in)
+- Team competitions
+- Custom game creation API
+- Integration with GitHub contributions
+- Online games.
+
+**Want to suggest a feature?** [Open an issue!](https://github.com/Victor-Okenwa/code-to-play/issues)
+
+---
+
+## 🐛 Known Issues
+
+No major issues currently reported.
+
+**Report a bug:** [GitHub Issues](https://github.com/Victor-Okenwa/code-to-play/issues)
+
+---
+
+## 📜 License
+
+This extension is licensed under the [MIT License](LICENSE).
+
+### Third-Party Assets
+
+**Fonts:**
+
+- **Press Start 2P** by CodeMan38 - [SIL Open Font License](https://scripts.sil.org/OFL)
+- **Orbitron** by Matt McInerney - [SIL Open Font License](https://scripts.sil.org/OFL)
+
+Special thanks to the font creators for making these available!
+
+---

@@ -36,6 +36,7 @@ azure-pipelines.yml
 !README.md
 !CHANGELOG.md
 !LICENSE
+!TRACKEDEXTENSIONS.md
 vsc-extension-quickstart.md
 
 # Environment
