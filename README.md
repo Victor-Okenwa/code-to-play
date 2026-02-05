@@ -3,6 +3,9 @@
 Turn coding into a game! Write code to unlock mini-games. Play Snake,
 Whack-a-Bug, and more as rewards for your productivity.
 
+![Game demonstration 1](./demo-assets/debug-snake.png)
+![Game demonstration 2](./demo-assets/wack-a-bug-play.png)
+
 ## Why Code to Play?
 
 Coding sessions can be intense. Code to Play gamifies your workflow by rewarding your progress with classic mini-games. Write meaningful code, unlock plays, and enjoy guilt-free breaks—all within VS Code.
@@ -13,6 +16,8 @@ Perfect for:
 - Tracking progress with automatic code line counting
 - Having fun while being productive
 - Reducing risk of burnout and stress
+  
+![Game demonstration 2](./demo-assets/activity-bar.png)
 
 ## Features
 
@@ -28,16 +33,20 @@ Play classic games with a coding twist:
 - Automatically counts meaningful lines of code
 - Excludes comments, blank lines, and trivial changes
 - Supports 13+ programming languages. [Click to check supported files](./TRACKEDEXTENSIONS.md)
-- Configurable file type tracking
+- File type tracking
 - Real-time progress updates
 
 ### Progressive Unlock System
 
 - Write code to unlock plays
-- Default: 100 lines = 5 plays (fully customizable)
+- Default: 100 lines = 5 plays.
 - Global play counter shared across all games
 - Visual progress in status bar
 - Unlock notifications to celebrate milestones
+
+![Exhaust games](./demo-assets/exhaust%20plays.gif)
+![Unlock games](./demo-assets/unlock-code-play.gif)
+
 
 ### High Score System
 
@@ -54,14 +63,6 @@ Play classic games with a coding twist:
 - Total plays across all games
 - Per-game breakdowns
 - Export your data as JSON
-
-### Fully Customizable
-
-- Adjust unlock thresholds
-- Choose which file types to track
-- Enable/disable notifications
-- Fine-tune debounce timing
-- Works your way!
 
 ### Privacy First
 
