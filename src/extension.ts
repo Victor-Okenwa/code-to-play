@@ -14,6 +14,7 @@ import { createStatusBar } from './ui/StatusBarManager';
 import { createWebviewManager } from './ui/WebViewManager';
 import { AllGames } from './games/registry';
 import { GameEvent } from './core/types';
+import { showDbState } from './utils';
 
 /** * Activates the extension
  * 
@@ -47,7 +48,6 @@ export function activate(context: vscode.ExtensionContext) {
 	// REGISTER GAMES
 	// ========================================
 
-	console.log(`Registering ${AllGames.length} games...`);
 	gameManager.registerGames(AllGames);
 
 	AllGames.map(game => {
@@ -68,6 +68,7 @@ export function activate(context: vscode.ExtensionContext) {
 	// Webview manager for game UIs
 	const webviewManager = createWebviewManager(context, gameManager);
 
+	// showDbState(context);
 	// ========================================
 	// REGISTER COMMANDS
 	// ========================================
@@ -96,7 +97,7 @@ export function activate(context: vscode.ExtensionContext) {
 	const viewStatsCommand = vscode.commands.registerCommand('codeToPlay.viewStats', () => {
 		const totalLines = storageManager.getTotalLinesWritten();
 		const games = gameManager.getAllGames();
-		const unlocked = games.filter(game => gameManager.isGameUnlocked(game.id)).length;
+		const unlocked = games.filter(() => gameManager.isGameUnlocked()).length;
 
 		let stats = `Code to Play Statistics\n\n`;
 		stats += `Total Lines of Code Written: ${totalLines}\n`;
@@ -105,9 +106,9 @@ export function activate(context: vscode.ExtensionContext) {
 		stats += `Games:\n`;
 		games.forEach(game => {
 			const state = storageManager.getGameState(game.id);
-			const unlocked = gameManager.isGameUnlocked(game.id);
-			const playsRemaining = gameManager.getPlaysRemaining(game.id);
-			const status = unlocked ? '✅' : '🔒';
+			const unlocked = gameManager.isGameUnlocked();
+			const playsRemaining = gameManager.getPlaysRemaining();
+			const status = unlocked ? '✅' : '$(Play)';
 			stats += `${status} ${game.name}\n`;
 			stats += `   Plays Remaining: ${playsRemaining}\n`;
 			stats += `   High Score: ${state.highScore}\n`;

@@ -96,9 +96,9 @@ function init(): void {
     // Draw initial state so grid lines are visible
     drawInitialState();
 
-    if (highScore > 0 && resetBtn) {
-        resetBtn.style.display = 'inline-block';
-    }
+    // if (highScore > 0 && resetBtn) {
+    //     resetBtn.style.display = 'inline-block';
+    // }
 }
 
 function loadHighScore(): void {
@@ -121,8 +121,6 @@ function setupEventListeners(): void {
 // ========================================
 
 function drawInitialState(): void {
-    console.log('[Debug Snake] Drawing initial state...');
-
     // Clear canvas
     ctx.fillStyle = '#1e1e1e';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -170,8 +168,6 @@ function drawInitialState(): void {
     ctx.fill();
 
     drawBug();
-
-    console.log('[Debug Snake] Initial state drawn');
 }
 
 // ========================================
@@ -179,10 +175,10 @@ function drawInitialState(): void {
 // ========================================
 
 function startGame(): void {
-    console.log('[Debug Snake] Starting game...');
+
+const isGameUnlocked = localStorage.getItem('debugSnakeUnlocked') === 'true';
 
     if (isRunning) {
-        console.log('[Debug Snake] Game already running');
         return;
     }
 
@@ -209,8 +205,6 @@ function startGame(): void {
 
     isRunning = true;
     runGameLoop();
-
-    console.log('[Debug Snake] Game started - snake should be moving right');
 }
 
 function runGameLoop(): void {
@@ -242,13 +236,10 @@ function togglePause(): void {
 }
 
 function restartGame(): void {
-    console.log('[Debug Snake] Restarting game...');
     startGame();
 }
 
 function endGame(): void {
-    console.log('[Debug Snake] Game over! Final score:', score);
-
     isRunning = false;
     isPaused = false;
 
@@ -263,7 +254,6 @@ function endGame(): void {
         updateScoreDisplay();
     }
 
-    // ✅ Send game over message to extension (no import needed!)
     sendGameOver(score);
 
     showGameOverAlert();
@@ -294,7 +284,6 @@ function update(): void {
     snakeY += velocityY;
 
     if (snakeX < 0 || snakeX >= TILE_COUNT || snakeY < 0 || snakeY >= TILE_COUNT) {
-        console.log('[Debug Snake] Wall collision!');
         endGame();
         return;
     }
@@ -307,14 +296,12 @@ function update(): void {
 
     for (let i = 0; i < snake.length - 1; i++) {
         if (snake[i].x === snakeX && snake[i].y === snakeY) {
-            console.log('[Debug Snake] Self collision!');
             endGame();
             return;
         }
     }
 
     if (snakeX === bugX && snakeY === bugY) {
-        console.log('[Debug Snake] Bug caught! Score:', score + 1);
         score++;
         snakeLength++;
         updateScoreDisplay();
@@ -323,7 +310,6 @@ function update(): void {
         if (score % BUGS_PER_SPEED_INCREASE === 0) {
             gameSpeed = Math.max(MIN_SPEED, gameSpeed * SPEED_MULTIPLIER);
             updateSpeedDisplay();
-            console.log('[Debug Snake] Speed increased! Level:', Math.floor(score / BUGS_PER_SPEED_INCREASE) + 1);
         }
     }
 }
@@ -543,7 +529,7 @@ function updateSpeedDisplay(): void {
 // ========================================
 
 /**
- * ✅ Sends game over message to VS Code extension
+ * Sends game over message to VS Code extension
  * Uses the global vscode variable (no import needed!)
  */
 function sendGameOver(finalScore: number): void {
@@ -553,9 +539,8 @@ function sendGameOver(finalScore: number): void {
             command: 'gameOver',
             score: finalScore
         });
-        console.log('[Debug Snake] ✅ Game over message sent, score:', finalScore);
     } catch (error) {
-        console.warn('[Debug Snake] Could not send message:', error);
+        console.warn('Debug Snake Could not send message:', error);
     }
 }
 
@@ -564,26 +549,19 @@ function sendGameOver(finalScore: number): void {
 // ========================================
 
 function setupButtons(): void {
-    console.log('[Debug Snake] Setting up event listeners...');
-
     init();
 
     if (startBtn) {
         startBtn.addEventListener('click', startGame);
-        console.log('[Debug Snake] ✅ Start button listener attached');
     }
 
     if (pauseBtn) {
         pauseBtn.addEventListener('click', togglePause);
-        console.log('[Debug Snake] ✅ Pause button listener attached');
     }
 
     if (restartBtn) {
         restartBtn.addEventListener('click', restartGame);
-        console.log('[Debug Snake] ✅ Restart button listener attached');
     }
-
-    console.log('[Debug Snake] ✅ All event listeners attached');
 }
 
 // ========================================

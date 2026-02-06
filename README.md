@@ -1,7 +1,9 @@
 # Code to Play - Unlock Games While You Code
 
-Turn coding into a game! Write code to unlock mini-games. Play Snake,
-Whack-a-Bug, and more as rewards for your productivity.
+Code to Play gamifies your coding experience by unlocking fun mini-games
+as you write code. Every 100 lines unlocks 5 plays across all games.
+Track your progress, compete against your high scores, and take fun
+breaks without leaving VS Code.
 
 ![Game demonstration 1](./demo-assets/debug-snake.png)
 ![Game demonstration 2](./demo-assets/wack-a-bug-play.png)

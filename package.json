@@ -10,7 +10,7 @@
     "email": "okenwavictor003@gmail.com"
   },
   "engines": {
-    "vscode": "^1.85.0"
+    "vscode": "^1.95.0"
   },
   "icon": "media/icons/extension-icon.png",
   "galleryBanner": {
@@ -150,6 +150,12 @@
         "title": "Command to Import Data",
         "category": "Code to Play",
         "when": "codeToPlay:isDev"
+      },
+      {
+        "command": "myExtension.showStorage",
+        "title": "Show extension Storage",
+        "category": "Code to Play",
+        "when": "codeToPlay:isDev"
       }
     ]
   },
@@ -172,7 +178,7 @@
   "devDependencies": {
     "@types/mocha": "^10.0.10",
     "@types/node": "22.x",
-    "@types/vscode": "^1.108.0",
+    "@types/vscode": "^1.95.0",
     "@typescript-eslint/eslint-plugin": "^8.39.0",
     "@typescript-eslint/parser": "^8.39.0",
     "@vscode/test-cli": "^0.0.11",

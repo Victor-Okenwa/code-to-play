@@ -339,7 +339,7 @@ export class GameManager {
      * @param gameId - ID of game to check (ignored, kept for compatibility)
      * @returns True if games are unlocked
      */
-    isGameUnlocked(gameId: string): boolean {
+    isGameUnlocked(): boolean {
         const globalState = this.storageManager.getGlobalPlayState();
         return globalState.isUnlocked;
     }
@@ -350,7 +350,7 @@ export class GameManager {
      * @param gameId - ID of game to check (ignored, kept for compatibility)
      * @returns Number of plays remaining
      */
-    getPlaysRemaining(gameId: string): number {
+    getPlaysRemaining(): number {
         const globalState = this.storageManager.getGlobalPlayState();
         return globalState.playsRemaining;
     }
