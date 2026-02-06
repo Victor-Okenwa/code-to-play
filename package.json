@@ -191,5 +191,8 @@
     "ovsx": "^0.8.3",
     "rimraf": "^6.1.2",
     "typescript": "^5.9.2"
+  },
+  "dependencies": {
+    "@vscode/codicons": "^0.0.44"
   }
 }

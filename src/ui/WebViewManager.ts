@@ -56,16 +56,19 @@ export class WebviewManager {
 
     private createWebviewPanel(game: IGame): vscode.WebviewPanel {
         const panel = vscode.window.createWebviewPanel(
-            `$(game) codeToPlay.${game.id}`,
-            `${game.name}`,
+            `codeToPlay.${game.id}`,
+            game.name,
             vscode.ViewColumn.One,
             {
                 enableScripts: true,
                 localResourceRoots: [
-                    vscode.Uri.file(path.join(this.context.extensionPath, 'dist'))
+                    vscode.Uri.file(path.join(this.context.extensionPath, 'dist')),
+                    vscode.Uri.joinPath(this.context.extensionUri, 'node_modules', '@vscode', 'codicons', 'dist', 'codicon.css')
                 ]
             }
         );
+
+        panel.iconPath = new vscode.ThemeIcon('game'); // use game icon as the tab icon
 
         return panel;
     }
@@ -73,7 +76,7 @@ export class WebviewManager {
     private setupPanelHandlers(gameId: string, panel: vscode.WebviewPanel): void {
         panel.onDidDispose(() => {
             this.activePanels.delete(gameId);
-            // ✅ DON'T call endPlay here - only when game actually ends
+            // DON'T call endPlay here - only when game actually ends
         });
 
         panel.webview.onDidReceiveMessage(
@@ -109,9 +112,12 @@ export class WebviewManager {
             const jsPath = path.join(distGameDir, 'game.js');
             const cssPath = path.join(distGameDir, game.cssPath);
 
+
+
             let html = fs.readFileSync(htmlPath, 'utf8');
             const js = fs.existsSync(jsPath) ? fs.readFileSync(jsPath, 'utf8') : '';
             const css = fs.existsSync(cssPath) ? fs.readFileSync(cssPath, 'utf8') : '';
+            const codiconUris = this.getCodiconUris(panel.webview);
 
             if (!js) {
                 console.warn(`[WebviewManager] No JS file for ${game.id}!`);
@@ -121,10 +127,10 @@ export class WebviewManager {
             const fontUris = this.getFontUris(panel.webview);
 
             // Create content
-            const commonStyles = this.getCommonStyles(fontUris, nonce);
+            const commonStyles = this.getCommonStyles(fontUris, codiconUris, nonce);
             const styleTag = this.createStyleTag(css, nonce);
 
-            // ✅ CRITICAL: Inject VS Code API first, then game code
+            // CRITICAL: Inject VS Code API first, then game code
             const vscodeApiScript = this.createVSCodeApiScript(nonce);
             const scriptTag = this.createScriptTag(js, nonce);
 
@@ -142,7 +148,7 @@ export class WebviewManager {
     }
 
     /**
-     * ✅ Creates the VS Code API script that games will use
+     * Creates the VS Code API script that games will use
      */
     private createVSCodeApiScript(nonce: string): string {
         return `<script nonce="${nonce}">
@@ -171,8 +177,29 @@ export class WebviewManager {
         return uris;
     }
 
-    private getCommonStyles(fontUris: Map<string, vscode.Uri>, nonce: string): string {
+    private getCodiconUris(webview: vscode.Webview): { cssUri: vscode.Uri; fontUri: vscode.Uri } {
+        const codiconsPath = vscode.Uri.joinPath(
+            this.context.extensionUri,
+            'node_modules',
+            '@vscode',
+            'codicons',
+            'dist'
+        );
+
+        return {
+            cssUri: webview.asWebviewUri(vscode.Uri.joinPath(codiconsPath, 'codicon.css')),
+            fontUri: webview.asWebviewUri(vscode.Uri.joinPath(codiconsPath, 'codicon.ttf'))
+        };
+    }
+
+    private getCommonStyles(
+        fontUris: Map<string, vscode.Uri>,
+        codiconUris: { cssUri: vscode.Uri; fontUri: vscode.Uri },
+        nonce: string
+    ): string {
         return `
+            <link nonce="${nonce}" rel="stylesheet" href="${codiconUris.cssUri}">
+
             <style nonce="${nonce}">
                 @font-face {
                     font-family: 'Press Start 2P';
@@ -323,7 +350,7 @@ export class WebviewManager {
             this.closeAllGames();
 
             vscode.window.showInformationMessage(
-                `Your play allowance has been exhausted! Write ${linesToUnlock} lines of code to unlock more plays. Happy coding! 🚀`
+                `Your play allowance has been exhausted! Write ${linesToUnlock} lines of code to unlock more plays. Happy coding!`
             );
         }
 
@@ -334,7 +361,7 @@ export class WebviewManager {
 
             if (score >= gameState.highScore) {
                 vscode.window.showInformationMessage(
-                    `$(graph) New high score in ${state.name}: ${score}!`
+                    `New high score in ${state.name}: ${score}!`
                 );
             }
         }

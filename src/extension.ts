@@ -14,7 +14,6 @@ import { createStatusBar } from './ui/StatusBarManager';
 import { createWebviewManager } from './ui/WebViewManager';
 import { AllGames } from './games/registry';
 import { GameEvent } from './core/types';
-import { showDbState } from './utils';
 
 /** * Activates the extension
  * 
