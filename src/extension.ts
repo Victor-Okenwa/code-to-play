@@ -50,11 +50,6 @@ export function activate(context: vscode.ExtensionContext) {
 
 	gameManager.registerGames(AllGames);
 
-	AllGames.map(game => {
-		console.log(`${game.name}, ${game.id}`);
-	});
-
-
 	// ========================================
 	// CREATE UI COMPONENTS
 	// ========================================
@@ -69,6 +64,7 @@ export function activate(context: vscode.ExtensionContext) {
 	const webviewManager = createWebviewManager(context, gameManager);
 
 	// showDbState(context);
+
 	// ========================================
 	// REGISTER COMMANDS
 	// ========================================
@@ -106,10 +102,8 @@ export function activate(context: vscode.ExtensionContext) {
 		stats += `Games:\n`;
 		games.forEach(game => {
 			const state = storageManager.getGameState(game.id);
-			const unlocked = gameManager.isGameUnlocked();
 			const playsRemaining = gameManager.getPlaysRemaining();
-			const status = unlocked ? '✅' : '$(Play)';
-			stats += `${status} ${game.name}\n`;
+			stats += `${game.name}\n`;
 			stats += `   Plays Remaining: ${playsRemaining}\n`;
 			stats += `   High Score: ${state.highScore}\n`;
 			stats += `   Total Plays: ${state.totalPlays}\n\n`;
@@ -239,7 +233,7 @@ export function activate(context: vscode.ExtensionContext) {
 				const game = gameManager.getGame(gameId);
 				if (game) {
 					// Show celebrations in status bar
-					statusBar.celebrate(`🎉 Unlocked ${game.name}! 🎉`);
+					statusBar.celebrate(`Unlocked ${game.name}!`);
 
 					// Show notification
 					vscode.window.showInformationMessage(`Congratulations! You've unlocked ${game.name}! Enjoy playing!`, 'Play Now').then(selection => {
@@ -255,7 +249,7 @@ export function activate(context: vscode.ExtensionContext) {
 				const lockedGame = gameManager.getGame(gameId);
 				if (lockedGame) {
 					const config = storageManager.getConfig();
-					vscode.window.showWarningMessage(`🔒 ${lockedGame.name} locked. Write ${config.unlock.linesToUnlock} lines to unlock ${config.unlock.playsPerUnlock} new plays.`);
+					vscode.window.showWarningMessage(`${lockedGame.name} locked. Write ${config.unlock.linesToUnlock} lines to unlock ${config.unlock.playsPerUnlock} new plays.`);
 				}
 				break;
 
@@ -266,7 +260,7 @@ export function activate(context: vscode.ExtensionContext) {
 					const progressGame = gameManager.getGame(gameId);
 					if (progressGame) {
 						vscode.window.showInformationMessage(
-							`📝 Almost there! ${data.linesRequired - data.linesWritten} more lines to unlock ${progressGame.name}`
+							`Almost there! ${data.linesRequired - data.linesWritten} more lines to unlock ${progressGame.name}`
 						);
 					}
 				}

@@ -288,7 +288,7 @@ export class WebviewManager {
     // ========================================
 
     /**
-     * ✅ Handles messages from games
+     * Handles messages from games
      */
     private async handleWebviewMessage(gameId: string, message: any): Promise<void> {
         console.log(`[WebviewManager] Message from ${gameId}:`, message.command);
@@ -321,26 +321,24 @@ export class WebviewManager {
      * ✅ Handles game over - decrements plays and updates high score
      */
     private async handleGameOver(gameId: string, score?: number): Promise<void> {
-        console.log(`[WebviewManager] Calling endPlay for ${gameId}...`);
-
         // Get current plays before decrementing
-        const playsBefore = this.gameManager.getPlaysRemaining(gameId);
+        const playsBefore = this.gameManager.getPlaysRemaining();
 
         // This decrements the play counter!
         await this.gameManager.endPlay(gameId, score);
 
         // Get plays after decrementing
-        const playsAfter = this.gameManager.getPlaysRemaining(gameId);
+        const playsAfter = this.gameManager.getPlaysRemaining();
 
-        console.log(`[WebviewManager] ✅ Plays: ${playsBefore} → ${playsAfter}`);
-
-        // ✅ Show custom message when plays exhausted
+        // Show custom message when plays exhausted
         if (playsAfter === 0) {
             const config = (this.gameManager as any).config;
             const linesToUnlock = config.unlock.linesToUnlock;
 
+            this.closeAllGames();
+
             vscode.window.showInformationMessage(
-                `🎮 Your play allowance has been exhausted! Write ${linesToUnlock} lines of code to unlock more plays. Happy coding! 🚀`
+                `Your play allowance has been exhausted! Write ${linesToUnlock} lines of code to unlock more plays. Happy coding! 🚀`
             );
         }
 
@@ -351,7 +349,7 @@ export class WebviewManager {
 
             if (score >= gameState.highScore) {
                 vscode.window.showInformationMessage(
-                    `🏆 New high score in ${state.name}: ${score}!`
+                    `New high score in ${state.name}: ${score}!`
                 );
             }
         }

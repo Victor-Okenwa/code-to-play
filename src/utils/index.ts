@@ -1,4 +1,8 @@
 import * as vscode from "vscode";
+import * as fs from "fs";
+import { GameManager } from "../core/GameManager";
+import { StorageManager } from "../core/StorageManager";
+import { CodeTracker } from "../core/CodeTracker";
 
 export function showDbState(context: vscode.ExtensionContext) {
     let disposable = vscode.commands.registerCommand('myExtension.showStorage', async () => {
@@ -29,4 +33,9 @@ export function showDbState(context: vscode.ExtensionContext) {
     });
 
     context.subscriptions.push(disposable);
+}
+
+
+export function showLocalstorage(context: vscode.ExtensionContext) {
+    const path = context.globalStorageUri.fsPath;
 }

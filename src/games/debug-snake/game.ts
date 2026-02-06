@@ -6,6 +6,8 @@
  * - Uses global vscode variable injected by WebviewManager
  */
 
+import { GameManager } from "../../core/GameManager";
+
 // ========================================
 // TYPE DEFINITIONS
 // ========================================
@@ -85,8 +87,6 @@ let isPaused: boolean = false;
 // ========================================
 
 function init(): void {
-    console.log('[Debug Snake] Initializing game...');
-
     loadHighScore();
     updateScoreDisplay();
     updateSpeedDisplay();
@@ -176,7 +176,6 @@ function drawInitialState(): void {
 
 function startGame(): void {
 
-const isGameUnlocked = localStorage.getItem('debugSnakeUnlocked') === 'true';
 
     if (isRunning) {
         return;
