@@ -268,7 +268,7 @@ export class GameManager {
             // Show notification if enabled
             if (this.config.showUnlockNotifications) {
                 vscode.window.showInformationMessage(
-                    `🎮 Games unlocked! You have ${newState.playsRemaining} plays.`
+                    `Games unlocked! You have ${newState.playsRemaining} plays.`
                 );
             }
         } else {
@@ -361,7 +361,7 @@ export class GameManager {
      * @param gameId - ID of game to check (ignored, kept for compatibility)
      * @returns Lines remaining (0 if already unlocked)
      */
-    getRemainingLinesToUnlock(gameId?: string): number {
+    getRemainingLinesToUnlock(): number {
         const globalState = this.storageManager.getGlobalPlayState();
 
         if (globalState.isUnlocked) {
@@ -380,7 +380,7 @@ export class GameManager {
      * @param gameId - ID of game to check (ignored, kept for compatibility)
      * @returns Progress percentage
      */
-    getUnlockProgress(gameId?: string): number {
+    getUnlockProgress(): number {
         const globalState = this.storageManager.getGlobalPlayState();
 
         if (globalState.isUnlocked) {

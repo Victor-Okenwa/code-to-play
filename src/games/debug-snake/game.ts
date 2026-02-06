@@ -1,12 +1,7 @@
 /**
  * game.ts - Debug Snake Game Logic
  * 
- * Fixed version with proper VS Code API usage
- * - No vscode imports (this runs in browser, not Node.js)
- * - Uses global vscode variable injected by WebviewManager
  */
-
-import { GameManager } from "../../core/GameManager";
 
 // ========================================
 // TYPE DEFINITIONS

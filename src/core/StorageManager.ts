@@ -153,7 +153,6 @@ export class StorageManager implements vscode.Disposable {
      */
     async saveGlobalPlayState(state: GlobalPlayState): Promise<void> {
         await this.globalState.update(StorageKey.GLOBAL_PLAY_STATE, state);
-        console.log('Global play state saved:', state, StorageKey);
     }
 
     /**

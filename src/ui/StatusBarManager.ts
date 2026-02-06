@@ -252,7 +252,7 @@ export class StatusBarManager {
         const totalLines = this.storageManager.getTotalLinesWritten();
 
         return [
-            `🎮 Code to Play`,
+            `Code to Play`,
             ``,
             `Locked`,
             `Progress: ${Math.floor(progress)}%`,

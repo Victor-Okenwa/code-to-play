@@ -17,6 +17,6 @@ export const WhackABugGame: IGame = {
     isPremium: false,
     isOnline: false,
     htmlPath: 'index.html',
-    jsPath: 'game.ts',  // TypeScript file
+    jsPath: 'game.ts',
     cssPath: 'styles.css'
 };

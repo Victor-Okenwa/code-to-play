@@ -1,8 +1,6 @@
 /**
  * game.ts - Whack-a-Bug Game Logic
  * 
- * TypeScript implementation of the Whack-a-Bug game.
- * Runs in VS Code webview with full type safety.
  */
 
 // ========================================
@@ -435,7 +433,6 @@ function sendGameOver(finalScore: number): void {
             command: 'gameOver',
             score: finalScore
         });
-        console.log('[Whack-a-Bug] Game over message sent, score:', finalScore);
     } catch (error) {
         console.warn('[Whack-a-Bug] Could not send message:', error);
     }
@@ -446,7 +443,6 @@ function sendGameOver(finalScore: number): void {
  */
 function resetHighScore(): void {
     if (isPlaying) {
-        console.warn('Cannot reset high score while game is running');
         return;
     }
 
@@ -454,7 +450,6 @@ function resetHighScore(): void {
         highScore = 0;
         saveHighScore();
         updateScoreDisplay();
-        console.log('✅ High score reset');
     }
 }
 
@@ -464,7 +459,6 @@ function resetHighScore(): void {
 // ========================================
 
 function setupButtons(): void {
-    console.log('[Whack-a-Bug] Setting up event listeners...');
 
     // Initialize game
     init();
@@ -473,7 +467,6 @@ function setupButtons(): void {
     const easyCard = document.getElementById('easyCard');
     if (easyCard) {
         easyCard.addEventListener('click', () => selectDifficulty('easy'));
-        console.log('[Whack-a-Bug] Easy card listener attached');
     }
 
     const mediumCard = document.getElementById('mediumCard');
@@ -490,7 +483,6 @@ function setupButtons(): void {
     const startGameBtn = document.querySelector('.start-game-btn');
     if (startGameBtn) {
         startGameBtn.addEventListener('click', startGameMode);
-        console.log('[Whack-a-Bug] Start button listener attached');
     }
 
     // Restart buttons (multiple)
@@ -509,8 +501,6 @@ function setupButtons(): void {
     if (resetHighScoreBtn) {
         resetHighScoreBtn.addEventListener('click', resetHighScore);
     }
-
-    console.log('[Whack-a-Bug] ✅ All event listeners attached');
 }
 
 // ========================================
