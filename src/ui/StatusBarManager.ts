@@ -206,12 +206,12 @@ export class StatusBarManager {
         const config = this.storageManager.getConfig();
 
         return [
-            `🎮 Code to Play`,
+            `Code to Play`,
             ``,
-            `✅ Unlocked and ready to play!`,
-            `🎯 Plays remaining: ${playsRemaining}`,
+            `Unlocked and ready to play!`,
+            `Plays remaining: ${playsRemaining}`,
             ``,
-            `📝 Write ${config.unlock.linesToUnlock} more lines after plays run out to unlock ${config.unlock.playsPerUnlock} new plays`,
+            `Write ${config.unlock.linesToUnlock} more lines after plays run out to unlock ${config.unlock.playsPerUnlock} new plays`,
             ``,
             `Click to view all games`
         ].join('\n');
@@ -227,10 +227,10 @@ export class StatusBarManager {
         const config = this.storageManager.getConfig();
 
         return [
-            `🎮 Code to Play`,
+            `Code to Play`,
             ``,
-            `⚠️ No plays remaining`,
-            `📝 Write ${config.unlock.linesToUnlock} lines of code to unlock ${config.unlock.playsPerUnlock} new plays`,
+            `No plays remaining`,
+            `Write ${config.unlock.linesToUnlock} lines of code to unlock ${config.unlock.playsPerUnlock} new plays`,
             ``,
             `Click to view all games`
         ].join('\n');
@@ -254,13 +254,13 @@ export class StatusBarManager {
         return [
             `🎮 Code to Play`,
             ``,
-            `🔒 Locked`,
-            `📊 Progress: ${Math.floor(progress)}%`,
-            `📝 Write ${linesRemaining} more lines to unlock`,
+            `Locked`,
+            `Progress: ${Math.floor(progress)}%`,
+            `Write ${linesRemaining} more lines to unlock`,
             ``,
             `When unlocked, you'll get ${config.unlock.playsPerUnlock} plays`,
             ``,
-            `📈 Total lines written: ${totalLines}`,
+            `Total lines written: ${totalLines}`,
             ``,
             `Click to view all games`
         ].join('\n');
