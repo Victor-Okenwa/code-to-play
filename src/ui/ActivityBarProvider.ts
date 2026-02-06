@@ -74,7 +74,7 @@ class GameTreeItem extends vscode.TreeItem {
                 return 'No plays';
             }
         } else {
-            return '🔒 Locked';
+            return 'Locked';
         }
     }
 
@@ -171,7 +171,7 @@ export class ActivityBarProvider implements vscode.TreeDataProvider<GameTreeItem
             const gameItems = this.getGameTreeItems();
             items.push(...gameItems);
 
-            // ✅ STICKY FOOTER BUTTONS
+            // STICKY FOOTER BUTTONS
             items.push(this.createSpacer() as any);
             items.push(this.createFooterSeparator() as any);
             items.push(this.createFooterButtons()[0]);
@@ -184,7 +184,7 @@ export class ActivityBarProvider implements vscode.TreeDataProvider<GameTreeItem
     }
 
     /**
-     * ✅ Creates sticky footer buttons
+     * Creates sticky footer buttons
      */
     private createFooterButtons(): FooterButtonItem[] {
         return [
@@ -204,10 +204,10 @@ export class ActivityBarProvider implements vscode.TreeDataProvider<GameTreeItem
     }
 
     /**
-     * ✅ Creates a visual separator before footer
+     * Creates a visual separator before footer
      */
     private createFooterSeparator(): GameTreeItem {
-        const separator = new vscode.TreeItem('___________________', vscode.TreeItemCollapsibleState.None);
+        const separator = new vscode.TreeItem('----', vscode.TreeItemCollapsibleState.None);
         separator.contextValue = 'separator';
         separator.iconPath = undefined;
         separator.command = undefined;
@@ -226,8 +226,8 @@ export class ActivityBarProvider implements vscode.TreeDataProvider<GameTreeItem
         headerItem.contextValue = 'playsHeader';
 
         headerItem.tooltip = globalState.isUnlocked
-            ? `✅ You have ${globalState.playsRemaining} plays available`
-            : `🔒 Write ${this.gameManager.getRemainingLinesToUnlock()} more lines to unlock`;
+            ? `You have ${globalState.playsRemaining} plays available`
+            : `Write ${this.gameManager.getRemainingLinesToUnlock()} more lines to unlock`;
 
         headerItem.command = undefined;
 

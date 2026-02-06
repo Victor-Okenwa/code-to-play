@@ -90,6 +90,11 @@
           "command": "codeToPlay.exportData",
           "when": "view == codeToPlayGames",
           "group": "actions@2"
+        },
+        {
+          "command": "codeToPlay.resetAllGames",
+          "when": "view == codeToPlayGames",
+          "group": "actions@3"
         }
       ]
     },
@@ -120,7 +125,7 @@
       },
       {
         "command": "codeToPlay.resetAllGames",
-        "title": "Reset All Games",
+        "title": "Reset highScores",
         "category": "Code to Play"
       },
       {
@@ -148,12 +153,6 @@
       {
         "command": "codeToPlay.importData",
         "title": "Command to Import Data",
-        "category": "Code to Play",
-        "when": "codeToPlay:isDev"
-      },
-      {
-        "command": "myExtension.showStorage",
-        "title": "Show extension Storage",
         "category": "Code to Play",
         "when": "codeToPlay:isDev"
       }
