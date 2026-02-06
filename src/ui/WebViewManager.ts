@@ -1,10 +1,7 @@
 /**
- * WebviewManager.ts - FIXED: Properly decrements plays on game over
+ * WebviewManager.ts
  * 
- * Changes:
- * 1. Injects VS Code API so games can send messages
- * 2. Handles 'gameOver' message to decrement plays
- * 3. Removed endPlay from panel dispose (was causing issues)
+ * Manages webview panels for game UIs in the Code to Play VS Code extension.
  */
 
 import * as vscode from 'vscode';
@@ -59,8 +56,8 @@ export class WebviewManager {
 
     private createWebviewPanel(game: IGame): vscode.WebviewPanel {
         const panel = vscode.window.createWebviewPanel(
-            `codeToPlay.${game.id}`,
-            `🎮 ${game.name}`,
+            `$(game) codeToPlay.${game.id}`,
+            `${game.name}`,
             vscode.ViewColumn.One,
             {
                 enableScripts: true,
@@ -112,15 +109,12 @@ export class WebviewManager {
             const jsPath = path.join(distGameDir, 'game.js');
             const cssPath = path.join(distGameDir, game.cssPath);
 
-            console.log(`[WebviewManager] Loading ${game.id}...`);
-            console.log(`[WebviewManager] JS exists: ${fs.existsSync(jsPath)}`);
-
             let html = fs.readFileSync(htmlPath, 'utf8');
             const js = fs.existsSync(jsPath) ? fs.readFileSync(jsPath, 'utf8') : '';
             const css = fs.existsSync(cssPath) ? fs.readFileSync(cssPath, 'utf8') : '';
 
             if (!js) {
-                console.warn(`[WebviewManager] ⚠️ No JS file for ${game.id}!`);
+                console.warn(`[WebviewManager] No JS file for ${game.id}!`);
             }
 
             const nonce = this.getNonce();
@@ -139,11 +133,8 @@ export class WebviewManager {
             html = this.applyContentSecurityPolicy(html, panel.webview, nonce);
 
             panel.webview.html = html;
-
-            console.log(`[WebviewManager] ✅ ${game.id} loaded`);
-
         } catch (error) {
-            console.error(`[WebviewManager] ❌ Error:`, error);
+            console.error(`[WebviewManager] Error:`, error);
             vscode.window.showErrorMessage(
                 `Failed to load game: ${error instanceof Error ? error.message : 'Unknown error'}`
             );
@@ -291,12 +282,9 @@ export class WebviewManager {
      * Handles messages from games
      */
     private async handleWebviewMessage(gameId: string, message: any): Promise<void> {
-        console.log(`[WebviewManager] Message from ${gameId}:`, message.command);
-
         switch (message.command) {
             case 'gameOver':
-                // ✅ THIS IS WHERE PLAYS ARE DECREMENTED!
-                console.log(`[WebviewManager] Game over - Score: ${message.score}`);
+                // THIS IS WHERE PLAYS ARE DECREMENTED!
                 await this.handleGameOver(gameId, message.score);
                 break;
 
@@ -318,12 +306,9 @@ export class WebviewManager {
     }
 
     /**
-     * ✅ Handles game over - decrements plays and updates high score
+     * Handles game over - decrements plays and updates high score
      */
     private async handleGameOver(gameId: string, score?: number): Promise<void> {
-        // Get current plays before decrementing
-        const playsBefore = this.gameManager.getPlaysRemaining();
-
         // This decrements the play counter!
         await this.gameManager.endPlay(gameId, score);
 
@@ -349,7 +334,7 @@ export class WebviewManager {
 
             if (score >= gameState.highScore) {
                 vscode.window.showInformationMessage(
-                    `New high score in ${state.name}: ${score}!`
+                    `$(graph) New high score in ${state.name}: ${score}!`
                 );
             }
         }
