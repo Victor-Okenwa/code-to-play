@@ -37,70 +37,129 @@ class GameTreeItem extends vscode.TreeItem {
         }
     }
 
-    private createTooltip(): string {
-        const lines: string[] = [
-            `🎮 ${this.game.name}`,
-            ``,
-            this.game.description,
-            ``,
-        ];
+    private createTooltip(): vscode.MarkdownString {
+        const tooltip = new vscode.MarkdownString();
+        tooltip.isTrusted = true;
+
+        tooltip.appendMarkdown(`### 🎮 ${this.game.name}\n\n`);
+        tooltip.appendMarkdown(`${this.game.description}\n\n`);
 
         if (this.globalState.isUnlocked) {
-            lines.push(`✅ Unlocked`);
-            lines.push(`🎯 Plays remaining: ${this.globalState.playsRemaining}`);
+            tooltip.appendMarkdown(`✅ **Unlocked**\n`);
+            tooltip.appendMarkdown(`🎯 **Plays remaining:** ${this.globalState.playsRemaining}\n`);
+
+            if (this.globalState.playsRemaining > 0) {
+                tooltip.appendMarkdown(`\n💡 _Click to play!_`);
+            } else {
+                const manager = (this as any).manager;
+                const remaining = manager?.getRemainingLinesToUnlock() || 0;
+                tooltip.appendMarkdown(`\n⚠️ **Out of plays!** Write ${remaining} more lines to unlock more.`);
+            }
         } else {
             const manager = (this as any).manager;
             const remaining = manager?.getRemainingLinesToUnlock() || 0;
-            lines.push(`🔒 Locked`);
-            lines.push(`📝 Write ${remaining} more lines to unlock`);
+            tooltip.appendMarkdown(`🔒 **Locked**\n`);
+            tooltip.appendMarkdown(`📝 **Write ${remaining} more lines to unlock**\n`);
         }
 
         if (this.state.highScore > 0) {
-            lines.push(`🏆 High score: ${this.state.highScore}`);
+            tooltip.appendMarkdown(`\n🏆 **High Score:** ${this.state.highScore}`);
         }
 
         if (this.state.totalPlays > 0) {
-            lines.push(`📊 Total plays: ${this.state.totalPlays}`);
+            tooltip.appendMarkdown(`\n📊 **Total Plays:** ${this.state.totalPlays}`);
         }
 
-        return lines.join('\n');
+        return tooltip;
     }
 
     private createDescription(): string {
         if (this.globalState.isUnlocked) {
             if (this.globalState.playsRemaining > 0) {
-                return `${this.globalState.playsRemaining} plays`;
+                return `▶️ ${this.globalState.playsRemaining} plays`;
             } else {
-                return 'No plays';
+                return `⏸️ No plays`;
             }
         } else {
-            return 'Locked';
+            const progress = this.calculateUnlockProgress();
+            const progressBar = this.createProgressBar(progress);
+            return `${progressBar} Locked`;
         }
+    }
+
+    private calculateUnlockProgress(): number {
+        const manager = (this as any).manager;
+        const totalLines = manager?.storageManager?.getTotalLinesWritten() || 0;
+        const config = manager?.storageManager?.getConfig();
+        const linesNeeded = config?.unlock?.linesToUnlock || 100;
+        return Math.min(totalLines / linesNeeded, 1);
+    }
+
+    private createProgressBar(progress: number): string {
+        const filled = Math.floor(progress * 5);
+        const empty = 5 - filled;
+        return '█'.repeat(filled) + '░'.repeat(empty);
     }
 
     private getIcon(): vscode.ThemeIcon | vscode.Uri | { light: vscode.Uri; dark: vscode.Uri } | undefined {
         if (this.globalState.isUnlocked) {
             if (this.globalState.playsRemaining > 0) {
-                return new vscode.ThemeIcon('play-circle',
-                    new vscode.ThemeColor('terminal.ansiGreen'));
+                return new vscode.ThemeIcon('play-circle', this.getDynamicIconColor());
             } else {
                 return new vscode.ThemeIcon('circle-slash',
-                    new vscode.ThemeColor('terminal.ansiYellow'));
+                    new vscode.ThemeColor('statusBarItem.warningForeground'));
             }
         } else {
             return new vscode.ThemeIcon('lock',
-                new vscode.ThemeColor('terminal.ansiRed'));
+                new vscode.ThemeColor('statusBarItem.errorForeground'));
+        }
+    }
+
+    private getDynamicIconColor(): vscode.ThemeColor {
+        const plays = this.globalState.playsRemaining;
+
+        if (plays <= 2) {
+            return new vscode.ThemeColor('statusBarItem.errorForeground');
+        } else if (plays <= 5) {
+            return new vscode.ThemeColor('statusBarItem.warningForeground');
+        } else {
+            return new vscode.ThemeColor('statusBarItem.activeForeground');
         }
     }
 
     private getContextValue(): string {
-        if (this.globalState.isUnlocked && this.globalState.playsRemaining > 0) {
-            return 'gameUnlocked';
-        } else if (this.globalState.isUnlocked && this.globalState.playsRemaining === 0) {
-            return 'gameNoPlays';
+        const baseContexts = [];
+
+        if (this.globalState.isUnlocked) {
+            baseContexts.push('gameUnlocked');
+            if (this.globalState.playsRemaining > 0) {
+                baseContexts.push('gamePlayable');
+                if (this.globalState.playsRemaining <= 2) {
+                    baseContexts.push('gameLowPlays');
+                }
+            } else {
+                baseContexts.push('gameNoPlays');
+            }
         } else {
-            return 'gameLocked';
+            baseContexts.push('gameLocked');
         }
+
+        // Add game-specific context
+        baseContexts.push(`game-${this.game.id}`);
+
+        // Add performance context
+        if (this.state.highScore > 1000) {
+            baseContexts.push('highPerformer');
+        } else if (this.state.highScore > 100) {
+            baseContexts.push('goodPerformer');
+        }
+
+        // Add activity context
+        if (this.state.totalPlays > 50) {
+            baseContexts.push('frequentPlayer');
+        }
+
+        return baseContexts.join(' ');
     }
 }
 
@@ -220,18 +279,47 @@ export class ActivityBarProvider implements vscode.TreeDataProvider<GameTreeItem
         const headerItem = new vscode.TreeItem(playsText, vscode.TreeItemCollapsibleState.None);
 
         headerItem.iconPath = globalState.isUnlocked
-            ? new vscode.ThemeIcon('play-circle', new vscode.ThemeColor('terminal.ansiGreen'))
-            : new vscode.ThemeIcon('lock', new vscode.ThemeColor('terminal.ansiRed'));
+            ? new vscode.ThemeIcon('play-circle', this.getHeaderIconColor(globalState.playsRemaining))
+            : new vscode.ThemeIcon('lock', new vscode.ThemeColor('statusBarItem.errorForeground'));
 
         headerItem.contextValue = 'playsHeader';
 
-        headerItem.tooltip = globalState.isUnlocked
-            ? `You have ${globalState.playsRemaining} plays available`
-            : `Write ${this.gameManager.getRemainingLinesToUnlock()} more lines to unlock`;
+        const tooltip = new vscode.MarkdownString();
+        tooltip.isTrusted = true;
 
+        if (globalState.isUnlocked) {
+            tooltip.appendMarkdown(`### 🎯 Game Status\n\n`);
+            tooltip.appendMarkdown(`You have **${globalState.playsRemaining} plays** available!\n\n`);
+
+            if (globalState.playsRemaining <= 2) {
+                tooltip.appendMarkdown(`⚠️ **Running low!** Consider writing more code soon.`);
+            } else if (globalState.playsRemaining === 0) {
+                const remaining = this.gameManager.getRemainingLinesToUnlock();
+                tooltip.appendMarkdown(`⏸️ **Out of plays!** Write **${remaining} more lines** to unlock more.`);
+            } else {
+                tooltip.appendMarkdown(`✅ **Ready to play!** Click on any game below to start.`);
+            }
+        } else {
+            const remaining = this.gameManager.getRemainingLinesToUnlock();
+            tooltip.appendMarkdown(`### 🔒 Games Locked\n\n`);
+            tooltip.appendMarkdown(`Write **${remaining} more lines** of code to unlock games!\n\n`);
+            tooltip.appendMarkdown(`Keep coding to earn your break time! 💻`);
+        }
+
+        headerItem.tooltip = tooltip;
         headerItem.command = undefined;
 
         return headerItem as any;
+    }
+
+    private getHeaderIconColor(playsRemaining: number): vscode.ThemeColor {
+        if (playsRemaining <= 2) {
+            return new vscode.ThemeColor('statusBarItem.errorForeground');
+        } else if (playsRemaining <= 5) {
+            return new vscode.ThemeColor('statusBarItem.warningForeground');
+        } else {
+            return new vscode.ThemeColor('statusBarItem.activeForeground');
+        }
     }
 
     private createCategoryHeader(label: string): GameTreeItem {
