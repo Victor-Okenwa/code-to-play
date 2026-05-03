@@ -170,8 +170,8 @@
     "test": "vscode-test",
     "clean": "rimraf dist out",
     "rebuild": "pnpm run clean && pnpm run compile",
-    "publish:vsce": "vsce publish",
-    "publish:ovsx": "ovsx publish",
+    "publish:vsce": "vsce publish --no-dependencies",
+    "publish:ovsx": "ovsx publish --no-dependencies",
     "publish:both": "vsce publish && ovsx publish"
   },
   "devDependencies": {

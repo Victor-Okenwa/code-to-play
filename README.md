@@ -245,8 +245,8 @@ Special thanks to the font creators for making these available!
 
 **Made with ❤️ by developers, for developers**
 
-[GitHub](https://github.com/yourusername/code-to-play) • [Report Issue](https://github.com/Victor-Okenwa/code-to-play/issues) • [Request Feature](https://github.com/Victor-Okenwa/code-to-play/issues/new)
+[GitHub](https://github.com/Victor-Okenwa/code-to-play) • [Report Issue](https://github.com/Victor-Okenwa/code-to-play/issues) • [Request Feature](https://github.com/Victor-Okenwa/code-to-play/issues/new)
 
-**Happy coding and gaming! 🎮💻**
+\*\*Happy coding and gaming!
 
 </div>

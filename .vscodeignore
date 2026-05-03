@@ -2,7 +2,9 @@
 .vscode/**
 .vscode-test/**
 src/**
+node_modules/**
 node_modules/**/.bin/**
+!node_modules/@vscode/codicons/dist/**
 **/*.map
 **/*.ts
 !dist/**

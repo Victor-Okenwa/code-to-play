@@ -24,7 +24,7 @@ export function activate(context: vscode.ExtensionContext) {
 	const isLocalDev = context.extensionMode === vscode.ExtensionMode.Development;
 
 	if (isLocalDev) {
-		console.log('Code to Play extension is now active!');
+		console.log('LOCAL [1] - Code to Play extension is now active!');
 	}
 
 	// ========================================
