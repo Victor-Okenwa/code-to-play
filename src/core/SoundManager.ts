@@ -1,15 +1,12 @@
 /**
- * SoundManager.ts - Audio management for games
+ * SoundManager.ts - Audio management for games using DOM audio elements
  */
 
 export class SoundManager {
     private static instance: SoundManager;
-    private sounds: Map<string, HTMLAudioElement> = new Map();
     private isMuted: boolean = false;
 
-    private constructor() {
-        this.initializeSounds();
-    }
+    private constructor() { }
 
     static getInstance(): SoundManager {
         if (!SoundManager.instance) {
@@ -18,41 +15,25 @@ export class SoundManager {
         return SoundManager.instance;
     }
 
-    private initializeSounds(): void {
-        const soundDefinitions = {
-            'slurp': 'slurp.mp3',
-            'pop': 'pop.mp3',
-        }
+    /**
+     * Play a sound by its audio element ID
+     * @param elementId - The ID of the audio element in the DOM
+     */
+    playById(elementId: string): void {
+        if (this.isMuted) {
+            return;
+        };
 
-        Object.entries(soundDefinitions).forEach(([name, file]) => {
-            const audio = new Audio();
-            audio.src = this.getSoundUrl(file);
-            audio.preload = 'auto';
-            audio.volume = 0.3;
-
-            // Add error handling
-            audio.addEventListener('error', () => {
-                console.warn(`Failed to load sound: ${file}`);
-            });
-            this.sounds.set(name, audio);
-        })
-    }
-
-    private getSoundUrl(filename: string): string {
-        return `vscode-resource:${window.location.protocol}//${window.location.host}/media/sfx/${filename}`
-    }
-
-    play(soundName: string): void {
-        if (this.isMuted) { return };
-
-        const audio = this.sounds.get(soundName);
-        if (audio) {
+        const audioElement = document.getElementById(elementId) as HTMLAudioElement;
+        if (audioElement) {
             // Clone the audio to allow overlapping sounds
-            const audioClone = audio.cloneNode() as HTMLAudioElement;
-            audioClone.volume = audio.volume;
+            const audioClone = audioElement.cloneNode() as HTMLAudioElement;
+            audioClone.volume = audioElement.volume;
             audioClone.play().catch(err => {
-                console.warn(`Failed to play sound: ${soundName}`, err);
-            })
+                console.warn(`Failed to play sound: ${elementId}`, err);
+            });
+        } else {
+            console.warn(`Audio element with ID '${elementId}' not found`);
         }
     }
 
@@ -64,13 +45,9 @@ export class SoundManager {
         return this.isMuted;
     }
 
-    // Clean up resources
+    // Clean up resources (if needed in future)
     dispose(): void {
-        this.sounds.forEach(audio => {
-            audio.pause();
-            audio.src = '';
-        });
-        this.sounds.clear();
+        // No resources to clean up since we're using DOM elements
     }
 }
 

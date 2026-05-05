@@ -4,6 +4,12 @@
  */
 
 // ========================================
+// IMPORTS
+// ========================================
+
+import { soundManager } from '../../core/SoundManager';
+
+// ========================================
 // DECLARE GLOBAL VSCODE API
 // This is injected by WebviewManager, not imported
 // ========================================
@@ -99,6 +105,9 @@ let countdownTimer: number | null = null;
 // ========================================
 
 function init(): void {
+    // Initialize sound manager
+    soundManager.setMuted(false);
+
     loadHighScore();
     updateScoreDisplay();
     createHoles();
@@ -206,6 +215,7 @@ function backToMenu(): void {
 // ========================================
 
 function startGame(): void {
+    soundManager.playById('popSound');
     score = 0;
     timeRemaining = GAME_DURATION;
     isPlaying = true;
@@ -250,6 +260,7 @@ function stopGame(): void {
 }
 
 function endGame(): void {
+    soundManager.playById('popSound');
     stopGame();
 
     if (score > highScore) {
@@ -371,6 +382,7 @@ function whackBug(holeIndex: number): void {
         return;
     }
 
+    soundManager.playById('slurpSound');
     score += currentDifficulty.pointsPerBug;
     updateScoreDisplay();
 

@@ -18,6 +18,12 @@ interface Position {
 }
 
 // ========================================
+// IMPORTS
+// ========================================
+
+import { soundManager } from '../../core/SoundManager';
+
+// ========================================
 // DECLARE GLOBAL VSCODE API
 // This is injected by WebviewManager, not imported
 // ========================================
@@ -82,6 +88,9 @@ let isPaused: boolean = false;
 // ========================================
 
 function init(): void {
+    // Initialize sound manager
+    soundManager.setMuted(false);
+
     loadHighScore();
     updateScoreDisplay();
     updateSpeedDisplay();
@@ -170,7 +179,7 @@ function drawInitialState(): void {
 // ========================================
 
 function startGame(): void {
-
+    soundManager.playById('popSound');
 
     if (isRunning) {
         return;
@@ -234,6 +243,7 @@ function restartGame(): void {
 }
 
 function endGame(): void {
+    soundManager.playById('popSound');
     isRunning = false;
     isPaused = false;
 
@@ -296,6 +306,7 @@ function update(): void {
     }
 
     if (snakeX === bugX && snakeY === bugY) {
+        soundManager.playById('slurpSound');
         score++;
         snakeLength++;
         updateScoreDisplay();

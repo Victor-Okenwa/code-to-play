@@ -125,6 +125,7 @@ export class WebviewManager {
 
             const nonce = this.getNonce();
             const fontUris = this.getFontUris(panel.webview);
+            const soundUris = this.getSoundUris(panel.webview);
 
             // Create content
             const commonStyles = this.getCommonStyles(fontUris, codiconUris, nonce);
@@ -135,7 +136,7 @@ export class WebviewManager {
             const scriptTag = this.createScriptTag(js, nonce);
 
             // Inject into HTML
-            html = this.injectContent(html, commonStyles + styleTag, vscodeApiScript + scriptTag);
+            html = this.injectContent(html, commonStyles + styleTag, vscodeApiScript + scriptTag, soundUris);
             html = this.applyContentSecurityPolicy(html, panel.webview, nonce);
 
             panel.webview.html = html;
@@ -190,6 +191,20 @@ export class WebviewManager {
             cssUri: webview.asWebviewUri(vscode.Uri.joinPath(codiconsPath, 'codicon.css')),
             fontUri: webview.asWebviewUri(vscode.Uri.joinPath(codiconsPath, 'codicon.ttf'))
         };
+    }
+
+    private getSoundUris(webview: vscode.Webview): Map<string, vscode.Uri> {
+        const soundDir = path.join(this.context.extensionPath, 'media', 'sfx');
+        const uris = new Map<string, vscode.Uri>();
+
+        const sounds = ['slurp.mp3', 'pop.mp3'];
+
+        for (const soundFile of sounds) {
+            const soundUri = vscode.Uri.file(path.join(soundDir, soundFile));
+            uris.set(soundFile, webview.asWebviewUri(soundUri));
+        }
+
+        return uris;
     }
 
     private getCommonStyles(
@@ -257,13 +272,21 @@ export class WebviewManager {
         return `<script nonce="${nonce}">${js}</script>`;
     }
 
-    private injectContent(html: string, styles: string, scripts: string): string {
+    private injectContent(html: string, styles: string, scripts: string, soundUris?: Map<string, vscode.Uri>): string {
         if (styles && html.includes('</head>')) {
             html = html.replace('</head>', `${styles}</head>`);
         }
 
         if (scripts && html.includes('</body>')) {
             html = html.replace('</body>', `${scripts}</body>`);
+        }
+
+        // Replace sound source placeholders with actual URIs
+        if (soundUris) {
+            for (const [filename, uri] of soundUris) {
+                const placeholder = `SOUND_SRC_${filename.toUpperCase().replace('.', '_')}`;
+                html = html.replace(new RegExp(placeholder, 'g'), uri.toString());
+            }
         }
 
         return html;
@@ -275,12 +298,13 @@ export class WebviewManager {
         nonce: string
     ): string {
         const csp = `
-            <meta http-equiv="Content-Security-Policy" 
-                  content="default-src 'none'; 
-                           style-src ${webview.cspSource} 'unsafe-inline'; 
-                           script-src 'nonce-${nonce}'; 
-                           font-src ${webview.cspSource}; 
-                           img-src ${webview.cspSource} data:;">
+            <meta http-equiv="Content-Security-Policy"
+                  content="default-src 'none';
+                           style-src ${webview.cspSource} 'unsafe-inline';
+                           script-src 'nonce-${nonce}';
+                           font-src ${webview.cspSource};
+                           img-src ${webview.cspSource} data:;
+                           media-src ${webview.cspSource};">
         `;
 
         if (html.includes('<head>')) {
