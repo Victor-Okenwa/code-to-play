@@ -7,14 +7,15 @@
   </head>
   <body>
 
-  <audio id="popSound" preload="auto">
-    <source src="SOUND_SRC_POP_MP3" type="audio/mpeg">
-  </audio>
-  
-  <audio id="slurpSound" preload="auto">
-    <source src="SOUND_SRC_SLURP_MP3" type="audio/mpeg">
-  </audio>
-
+  <!-- ✅ AUDIO ELEMENTS (must have ID matching playById calls) -->
+      <audio id="popSound" preload="auto" style="display: none;">
+        <source src="SOUND_SRC_POP_MP3" type="audio/mpeg">
+      </audio>
+      
+      <audio id="slurpSound" preload="auto" style="display: none;">
+        <source src="SOUND_SRC_SLURP_MP3" type="audio/mpeg">
+      </audio>
+ 
     <div class="game-container">
       <!-- Game Over Alert (Full Screen) -->
       <div class="game-over-alert" id="gameOverAlert">

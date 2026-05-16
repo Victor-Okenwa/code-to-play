@@ -25,42 +25,15 @@ declare const vscode: {
     postMessage(message: any): void;
 };
 
-// ========================================
-// SOUND MANAGER (INLINE - NO IMPORT)
-// ========================================
-
-class SoundManager {
-    private isMuted: boolean = false;
-
-    playById(elementId: string): void {
-        if (this.isMuted) {
-            return;
-        }
-
-        const audioElement = document.getElementById(elementId) as HTMLAudioElement;
-        if (audioElement) {
-            // Clone to allow overlapping sounds
-            const audioClone = audioElement.cloneNode(true) as HTMLAudioElement;
-            audioClone.volume = audioElement.volume;
-            audioClone.play().catch(err => {
-                console.warn(`Failed to play sound: ${elementId}`, err);
-            });
-        } else {
-            console.warn(`Audio element with ID '${elementId}' not found`);
-        }
-    }
-
-    setMuted(muted: boolean): void {
-        this.isMuted = muted;
-    }
-
-    isSoundMuted(): boolean {
-        return this.isMuted;
-    }
-}
-
-// Create singleton instance
-const soundManager = new SoundManager();
+// Declare SoundManager as global (injected by WebviewManager)
+declare const soundManager: {
+    playById(id: string): void;
+    setMuted(muted: boolean): void;
+    isSoundMuted(): boolean;
+    setVolume(volume: number): void;
+    getVolume(): number;
+    preloadAll(): void;
+};
 
 // ========================================
 // DOM ELEMENT REFERENCES
@@ -118,8 +91,10 @@ let isPaused: boolean = false;
 // ========================================
 
 function init(): void {
-    // Initialize sound manager
-    soundManager.setMuted(false);
+    // ✅ Preload all sounds
+    if (typeof soundManager !== 'undefined' && soundManager.preloadAll) {
+        soundManager.preloadAll();
+    }
 
     loadHighScore();
     updateScoreDisplay();
@@ -129,10 +104,6 @@ function init(): void {
 
     // Draw initial state so grid lines are visible
     drawInitialState();
-
-    // if (highScore > 0 && resetBtn) {
-    //     resetBtn.style.display = 'inline-block';
-    // }
 }
 
 function loadHighScore(): void {
@@ -209,9 +180,11 @@ function drawInitialState(): void {
 // ========================================
 
 function startGame(): void {
-    soundManager.playById('popSound');
-    if (isRunning) {
-        return;
+    // ✅ Play start sound using global soundManager
+    if (typeof soundManager !== 'undefined') {
+        soundManager.playById('popSound');
+    } else {
+        console.warn('[Debug Snake] SoundManager not available');
     }
 
     // Reset game state
@@ -272,7 +245,7 @@ function restartGame(): void {
 }
 
 function endGame(): void {
-    soundManager.playById('popSound');
+
     isRunning = false;
     isPaused = false;
 
@@ -335,10 +308,11 @@ function update(): void {
     }
 
     if (snakeX === bugX && snakeY === bugY) {
-        // soundManager.playById('slurpSound');
         score++;
         snakeLength++;
         updateScoreDisplay();
+        // Play slurp sound as snakes eats
+        // soundManager.playById('slurpSound');
         placeBug();
 
         if (score % BUGS_PER_SPEED_INCREASE === 0) {

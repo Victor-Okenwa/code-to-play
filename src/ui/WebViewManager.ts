@@ -178,6 +178,35 @@ export class WebviewManager {
         return uris;
     }
 
+    /**
+     * Sends sound configuration from VS Code settings to the webview
+    */
+    private sendSoundConfig(gameId: string): void {
+        const panel = this.activePanels.get(gameId);
+        if (!panel) {
+            return;
+        }
+
+        // Get settings from VS Code
+        const config = vscode.workspace.getConfiguration('codeToPlay');
+        const soundEnabled = config.get('sound.enabled', true);
+        const soundVolume = config.get('sound.volume', 1.0);
+
+        console.log(`[WebviewManager] Sending sound config to ${gameId}:`, {
+            soundEnabled,
+            soundVolume
+        });
+
+        // Send to webview
+        panel.webview.postMessage({
+            command: 'updateSoundConfig',
+            config: {
+                soundEnabled,
+                soundVolume
+            }
+        });
+    }
+
     private getCodiconUris(webview: vscode.Webview): { cssUri: vscode.Uri; fontUri: vscode.Uri } {
         const codiconsPath = vscode.Uri.joinPath(
             this.context.extensionUri,
@@ -284,9 +313,18 @@ export class WebviewManager {
         // Replace sound source placeholders with actual URIs
         if (soundUris) {
             for (const [filename, uri] of soundUris) {
-                const placeholder = `SOUND_SRC_${filename.toUpperCase().replace('.', '_')}`;
-                html = html.replace(new RegExp(placeholder, 'g'), uri.toString());
+                // Handle both uppercase and lowercase replacements
+                const placeholders = [
+                    `SOUND_SRC_${filename.toUpperCase().replace(/\./g, '_')}`,
+                    `SOUND_${filename.toUpperCase().replace('.mp3', '').replace(/\./g, '_')}`
+                ];
+
+                for (const placeholder of placeholders) {
+                    html = html.replace(new RegExp(placeholder, 'g'), uri.toString());
+                }
             }
+
+            console.log(`[WebviewManager] Injected sound URIs`);
         }
 
         return html;

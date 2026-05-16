@@ -6,6 +6,15 @@
     <title>Whack-a-Bug</title>
   </head>
   <body>
+      <!-- ✅ AUDIO ELEMENTS (must have ID matching playById calls) -->
+      <audio id="popSound" preload="auto" style="display: none;">
+        <source src="SOUND_SRC_POP_MP3" type="audio/mpeg">
+      </audio>
+      
+      <audio id="slurpSound" preload="auto" style="display: none;">
+        <source src="SOUND_SRC_SLURP_MP3" type="audio/mpeg">
+      </audio>
+ 
     <div class="game-container">
       <!-- Game Over Alert Overlay (Full Screen) -->
       <div class="game-over-alert" id="gameOverAlert">
@@ -112,10 +121,6 @@
           <li>You have 60 seconds - make every click count!</li>
         </ul>
       </div>
-
-      <!-- Sound effects -->
-      <audio id="slurpSound" src="SOUND_SRC_SLURP_MP3" preload="auto"></audio>
-      <audio id="popSound" src="SOUND_SRC_POP_MP3" preload="auto"></audio>
 
       <!-- Reset High Score Button -->
       <!-- <div class="reset-container" id="resetContainer" style="display: none">
