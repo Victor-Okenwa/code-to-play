@@ -6,6 +6,15 @@
     <title>Debug Snake</title>
   </head>
   <body>
+
+  <audio id="popSound" preload="auto">
+    <source src="SOUND_SRC_POP_MP3" type="audio/mpeg">
+  </audio>
+  
+  <audio id="slurpSound" preload="auto">
+    <source src="SOUND_SRC_SLURP_MP3" type="audio/mpeg">
+  </audio>
+
     <div class="game-container">
       <!-- Game Over Alert (Full Screen) -->
       <div class="game-over-alert" id="gameOverAlert">
@@ -34,10 +43,6 @@
           <div class="score-value" id="speed">1</div>
         </div>
       </div>
-
-      <!-- Sound effects -->
-      <audio id="slurpSound" src="SOUND_SRC_SLURP_MP3" preload="auto"></audio>
-      <audio id="popSound" src="SOUND_SRC_POP_MP3" preload="auto"></audio>
 
       <!-- Game canvas -->
 

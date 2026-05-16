@@ -16,13 +16,6 @@ interface Position {
     x: number;
     y: number;
 }
-
-// ========================================
-// IMPORTS
-// ========================================
-
-import { soundManager } from '../../core/SoundManager';
-
 // ========================================
 // DECLARE GLOBAL VSCODE API
 // This is injected by WebviewManager, not imported
@@ -31,6 +24,43 @@ import { soundManager } from '../../core/SoundManager';
 declare const vscode: {
     postMessage(message: any): void;
 };
+
+// ========================================
+// SOUND MANAGER (INLINE - NO IMPORT)
+// ========================================
+
+class SoundManager {
+    private isMuted: boolean = false;
+
+    playById(elementId: string): void {
+        if (this.isMuted) {
+            return;
+        }
+
+        const audioElement = document.getElementById(elementId) as HTMLAudioElement;
+        if (audioElement) {
+            // Clone to allow overlapping sounds
+            const audioClone = audioElement.cloneNode(true) as HTMLAudioElement;
+            audioClone.volume = audioElement.volume;
+            audioClone.play().catch(err => {
+                console.warn(`Failed to play sound: ${elementId}`, err);
+            });
+        } else {
+            console.warn(`Audio element with ID '${elementId}' not found`);
+        }
+    }
+
+    setMuted(muted: boolean): void {
+        this.isMuted = muted;
+    }
+
+    isSoundMuted(): boolean {
+        return this.isMuted;
+    }
+}
+
+// Create singleton instance
+const soundManager = new SoundManager();
 
 // ========================================
 // DOM ELEMENT REFERENCES
@@ -180,7 +210,6 @@ function drawInitialState(): void {
 
 function startGame(): void {
     soundManager.playById('popSound');
-
     if (isRunning) {
         return;
     }
@@ -306,7 +335,7 @@ function update(): void {
     }
 
     if (snakeX === bugX && snakeY === bugY) {
-        soundManager.playById('slurpSound');
+        // soundManager.playById('slurpSound');
         score++;
         snakeLength++;
         updateScoreDisplay();

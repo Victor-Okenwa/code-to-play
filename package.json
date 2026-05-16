@@ -158,6 +158,24 @@
       }
     ]
   },
+  "configuration": {
+    "title": "Code to Play",
+    "properties": {      
+      "codeToPlay.sound.enabled": {
+        "type": "boolean",
+        "default": true,
+        "description": "Enable or disable all sound effects in games"
+      },
+      "codeToPlay.sound.volume": {
+        "type": "number",
+        "default": 1.0,
+        "minimum": 0,
+        "maximum": 1,
+        "step": 0.1,
+        "description": "Volume level for game sounds (0 to 1, where 1 is max)"
+      }
+    }
+  },
   "scripts": {
     "vscode:prepublish": "pnpm run package",
     "compile": "node esbuild.js",

@@ -304,7 +304,8 @@ export class WebviewManager {
                            script-src 'nonce-${nonce}';
                            font-src ${webview.cspSource};
                            img-src ${webview.cspSource} data:;
-                           media-src ${webview.cspSource};">
+                           media-src ${webview.cspSource};
+                           connect-src ${webview.cspSource};">
         `;
 
         if (html.includes('<head>')) {
