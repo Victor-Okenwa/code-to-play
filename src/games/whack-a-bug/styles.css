@@ -13,26 +13,16 @@
     Mimics VS Code's dark theme colors
 ======================================== */
 body {
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  /* Gradient background matching VS Code dark theme */
-  background: linear-gradient(135deg, #1e1e1e 0%, #2d2d30 100%);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
-  color: #d4d4d4; /* VS Code default text color */
+  font-family: "Orbitron", "Segoe UI", sans-serif;
+  color: #d4d4d4;
 }
 
-/* ========================================
-    GAME CONTAINER - Main wrapper
-    Contains all game elements
-======================================== */
 .game-container {
-  background: #252526; /* VS Code sidebar background */
-  border-radius: 12px;
-  padding: 30px;
+  background: #252526;
+  border: 1px solid #3e3e42;
+  border-radius: 0 0 12px 12px;
+  padding: 24px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-  max-width: 600px;
   width: 100%;
 }
 
@@ -45,13 +35,14 @@ body {
 }
 
 .game-header h1 {
-  color: #4ec9b0; /* VS Code teal accent color */
-  font-size: 2em;
+  color: #4ec9b0;
+  font-size: 1.6em;
   margin-bottom: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
+  font-family: "Press Start 2P", cursive;
 }
 
 .bug-icon {
@@ -235,6 +226,7 @@ body {
 /* Individual hole container */
 .hole {
   aspect-ratio: 1;
+  min-height: 80px;
   background: #0d0d0d;
   border: 3px solid #3e3e42;
   border-radius: 50%;
@@ -265,6 +257,12 @@ body {
 /* Bug is visible when active */
 .bug.active {
   top: 10%;
+  animation: bugPulse 0.6s ease-in-out infinite alternate;
+}
+
+@keyframes bugPulse {
+  from { transform: scale(1); }
+  to { transform: scale(1.05); }
 }
 
 /* Bug being squashed animation */

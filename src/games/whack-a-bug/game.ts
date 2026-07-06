@@ -4,18 +4,31 @@
  */
 
 // ========================================
-// IMPORTS
-// ========================================
-
-import { soundManager } from '../../core/SoundManager';
-
-// ========================================
 // DECLARE GLOBAL VSCODE API
 // This is injected by WebviewManager, not imported
 // ========================================
 
 declare const vscode: {
     postMessage(message: any): void;
+};
+
+// Declare SoundManager as global (injected by WebviewManager)
+declare const soundManager: {
+    playById(id: string): void;
+    setMuted(muted: boolean): void;
+    isSoundMuted(): boolean;
+    setVolume(volume: number): void;
+    getVolume(): number;
+    preloadAll(): void;
+};
+
+declare const initGameChrome: () => void;
+
+declare const gameChrome: {
+    refreshMuteUI(): void;
+    applyZoom(zoom: number): void;
+    setDifficultyBadge(label: string): void;
+    refreshToolbarPhase(): void;
 };
 
 // ========================================
@@ -105,8 +118,13 @@ let countdownTimer: number | null = null;
 // ========================================
 
 function init(): void {
-    // Initialize sound manager
-    soundManager.setMuted(false);
+    if (typeof initGameChrome === 'function') {
+        initGameChrome();
+    }
+
+    if (typeof soundManager !== 'undefined') {
+        soundManager.setMuted(false);
+    }
 
     loadHighScore();
     updateScoreDisplay();
@@ -196,6 +214,12 @@ function startGameMode(): void {
 
     difficultySelection.style.display = 'none';
     gameArea.style.display = 'block';
+    gameArea.classList.add('active');
+
+    if (typeof gameChrome !== 'undefined') {
+        gameChrome.setDifficultyBadge(currentDifficulty.name);
+        gameChrome.refreshToolbarPhase();
+    }
 
     startGame();
 }
@@ -204,7 +228,13 @@ function backToMenu(): void {
     stopGame();
 
     gameArea.style.display = 'none';
+    gameArea.classList.remove('active');
     difficultySelection.style.display = 'block';
+
+    if (typeof gameChrome !== 'undefined') {
+        gameChrome.setDifficultyBadge('');
+        gameChrome.refreshToolbarPhase();
+    }
 
     gameOverElement.classList.remove('show');
     gameOverAlert.classList.remove('show');
@@ -215,7 +245,9 @@ function backToMenu(): void {
 // ========================================
 
 function startGame(): void {
-    soundManager.playById('popSound');
+    if (typeof soundManager !== 'undefined') {
+        soundManager.playById('popSound');
+    }
     score = 0;
     timeRemaining = GAME_DURATION;
     isPlaying = true;
@@ -260,7 +292,9 @@ function stopGame(): void {
 }
 
 function endGame(): void {
-    soundManager.playById('popSound');
+    if (typeof soundManager !== 'undefined') {
+        soundManager.playById('popSound');
+    }
     stopGame();
 
     if (score > highScore) {
@@ -382,7 +416,9 @@ function whackBug(holeIndex: number): void {
         return;
     }
 
-    soundManager.playById('slurpSound');
+    if (typeof soundManager !== 'undefined') {
+        soundManager.playById('slurpSound');
+    }
     score += currentDifficulty.pointsPerBug;
     updateScoreDisplay();
 

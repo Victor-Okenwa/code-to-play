@@ -7,7 +7,6 @@
   </head>
   <body>
 
-  <!-- ✅ AUDIO ELEMENTS (must have ID matching playById calls) -->
       <audio id="popSound" preload="auto" style="display: none;">
         <source src="SOUND_SRC_POP_MP3" type="audio/mpeg">
       </audio>
@@ -15,77 +14,117 @@
       <audio id="slurpSound" preload="auto" style="display: none;">
         <source src="SOUND_SRC_SLURP_MP3" type="audio/mpeg">
       </audio>
- 
-    <div class="game-container">
-      <!-- Game Over Alert (Full Screen) -->
-      <div class="game-over-alert" id="gameOverAlert">
-        <h2>GAME OVER!</h2>
-        <p id="alertScore">Bugs Fixed: 0</p>
-      </div>
 
-      <!-- Game header -->
-      <div class="game-header">
-        <h1><span class="snake">🐍</span> Debug Snake</h1>
-        <p>Catch the bugs and grow your debugging skills!</p>
-      </div>
-
-      <!-- Score panel -->
-      <div class="score-panel">
-        <div class="score-item">
-          <div class="score-label">Bugs Fixed</div>
-          <div class="score-value" id="score">0</div>
-        </div>
-        <div class="score-item">
-          <div class="score-label">High Score</div>
-          <div class="score-value" id="highScore">0</div>
-        </div>
-        <div class="score-item">
-          <div class="score-label">Speed Level</div>
-          <div class="score-value" id="speed">1</div>
-        </div>
-      </div>
-
-      <!-- Game canvas -->
-
-      <div class="game-area">
-        <canvas id="gameCanvas" width="400" height="400"></canvas>
-      </div>
-
-      <!-- Game over screen -->
-      <div class="game-over" id="gameOver">
-        <h2>Debug Session Complete!</h2>
-        <p>Bugs Fixed: <span id="finalScore">0</span></p>
-        <button class="btn" id="restartBtn">Debug Again</button>
-      </div>
-
-      <!-- Control buttons -->
-      <div class="controls">
-        <button class="btn" id="startBtn">Start Debugging</button>
-        <button class="btn" id="pauseBtn" style="display: none">
-          Pause (SPC)
+    <div class="game-viewport" id="gameViewport">
+      <div class="game-toolbar" id="gameToolbar">
+        <button type="button" class="toolbar-btn" id="muteBtn" title="Toggle sound (Ctrl+M)" aria-pressed="false">
+          <i class="codicon codicon-unmute" id="muteIcon"></i>
+          <span id="muteLabel">Sound On</span>
         </button>
-      </div>
-
-      <!-- Instructions -->
-      <div class="instructions">
-        <h3>Controls</h3>
-        <ul>
-          <li><strong>Arrow Keys</strong> - Move snake</li>
-          <li><strong>Space</strong> - Pause/Resume</li>
-        </ul>
-        <h3>How to Play</h3>
-        <ul>
-          <li>Catch red ladybugs to grow your green snake</li>
-          <li>Avoid hitting walls or yourself</li>
-          <li>Speed increases every 5 bugs caught</li>
-        </ul>
-      </div>
-
-      <!-- Reset High Score Button -->
-      <div class="reset-container" id="resetContainer" style="display: none">
-        <button class="btn reset-btn" id="resetHighScoreBtn">
-          Reset High Score
+        <button type="button" class="toolbar-btn" id="fullscreenBtn" title="Toggle focus play mode (Ctrl+F)">
+          <i class="codicon codicon-screen-full" id="fullscreenIcon"></i>
+          <span id="fullscreenLabel">Focus Play</span>
         </button>
+        <span class="difficulty-badge" id="difficultyBadge"></span>
+        <span class="toolbar-hint">Choose difficulty</span>
+      </div>
+
+      <div class="game-container">
+        <div class="game-over-alert" id="gameOverAlert">
+          <h2>GAME OVER!</h2>
+          <p id="alertScore">Bugs Fixed: 0</p>
+        </div>
+
+        <div class="game-header">
+          <h1><span class="snake">🐍</span> Debug Snake</h1>
+          <p>Catch the bugs and grow your debugging skills!</p>
+        </div>
+
+        <div class="difficulty-selection" id="difficultySelection">
+          <h2 class="difficulty-title">Choose Difficulty</h2>
+          <div class="difficulty-options">
+            <div class="difficulty-card active" id="easyCard" data-difficulty="easy">
+              <div class="difficulty-header">
+                <span class="difficulty-indicator">🟢</span>
+                <span class="difficulty-name">EASY</span>
+              </div>
+              <div class="difficulty-description">
+                Slower pace • More time between speed increases • Great for breaks
+              </div>
+            </div>
+            <div class="difficulty-card" id="hardCard" data-difficulty="hard">
+              <div class="difficulty-header">
+                <span class="difficulty-indicator">🟡</span>
+                <span class="difficulty-name">HARD</span>
+              </div>
+              <div class="difficulty-description">
+                Faster movement • Speed ramps up quicker • For experienced debuggers
+              </div>
+            </div>
+            <div class="difficulty-card" id="veryHardCard" data-difficulty="veryHard">
+              <div class="difficulty-header">
+                <span class="difficulty-indicator">🔴</span>
+                <span class="difficulty-name">VERY HARD</span>
+              </div>
+              <div class="difficulty-description">
+                Blazing speed • Rapid acceleration • Maximum challenge
+              </div>
+            </div>
+          </div>
+          <button class="btn start-game-btn" id="enterGameBtn">Start Game</button>
+        </div>
+
+        <div class="game-play" id="gamePlay" style="display: none" data-focus-pause-key="Space">
+          <div class="score-panel focus-play-scores">
+            <div class="score-item">
+              <div class="score-label">Bugs Fixed</div>
+              <div class="score-value" id="score">0</div>
+            </div>
+            <div class="score-item">
+              <div class="score-label">High Score</div>
+              <div class="score-value" id="highScore">0</div>
+            </div>
+            <div class="score-item">
+              <div class="score-label">Speed Level</div>
+              <div class="score-value" id="speed">1</div>
+            </div>
+          </div>
+
+          <div class="game-area focus-play-target">
+            <canvas id="gameCanvas" width="400" height="400"></canvas>
+          </div>
+
+          <div class="game-over" id="gameOver">
+            <h2>Debug Session Complete!</h2>
+            <p>Bugs Fixed: <span id="finalScore">0</span></p>
+            <button class="btn" id="restartBtn">Debug Again</button>
+          </div>
+
+          <div class="controls">
+            <button class="btn" id="startBtn">Start Debugging</button>
+            <button class="btn" id="pauseBtn" style="display: none">Pause (SPC)</button>
+            <button class="btn back-btn" id="backToMenuBtn">Change Difficulty</button>
+          </div>
+        </div>
+
+        <div class="instructions">
+          <details>
+            <summary>How to Play</summary>
+            <h3>Controls</h3>
+            <ul>
+              <li><strong>Arrow Keys</strong> — Move snake</li>
+              <li><strong>Space</strong> — Pause/Resume</li>
+              <li><strong>Ctrl+M</strong> — Toggle sound</li>
+              <li><strong>Ctrl+F</strong> — Toggle focus play mode</li>
+            </ul>
+            <h3>Rules</h3>
+            <ul>
+              <li>Catch red ladybugs to grow your green snake</li>
+              <li>Avoid hitting walls or yourself</li>
+              <li>Speed increases as you catch more bugs</li>
+            </ul>
+          </details>
+        </div>
       </div>
     </div>
   </body>

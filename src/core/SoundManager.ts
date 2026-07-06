@@ -35,7 +35,7 @@ class SoundManager {
             if (id) {
                 this.audioElements.set(id, audio);
                 audio.volume = this.volume;
-                console.log(`[SoundManager] Registered audio element: ${id}`)
+                console.log(`[SoundManager] Registered audio element: ${id}`);
             }
         });
 
@@ -91,14 +91,20 @@ class SoundManager {
             return;
         }
 
+        const source = audioElement.querySelector('source');
+        const src = source?.src || audioElement.src;
+        if (!src) {
+            console.warn(`[SoundManager] No audio source for: ${elementId}`);
+            return;
+        }
+
         try {
-            // Clone the audio to allow overlapping sounds
-            const audioClone = audioElement.cloneNode(true) as HTMLAudioElement;
-            audioClone.volume = this.volume;
+            const audio = new Audio(src);
+            audio.volume = this.volume;
 
             console.log(`[SoundManager] Playing sound: ${elementId} (volume: ${this.volume})`);
 
-            audioClone.play().catch(err => {
+            audio.play().catch(err => {
                 console.warn(`[SoundManager] Failed to play sound ${elementId}:`, err);
             });
         } catch (error) {
@@ -109,6 +115,11 @@ class SoundManager {
 
     setMuted(muted: boolean): void {
         this.isMuted = muted;
+    }
+
+    toggleMute(): boolean {
+        this.isMuted = !this.isMuted;
+        return this.isMuted;
     }
 
     isSoundMuted(): boolean {

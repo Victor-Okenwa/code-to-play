@@ -1,7 +1,10 @@
 /**
- * WebviewManager.ts
+ * WebviewManager.ts - FIXED VERSION
  * 
- * Manages webview panels for game UIs in the Code to Play VS Code extension.
+ * Issues fixed:
+ * 1. SoundManager is now properly injected into webview
+ * 2. Sound URIs point to correct dist directory
+ * 3. Configuration is sent after HTML loads
  */
 
 import * as vscode from 'vscode';
@@ -19,6 +22,16 @@ export class WebviewManager {
         private gameManager: GameManager
     ) {
         this.context = context;
+
+        const configChangeDisposable = vscode.workspace.onDidChangeConfiguration(e => {
+            if (e.affectsConfiguration('codeToPlay.sound') || e.affectsConfiguration('codeToPlay.display')) {
+                for (const gameId of this.activePanels.keys()) {
+                    this.sendSoundConfig(gameId);
+                    this.sendDisplayConfig(gameId);
+                }
+            }
+        });
+        context.subscriptions.push(configChangeDisposable);
     }
 
     // ========================================
@@ -63,12 +76,12 @@ export class WebviewManager {
                 enableScripts: true,
                 localResourceRoots: [
                     vscode.Uri.file(path.join(this.context.extensionPath, 'dist')),
-                    vscode.Uri.joinPath(this.context.extensionUri, 'node_modules', '@vscode', 'codicons', 'dist', 'codicon.css')
+                    vscode.Uri.joinPath(this.context.extensionUri, 'node_modules', '@vscode', 'codicons', 'dist')
                 ]
             }
         );
 
-        panel.iconPath = new vscode.ThemeIcon('game'); // use game icon as the tab icon
+        panel.iconPath = new vscode.ThemeIcon('game');
 
         return panel;
     }
@@ -76,7 +89,6 @@ export class WebviewManager {
     private setupPanelHandlers(gameId: string, panel: vscode.WebviewPanel): void {
         panel.onDidDispose(() => {
             this.activePanels.delete(gameId);
-            // DON'T call endPlay here - only when game actually ends
         });
 
         panel.webview.onDidReceiveMessage(
@@ -86,8 +98,9 @@ export class WebviewManager {
         );
 
         panel.onDidChangeViewState(e => {
-            if (!e.webviewPanel.visible) {
-                // Could pause game or save state here
+            if (e.webviewPanel.visible) {
+                this.sendSoundConfig(gameId);
+                this.sendDisplayConfig(gameId);
             }
         });
     }
@@ -112,8 +125,6 @@ export class WebviewManager {
             const jsPath = path.join(distGameDir, 'game.js');
             const cssPath = path.join(distGameDir, game.cssPath);
 
-
-
             let html = fs.readFileSync(htmlPath, 'utf8');
             const js = fs.existsSync(jsPath) ? fs.readFileSync(jsPath, 'utf8') : '';
             const css = fs.existsSync(cssPath) ? fs.readFileSync(cssPath, 'utf8') : '';
@@ -129,17 +140,28 @@ export class WebviewManager {
 
             // Create content
             const commonStyles = this.getCommonStyles(fontUris, codiconUris, nonce);
+            const chromeStyles = this.getGameChromeStyles(nonce);
             const styleTag = this.createStyleTag(css, nonce);
 
-            // CRITICAL: Inject VS Code API first, then game code
             const vscodeApiScript = this.createVSCodeApiScript(nonce);
+            const soundManagerScript = this.createSoundManagerScript(nonce);
+            const gameChromeScript = this.createGameChromeScript(nonce);
             const scriptTag = this.createScriptTag(js, nonce);
 
-            // Inject into HTML
-            html = this.injectContent(html, commonStyles + styleTag, vscodeApiScript + scriptTag, soundUris);
+            html = this.injectContent(
+                html,
+                commonStyles + chromeStyles + styleTag,
+                vscodeApiScript + soundManagerScript + gameChromeScript + scriptTag,
+                soundUris
+            );
             html = this.applyContentSecurityPolicy(html, panel.webview, nonce);
 
             panel.webview.html = html;
+
+            setTimeout(() => {
+                this.sendSoundConfig(game.id);
+                this.sendDisplayConfig(game.id);
+            }, 500);
         } catch (error) {
             console.error(`[WebviewManager] Error:`, error);
             vscode.window.showErrorMessage(
@@ -149,38 +171,69 @@ export class WebviewManager {
     }
 
     /**
-     * Creates the VS Code API script that games will use
+     * Creates the VS Code API script
      */
     private createVSCodeApiScript(nonce: string): string {
         return `<script nonce="${nonce}">
-            // Make VS Code API globally available
             const vscode = acquireVsCodeApi();
         </script>`;
     }
 
-    private getFontUris(webview: vscode.Webview): Map<string, vscode.Uri> {
-        const fontDir = path.join(this.context.extensionPath, 'dist', 'media', 'fonts');
-        const uris = new Map<string, vscode.Uri>();
+    /**
+     * Loads compiled SoundManager from dist and injects it into the webview.
+     */
+    private createSoundManagerScript(nonce: string): string {
+        const soundManagerPath = path.join(
+            this.context.extensionPath,
+            'dist',
+            'sound-manager.js'
+        );
 
-        const fonts = {
-            pressStartWoff2: 'PressStart2P.woff2',
-            pressStartTtf: 'PressStart2P-Regular.ttf',
-            orbitronWoff2: 'Orbitron.woff2',
-            orbitronRegular: 'Orbitron-Regular.ttf',
-            orbitronBold: 'Orbitron-Bold.ttf'
-        };
-
-        for (const [key, filename] of Object.entries(fonts)) {
-            const fontUri = vscode.Uri.file(path.join(fontDir, filename));
-            uris.set(key, webview.asWebviewUri(fontUri));
+        if (!fs.existsSync(soundManagerPath)) {
+            console.warn('[WebviewManager] sound-manager.js not found — run compile first');
+            return '';
         }
 
-        return uris;
+        const js = fs.readFileSync(soundManagerPath, 'utf8');
+        return `<script nonce="${nonce}">${js}</script>`;
+    }
+
+    private createGameChromeScript(nonce: string): string {
+        const gameChromePath = path.join(
+            this.context.extensionPath,
+            'dist',
+            'game-chrome.js'
+        );
+
+        if (!fs.existsSync(gameChromePath)) {
+            console.warn('[WebviewManager] game-chrome.js not found — run compile first');
+            return '';
+        }
+
+        const js = fs.readFileSync(gameChromePath, 'utf8');
+        return `<script nonce="${nonce}">${js}</script>`;
+    }
+
+    private getGameChromeStyles(nonce: string): string {
+        const chromeCssPath = path.join(
+            this.context.extensionPath,
+            'dist',
+            'media',
+            'styles',
+            'game-chrome.css'
+        );
+
+        if (!fs.existsSync(chromeCssPath)) {
+            return '';
+        }
+
+        const css = fs.readFileSync(chromeCssPath, 'utf8');
+        return `<style nonce="${nonce}">${css}</style>`;
     }
 
     /**
      * Sends sound configuration from VS Code settings to the webview
-    */
+     */
     private sendSoundConfig(gameId: string): void {
         const panel = this.activePanels.get(gameId);
         if (!panel) {
@@ -207,6 +260,43 @@ export class WebviewManager {
         });
     }
 
+    private sendDisplayConfig(gameId: string): void {
+        const panel = this.activePanels.get(gameId);
+        if (!panel) {
+            return;
+        }
+
+        const config = vscode.workspace.getConfiguration('codeToPlay');
+        const zoom = config.get<number>('display.zoom', 0.85);
+        const allowFullscreen = config.get<boolean>('display.allowFullscreen', true);
+        const autoFullscreen = config.get<boolean>('display.autoFullscreen', false);
+
+        panel.webview.postMessage({
+            command: 'updateDisplayConfig',
+            config: { zoom, allowFullscreen, autoFullscreen }
+        });
+    }
+
+    private getFontUris(webview: vscode.Webview): Map<string, vscode.Uri> {
+        const fontDir = path.join(this.context.extensionPath, 'dist', 'media', 'fonts');
+        const uris = new Map<string, vscode.Uri>();
+
+        const fonts = {
+            pressStartWoff2: 'PressStart2P.woff2',
+            pressStartTtf: 'PressStart2P-Regular.ttf',
+            orbitronWoff2: 'Orbitron.woff2',
+            orbitronRegular: 'Orbitron-Regular.ttf',
+            orbitronBold: 'Orbitron-Bold.ttf'
+        };
+
+        for (const [key, filename] of Object.entries(fonts)) {
+            const fontUri = vscode.Uri.file(path.join(fontDir, filename));
+            uris.set(key, webview.asWebviewUri(fontUri));
+        }
+
+        return uris;
+    }
+
     private getCodiconUris(webview: vscode.Webview): { cssUri: vscode.Uri; fontUri: vscode.Uri } {
         const codiconsPath = vscode.Uri.joinPath(
             this.context.extensionUri,
@@ -222,15 +312,20 @@ export class WebviewManager {
         };
     }
 
+    /**
+     * ✅ FIXED: Points to dist/media/sfx where bundled sounds are
+     */
     private getSoundUris(webview: vscode.Webview): Map<string, vscode.Uri> {
-        const soundDir = path.join(this.context.extensionPath, 'media', 'sfx');
+        const soundDir = path.join(this.context.extensionPath, 'dist', 'media', 'sfx');
         const uris = new Map<string, vscode.Uri>();
 
         const sounds = ['slurp.mp3', 'pop.mp3'];
 
         for (const soundFile of sounds) {
             const soundUri = vscode.Uri.file(path.join(soundDir, soundFile));
-            uris.set(soundFile, webview.asWebviewUri(soundUri));
+            const webviewUri = webview.asWebviewUri(soundUri);
+            uris.set(soundFile, webviewUri);
+            console.log(`[WebviewManager] Sound URI for ${soundFile}: ${webviewUri.toString()}`);
         }
 
         return uris;
@@ -313,7 +408,6 @@ export class WebviewManager {
         // Replace sound source placeholders with actual URIs
         if (soundUris) {
             for (const [filename, uri] of soundUris) {
-                // Handle both uppercase and lowercase replacements
                 const placeholders = [
                     `SOUND_SRC_${filename.toUpperCase().replace(/\./g, '_')}`,
                     `SOUND_${filename.toUpperCase().replace('.mp3', '').replace(/\./g, '_')}`
@@ -321,6 +415,7 @@ export class WebviewManager {
 
                 for (const placeholder of placeholders) {
                     html = html.replace(new RegExp(placeholder, 'g'), uri.toString());
+                    console.log(`[WebviewManager] Replaced ${placeholder} with ${uri.toString()}`);
                 }
             }
 
@@ -368,13 +463,9 @@ export class WebviewManager {
     // MESSAGE HANDLING
     // ========================================
 
-    /**
-     * Handles messages from games
-     */
     private async handleWebviewMessage(gameId: string, message: any): Promise<void> {
         switch (message.command) {
             case 'gameOver':
-                // THIS IS WHERE PLAYS ARE DECREMENTED!
                 await this.handleGameOver(gameId, message.score);
                 break;
 
@@ -388,6 +479,8 @@ export class WebviewManager {
 
             case 'ready':
                 console.log(`[${gameId}] Ready`);
+                this.sendSoundConfig(gameId);
+                this.sendDisplayConfig(gameId);
                 break;
 
             default:
@@ -395,17 +488,11 @@ export class WebviewManager {
         }
     }
 
-    /**
-     * Handles game over - decrements plays and updates high score
-     */
     private async handleGameOver(gameId: string, score?: number): Promise<void> {
-        // This decrements the play counter!
         await this.gameManager.endPlay(gameId, score);
 
-        // Get plays after decrementing
         const playsAfter = this.gameManager.getPlaysRemaining();
 
-        // Show custom message when plays exhausted
         if (playsAfter === 0) {
             const config = (this.gameManager as any).config;
             const linesToUnlock = config.unlock.linesToUnlock;
