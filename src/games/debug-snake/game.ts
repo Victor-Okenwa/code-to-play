@@ -215,6 +215,8 @@ function enterGame(): void {
         gameChrome.setDifficultyBadge(currentDifficulty.label);
         gameChrome.refreshToolbarPhase();
     }
+
+    notifyGameStateChanged();
 }
 
 function backToMenu(): void {
@@ -241,6 +243,7 @@ function backToMenu(): void {
     }
 
     drawInitialState();
+    notifyGameStateChanged();
 }
 
 function loadHighScore(): void {
@@ -254,6 +257,10 @@ function saveHighScore(): void {
     localStorage.setItem(`snakeHighScore_${selectedDifficulty}`, highScore.toString());
 }
 
+function notifyGameStateChanged(): void {
+    window.dispatchEvent(new CustomEvent('gameChrome:gameStateChanged'));
+}
+
 function setupEventListeners(): void {
     document.addEventListener('keydown', handleKeyPress);
 
@@ -261,6 +268,18 @@ function setupEventListeners(): void {
         if (isRunning) {
             togglePause();
         }
+    });
+
+    window.addEventListener('gameChrome:start', () => {
+        if (!isRunning && startBtn.style.display !== 'none') {
+            startGame();
+        }
+    });
+
+    window.addEventListener('gameChrome:restart', () => {
+        gameOverElement.classList.remove('show');
+        gameOverAlert.classList.remove('show');
+        restartGame();
     });
 }
 
@@ -353,6 +372,7 @@ function startGame(): void {
 
     isRunning = true;
     runGameLoop();
+    notifyGameStateChanged();
 }
 
 function runGameLoop(): void {
@@ -410,12 +430,14 @@ function endGame(): void {
     sendGameOver(score);
 
     showGameOverAlert();
+    notifyGameStateChanged();
 
     setTimeout(() => {
         finalScoreElement.textContent = score.toString();
         gameOverElement.classList.add('show');
         startBtn.style.display = 'inline-block';
         pauseBtn.style.display = 'none';
+        notifyGameStateChanged();
     }, 2500);
 }
 

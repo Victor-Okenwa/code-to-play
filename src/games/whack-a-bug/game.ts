@@ -63,6 +63,8 @@ const gameOverElement = document.getElementById('gameOver') as HTMLElement;
 const finalScoreElement = document.getElementById('finalScore') as HTMLElement;
 const gameOverAlert = document.getElementById('gameOverAlert') as HTMLElement;
 const alertScore = document.getElementById('alertScore') as HTMLElement;
+const startBtn = document.getElementById('startBtn') as HTMLButtonElement;
+const pauseBtn = document.getElementById('pauseBtn') as HTMLButtonElement;
 
 // ========================================
 // GAME CONSTANTS
@@ -109,6 +111,7 @@ let score: number = 0;
 let highScore: number = 0;
 let timeRemaining: number = GAME_DURATION;
 let isPlaying: boolean = false;
+let isPaused: boolean = false;
 let bugs: BugState[] = [];
 let spawnTimer: number | null = null;
 let countdownTimer: number | null = null;
@@ -202,7 +205,11 @@ function selectDifficulty(difficulty: string): void {
     }
 }
 
-function startGameMode(): void {
+function notifyGameStateChanged(): void {
+    window.dispatchEvent(new CustomEvent('gameChrome:gameStateChanged'));
+}
+
+function enterGame(): void {
     if (selectedDifficulty !== 'easy') {
         alert('Only Easy mode is available in this version!');
         return;
@@ -216,12 +223,17 @@ function startGameMode(): void {
     gameArea.style.display = 'block';
     gameArea.classList.add('active');
 
+    gameOverElement.classList.remove('show');
+    gameOverAlert.classList.remove('show');
+    startBtn.style.display = 'inline-block';
+    pauseBtn.style.display = 'none';
+
     if (typeof gameChrome !== 'undefined') {
         gameChrome.setDifficultyBadge(currentDifficulty.name);
         gameChrome.refreshToolbarPhase();
     }
 
-    startGame();
+    notifyGameStateChanged();
 }
 
 function backToMenu(): void {
@@ -231,6 +243,9 @@ function backToMenu(): void {
     gameArea.classList.remove('active');
     difficultySelection.style.display = 'block';
 
+    startBtn.style.display = 'inline-block';
+    pauseBtn.style.display = 'none';
+
     if (typeof gameChrome !== 'undefined') {
         gameChrome.setDifficultyBadge('');
         gameChrome.refreshToolbarPhase();
@@ -238,6 +253,7 @@ function backToMenu(): void {
 
     gameOverElement.classList.remove('show');
     gameOverAlert.classList.remove('show');
+    notifyGameStateChanged();
 }
 
 // ========================================
@@ -251,6 +267,7 @@ function startGame(): void {
     score = 0;
     timeRemaining = GAME_DURATION;
     isPlaying = true;
+    isPaused = false;
 
     updateScoreDisplay();
     updateTimerDisplay();
@@ -265,12 +282,51 @@ function startGame(): void {
         bugElement.classList.remove('active');
     });
 
+    startBtn.style.display = 'none';
+    pauseBtn.style.display = 'inline-block';
+    pauseBtn.textContent = 'Pause';
+
     startCountdown();
     scheduleNextBug();
+    notifyGameStateChanged();
+}
+
+function togglePause(): void {
+    if (!isPlaying || timeRemaining <= 0) {
+        return;
+    }
+
+    isPaused = !isPaused;
+    pauseBtn.textContent = isPaused ? 'Resume' : 'Pause';
+
+    if (isPaused) {
+        if (spawnTimer) {
+            clearTimeout(spawnTimer);
+            spawnTimer = null;
+        }
+        if (countdownTimer) {
+            clearInterval(countdownTimer);
+            countdownTimer = null;
+        }
+        bugs.forEach(bug => {
+            if (bug.timer) {
+                clearTimeout(bug.timer);
+                bug.timer = null;
+            }
+        });
+    } else {
+        startCountdown();
+        scheduleNextBug();
+    }
+
+    window.dispatchEvent(new CustomEvent('gameChrome:pauseStateChanged', {
+        detail: { isPaused }
+    }));
 }
 
 function stopGame(): void {
     isPlaying = false;
+    isPaused = false;
 
     if (spawnTimer) {
         clearTimeout(spawnTimer);
@@ -297,6 +353,8 @@ function endGame(): void {
     }
     stopGame();
 
+    pauseBtn.style.display = 'none';
+
     if (score > highScore) {
         highScore = score;
         saveHighScore();
@@ -307,10 +365,13 @@ function endGame(): void {
     sendGameOver(score);
 
     showGameOverAlert();
+    notifyGameStateChanged();
 
     setTimeout(() => {
         finalScoreElement.textContent = score.toString();
         gameOverElement.classList.add('show');
+        startBtn.style.display = 'inline-block';
+        notifyGameStateChanged();
     }, 2500);
 }
 
@@ -332,7 +393,15 @@ function restartGame(): void {
 // ========================================
 
 function startCountdown(): void {
+    if (countdownTimer) {
+        clearInterval(countdownTimer);
+    }
+
     countdownTimer = window.setInterval(() => {
+        if (isPaused) {
+            return;
+        }
+
         timeRemaining--;
         updateTimerDisplay();
 
@@ -343,7 +412,7 @@ function startCountdown(): void {
 }
 
 function scheduleNextBug(): void {
-    if (!isPlaying) {
+    if (!isPlaying || isPaused) {
         return;
     }
 
@@ -367,7 +436,7 @@ function getSpawnDelay(): number {
 }
 
 function spawnBug(): void {
-    if (!isPlaying) {
+    if (!isPlaying || isPaused) {
         return;
     }
 
@@ -527,11 +596,45 @@ function setupButtons(): void {
         hardCard.addEventListener('click', () => selectDifficulty('hard'));
     }
 
-    // Start game button
+    // Choose difficulty button
     const startGameBtn = document.querySelector('.start-game-btn');
     if (startGameBtn) {
-        startGameBtn.addEventListener('click', startGameMode);
+        startGameBtn.addEventListener('click', enterGame);
     }
+
+    if (startBtn) {
+        startBtn.addEventListener('click', startGame);
+    }
+
+    if (pauseBtn) {
+        pauseBtn.addEventListener('click', togglePause);
+    }
+
+    window.addEventListener('gameChrome:togglePause', () => {
+        if (isPlaying) {
+            togglePause();
+        }
+    });
+
+    window.addEventListener('gameChrome:start', () => {
+        if (!isPlaying && startBtn.style.display !== 'none') {
+            startGame();
+        }
+    });
+
+    window.addEventListener('gameChrome:restart', () => {
+        gameOverElement.classList.remove('show');
+        gameOverAlert.classList.remove('show');
+        restartGame();
+    });
+
+    document.addEventListener('keydown', (event) => {
+        if (event.code === 'Space' && isPlaying && timeRemaining > 0
+            && !gameOverElement.classList.contains('show')) {
+            event.preventDefault();
+            togglePause();
+        }
+    });
 
     // Restart buttons (multiple)
     const restartButtons = document.querySelectorAll('[data-action="restart"]');

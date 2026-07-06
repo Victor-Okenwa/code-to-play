@@ -76,10 +76,10 @@
             </div>
           </div>
 
-          <button class="btn start-game-btn">Start Game</button>
+          <button class="btn start-game-btn">Choose Difficulty</button>
         </div>
 
-        <div class="game-area" id="gameArea">
+        <div class="game-area" id="gameArea" data-focus-pause-key="Space">
           <div class="game-info focus-play-scores">
             <div class="info-item">
               <div class="info-label">Score</div>
@@ -105,6 +105,8 @@
           </div>
 
           <div class="controls">
+            <button class="btn" id="startBtn">Start Game</button>
+            <button class="btn" id="pauseBtn" style="display: none">Pause</button>
             <button class="btn back-btn" data-action="back">Back to Menu</button>
           </div>
         </div>
