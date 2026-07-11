@@ -12,12 +12,7 @@
 ======================================== */
 body {
   font-family: "Orbitron", "Segoe UI", sans-serif;
-  background: linear-gradient(135deg, #1e1e1e 0%, #2d2d30 100%);
-  padding: 20px 0;
-  min-height: 100vh;
   color: #d4d4d4;
-  overflow-y: auto;
-  overflow-x: hidden;
 }
 
 /* ========================================
@@ -25,11 +20,10 @@ body {
 ======================================== */
 .game-container {
   background: #252526;
-  border-radius: 12px;
-  padding: 30px;
+  border: 1px solid #3e3e42;
+  border-radius: 0 0 12px 12px;
+  padding: 24px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-  max-width: 600px;
-  margin: 0 auto;
   width: 100%;
 }
 
@@ -104,7 +98,8 @@ body {
   border: 3px solid #3e3e42;
   border-radius: 8px;
   display: block;
-  margin: 0 auto 20px auto;
+  margin: 0 auto;
+  box-shadow: 0 0 20px rgba(78, 201, 176, 0.15);
 }
 
 /* ========================================
@@ -280,4 +275,16 @@ body {
 
 .reset-btn:active {
   background: #b71c1c !important;
+}
+
+.back-btn {
+  background: #3e3e42;
+}
+
+.back-btn:hover {
+  background: #4e4e52;
+}
+
+.game-play {
+  display: none;
 }

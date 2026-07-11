@@ -35,9 +35,27 @@ declare const soundManager: {
     preloadAll(): void;
 };
 
+declare const initGameChrome: () => void;
+
+declare const gameChrome: {
+    refreshMuteUI(): void;
+    applyZoom(zoom: number): void;
+    setDifficultyBadge(label: string): void;
+    refreshToolbarPhase(): void;
+};
+
 // ========================================
-// DOM ELEMENT REFERENCES
+// TYPE DEFINITIONS
 // ========================================
+
+interface SnakeDifficulty {
+    name: string;
+    label: string;
+    initialSpeed: number;
+    minSpeed: number;
+    speedMultiplier: number;
+    bugsPerSpeedIncrease: number;
+}
 
 const canvas = document.getElementById('gameCanvas') as HTMLCanvasElement;
 const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
@@ -49,9 +67,12 @@ const finalScoreElement = document.getElementById('finalScore') as HTMLElement;
 const startBtn = document.getElementById('startBtn') as HTMLButtonElement;
 const pauseBtn = document.getElementById('pauseBtn') as HTMLButtonElement;
 const restartBtn = document.getElementById('restartBtn') as HTMLButtonElement;
-const resetBtn = document.getElementById('resetBtn') as HTMLButtonElement;
 const gameOverAlert = document.getElementById('gameOverAlert') as HTMLElement;
 const alertScore = document.getElementById('alertScore') as HTMLElement;
+const difficultySelection = document.getElementById('difficultySelection') as HTMLElement;
+const gamePlay = document.getElementById('gamePlay') as HTMLElement;
+const enterGameBtn = document.getElementById('enterGameBtn') as HTMLButtonElement;
+const backToMenuBtn = document.getElementById('backToMenuBtn') as HTMLButtonElement;
 
 // ========================================
 // GAME CONFIGURATION CONSTANTS
@@ -59,17 +80,46 @@ const alertScore = document.getElementById('alertScore') as HTMLElement;
 
 const GRID_SIZE: number = 20;
 const TILE_COUNT: number = canvas.width / GRID_SIZE;
-const INITIAL_SPEED: number = 200;
-const MIN_SPEED: number = 50;
-const SPEED_MULTIPLIER: number = 0.85;
-const BUGS_PER_SPEED_INCREASE: number = 5;
 const INITIAL_SNAKE_LENGTH: number = 3;
 const INITIAL_SNAKE_X: number = 10;
 const INITIAL_SNAKE_Y: number = 10;
 
+const difficulties: Record<string, SnakeDifficulty> = {
+    easy: {
+        name: 'Easy',
+        label: 'Easy',
+        initialSpeed: 220,
+        minSpeed: 80,
+        speedMultiplier: 0.88,
+        bugsPerSpeedIncrease: 6
+    },
+    hard: {
+        name: 'Hard',
+        label: 'Hard',
+        initialSpeed: 160,
+        minSpeed: 60,
+        speedMultiplier: 0.85,
+        bugsPerSpeedIncrease: 5
+    },
+    veryHard: {
+        name: 'Very Hard',
+        label: 'Very Hard',
+        initialSpeed: 110,
+        minSpeed: 45,
+        speedMultiplier: 0.82,
+        bugsPerSpeedIncrease: 4
+    }
+};
+
 // ========================================
 // GAME STATE VARIABLES
 // ========================================
+
+let selectedDifficulty: string = 'easy';
+let currentDifficulty: SnakeDifficulty = difficulties.easy;
+let bugsPerSpeedIncrease: number = currentDifficulty.bugsPerSpeedIncrease;
+let minSpeed: number = currentDifficulty.minSpeed;
+let speedMultiplier: number = currentDifficulty.speedMultiplier;
 
 let snake: SnakeSegment[] = [];
 let snakeLength: number = INITIAL_SNAKE_LENGTH;
@@ -82,7 +132,7 @@ let bugY: number = 15;
 let score: number = 0;
 let highScore: number = 0;
 let gameLoop: number | null = null;
-let gameSpeed: number = INITIAL_SPEED;
+let gameSpeed: number = currentDifficulty.initialSpeed;
 let isRunning: boolean = false;
 let isPaused: boolean = false;
 
@@ -91,34 +141,146 @@ let isPaused: boolean = false;
 // ========================================
 
 function init(): void {
-    // ✅ Preload all sounds
+    if (typeof initGameChrome === 'function') {
+        initGameChrome();
+    }
+
     if (typeof soundManager !== 'undefined' && soundManager.preloadAll) {
         soundManager.preloadAll();
     }
 
+    setupDifficultySelection();
     loadHighScore();
     updateScoreDisplay();
     updateSpeedDisplay();
     placeBug();
     setupEventListeners();
-
-    // Draw initial state so grid lines are visible
     drawInitialState();
 }
 
+function setupDifficultySelection(): void {
+    document.querySelectorAll('.difficulty-card[data-difficulty]').forEach(card => {
+        card.addEventListener('click', () => {
+            const difficulty = (card as HTMLElement).dataset.difficulty;
+            if (difficulty) {
+                selectDifficulty(difficulty);
+            }
+        });
+    });
+
+    if (enterGameBtn) {
+        enterGameBtn.addEventListener('click', enterGame);
+    }
+
+    if (backToMenuBtn) {
+        backToMenuBtn.addEventListener('click', backToMenu);
+    }
+}
+
+function selectDifficulty(difficulty: string): void {
+    if (!difficulties[difficulty]) {
+        return;
+    }
+
+    selectedDifficulty = difficulty;
+    currentDifficulty = difficulties[difficulty];
+
+    document.querySelectorAll('.difficulty-card').forEach(card => {
+        card.classList.remove('active');
+    });
+
+    const selectedCard = document.getElementById(`${difficulty}Card`);
+    if (selectedCard) {
+        selectedCard.classList.add('active');
+    }
+
+    loadHighScore();
+    updateScoreDisplay();
+}
+
+function enterGame(): void {
+    currentDifficulty = difficulties[selectedDifficulty];
+    bugsPerSpeedIncrease = currentDifficulty.bugsPerSpeedIncrease;
+    minSpeed = currentDifficulty.minSpeed;
+    speedMultiplier = currentDifficulty.speedMultiplier;
+    gameSpeed = currentDifficulty.initialSpeed;
+
+    loadHighScore();
+    updateScoreDisplay();
+
+    difficultySelection.style.display = 'none';
+    gamePlay.style.display = 'block';
+
+    if (typeof gameChrome !== 'undefined') {
+        gameChrome.setDifficultyBadge(currentDifficulty.label);
+        gameChrome.refreshToolbarPhase();
+    }
+
+    notifyGameStateChanged();
+}
+
+function backToMenu(): void {
+    if (isRunning) {
+        isRunning = false;
+        isPaused = false;
+        if (gameLoop) {
+            clearTimeout(gameLoop);
+            gameLoop = null;
+        }
+    }
+
+    gameOverElement.classList.remove('show');
+    gameOverAlert.classList.remove('show');
+    startBtn.style.display = 'inline-block';
+    pauseBtn.style.display = 'none';
+
+    gamePlay.style.display = 'none';
+    difficultySelection.style.display = 'block';
+
+    if (typeof gameChrome !== 'undefined') {
+        gameChrome.setDifficultyBadge('');
+        gameChrome.refreshToolbarPhase();
+    }
+
+    drawInitialState();
+    notifyGameStateChanged();
+}
+
 function loadHighScore(): void {
-    const saved = localStorage.getItem('snakeHighScore');
+    const saved = localStorage.getItem(`snakeHighScore_${selectedDifficulty}`);
     if (saved) {
         highScore = parseInt(saved, 10);
     }
 }
 
 function saveHighScore(): void {
-    localStorage.setItem('snakeHighScore', highScore.toString());
+    localStorage.setItem(`snakeHighScore_${selectedDifficulty}`, highScore.toString());
+}
+
+function notifyGameStateChanged(): void {
+    window.dispatchEvent(new CustomEvent('gameChrome:gameStateChanged'));
 }
 
 function setupEventListeners(): void {
     document.addEventListener('keydown', handleKeyPress);
+
+    window.addEventListener('gameChrome:togglePause', () => {
+        if (isRunning) {
+            togglePause();
+        }
+    });
+
+    window.addEventListener('gameChrome:start', () => {
+        if (!isRunning && startBtn.style.display !== 'none') {
+            startGame();
+        }
+    });
+
+    window.addEventListener('gameChrome:restart', () => {
+        gameOverElement.classList.remove('show');
+        gameOverAlert.classList.remove('show');
+        restartGame();
+    });
 }
 
 // ========================================
@@ -195,7 +357,7 @@ function startGame(): void {
     velocityX = 1;
     velocityY = 0;
     score = 0;
-    gameSpeed = INITIAL_SPEED;
+    gameSpeed = currentDifficulty.initialSpeed;
     isPaused = false;
 
     gameOverElement.classList.remove('show');
@@ -210,6 +372,7 @@ function startGame(): void {
 
     isRunning = true;
     runGameLoop();
+    notifyGameStateChanged();
 }
 
 function runGameLoop(): void {
@@ -238,6 +401,10 @@ function togglePause(): void {
     if (!isPaused) {
         runGameLoop();
     }
+
+    window.dispatchEvent(new CustomEvent('gameChrome:pauseStateChanged', {
+        detail: { isPaused }
+    }));
 }
 
 function restartGame(): void {
@@ -263,12 +430,14 @@ function endGame(): void {
     sendGameOver(score);
 
     showGameOverAlert();
+    notifyGameStateChanged();
 
     setTimeout(() => {
         finalScoreElement.textContent = score.toString();
         gameOverElement.classList.add('show');
         startBtn.style.display = 'inline-block';
         pauseBtn.style.display = 'none';
+        notifyGameStateChanged();
     }, 2500);
 }
 
@@ -312,11 +481,11 @@ function update(): void {
         snakeLength++;
         updateScoreDisplay();
         // Play slurp sound as snakes eats
-        // soundManager.playById('slurpSound');
+        soundManager.playById('slurpSound');
         placeBug();
 
-        if (score % BUGS_PER_SPEED_INCREASE === 0) {
-            gameSpeed = Math.max(MIN_SPEED, gameSpeed * SPEED_MULTIPLIER);
+        if (score % bugsPerSpeedIncrease === 0) {
+            gameSpeed = Math.max(minSpeed, gameSpeed * speedMultiplier);
             updateSpeedDisplay();
         }
     }
@@ -473,6 +642,27 @@ function placeBug(): void {
 // INPUT HANDLING
 // ========================================
 
+function handleDirection(dir: string): void {
+    if (!isRunning || isPaused) {
+        return;
+    }
+
+    switch (dir) {
+        case 'up':
+            if (velocityY !== 1) { velocityX = 0; velocityY = -1; }
+            break;
+        case 'down':
+            if (velocityY !== -1) { velocityX = 0; velocityY = 1; }
+            break;
+        case 'left':
+            if (velocityX !== 1) { velocityX = -1; velocityY = 0; }
+            break;
+        case 'right':
+            if (velocityX !== -1) { velocityX = 1; velocityY = 0; }
+            break;
+    }
+}
+
 function handleKeyPress(event: KeyboardEvent): void {
     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(event.key)) {
         event.preventDefault();
@@ -489,31 +679,16 @@ function handleKeyPress(event: KeyboardEvent): void {
 
     switch (event.key) {
         case 'ArrowUp':
-            if (velocityY !== 1) {
-                velocityX = 0;
-                velocityY = -1;
-            }
+            handleDirection('up');
             break;
-
         case 'ArrowDown':
-            if (velocityY !== -1) {
-                velocityX = 0;
-                velocityY = 1;
-            }
+            handleDirection('down');
             break;
-
         case 'ArrowLeft':
-            if (velocityX !== 1) {
-                velocityX = -1;
-                velocityY = 0;
-            }
+            handleDirection('left');
             break;
-
         case 'ArrowRight':
-            if (velocityX !== -1) {
-                velocityX = 1;
-                velocityY = 0;
-            }
+            handleDirection('right');
             break;
     }
 }
@@ -528,7 +703,7 @@ function updateScoreDisplay(): void {
 }
 
 function updateSpeedDisplay(): void {
-    const level = Math.floor(score / BUGS_PER_SPEED_INCREASE) + 1;
+    const level = Math.floor(score / bugsPerSpeedIncrease) + 1;
     speedElement.textContent = level.toString();
 }
 
@@ -536,13 +711,8 @@ function updateSpeedDisplay(): void {
 // VS CODE COMMUNICATION
 // ========================================
 
-/**
- * Sends game over message to VS Code extension
- * Uses the global vscode variable (no import needed!)
- */
 function sendGameOver(finalScore: number): void {
     try {
-        // vscode is available globally (injected by WebviewManager)
         vscode.postMessage({
             command: 'gameOver',
             score: finalScore
@@ -571,10 +741,6 @@ function setupButtons(): void {
         restartBtn.addEventListener('click', restartGame);
     }
 }
-
-// ========================================
-// INITIALIZE ON LOAD
-// ========================================
 
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', setupButtons);

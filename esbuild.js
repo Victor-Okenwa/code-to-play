@@ -219,6 +219,30 @@ async function build() {
       logLevel: "info",
     }));
 
+    const soundManagerOptions = {
+      entryPoints: ["src/core/SoundManager.ts"],
+      bundle: true,
+      outfile: "dist/sound-manager.js",
+      format: "iife",
+      platform: "browser",
+      target: "es2020",
+      sourcemap: !isProduction,
+      minify: isProduction,
+      logLevel: "info",
+    };
+
+    const gameChromeOptions = {
+      entryPoints: ["src/games/shared/game-chrome.ts"],
+      bundle: true,
+      outfile: "dist/game-chrome.js",
+      format: "iife",
+      platform: "browser",
+      target: "es2020",
+      sourcemap: !isProduction,
+      minify: isProduction,
+      logLevel: "info",
+    };
+
     if (isWatch) {
       console.log("👀 Starting watch mode...");
 
@@ -236,6 +260,14 @@ async function build() {
         await gameCtx.rebuild(); // Added: Initial build for each game
         await gameCtx.watch();
       }
+
+      const soundManagerCtx = await esbuild.context(soundManagerOptions);
+      await soundManagerCtx.rebuild();
+      await soundManagerCtx.watch();
+
+      const gameChromeCtx = await esbuild.context(gameChromeOptions);
+      await gameChromeCtx.rebuild();
+      await gameChromeCtx.watch();
 
       // Added: Set up chokidar to watch and copy static files on change
       chokidar
@@ -285,6 +317,12 @@ async function build() {
       for (const gameOpts of gameOptions) {
         await esbuild.build(gameOpts);
       }
+
+      console.log("🔨 Building sound manager...");
+      await esbuild.build(soundManagerOptions);
+
+      console.log("🔨 Building game chrome...");
+      await esbuild.build(gameChromeOptions);
 
       console.log("✅ Build complete!");
     }

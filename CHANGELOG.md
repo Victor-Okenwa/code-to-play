@@ -1,5 +1,30 @@
 # Changelog
 
+## [0.0.2] - 2026-07-06
+
+### Added in 0.0.2
+
+- **Sound Effects and Audio Assets**:
+  - Added game SFX assets for gameplay feedback (`pop` and `slurp`)
+  - Added inline SoundManager support for game-specific audio playback
+- **Game Difficulty Controls**:
+  - Added difficulty selection to improve gameplay customization
+- **Shared Game Chrome Controls**:
+  - Added shared in-game toolbar controls for mute and focus play workflows
+
+### Changed
+
+- **Sound System Enhancements**:
+  - Refactored sound handling to use centralized SoundManager access
+  - Improved global sound configuration integration with extension settings
+- **Visual and UX Polish**:
+  - Improved game UI styling and state transitions for a cleaner in-editor experience
+  - Enhanced game chrome behavior to better match VS Code dark-theme aesthetics
+
+### Performance in 0.0.2
+
+- Reduced repeated UI state handling by consolidating shared game chrome logic
+
 ## [0.0.1] - 2026-02-04
 
 ### Added

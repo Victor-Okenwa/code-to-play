@@ -1,0 +1,467 @@
+/* ========================================
+   GAME VIEWPORT & ZOOM
+======================================== */
+:root {
+  --game-zoom: 0.85;
+}
+
+body {
+  background: linear-gradient(135deg, #1e1e1e 0%, #2d2d30 100%);
+  min-height: 100vh;
+  padding: 12px 0;
+}
+
+.game-viewport {
+  max-width: 640px;
+  margin: 0 auto;
+  zoom: var(--game-zoom);
+}
+
+/* ========================================
+   GAME TOOLBAR
+======================================== */
+.game-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 14px;
+  background: #2d2d30;
+  border: 1px solid #3e3e42;
+  border-bottom: none;
+  border-radius: 10px 10px 0 0;
+}
+
+.toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: #1e1e1e;
+  border: 1px solid #3e3e42;
+  border-radius: 6px;
+  color: #d4d4d4;
+  font-family: "Orbitron", sans-serif;
+  font-size: 0.8em;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.toolbar-btn:hover {
+  background: #252526;
+  border-color: #4ec9b0;
+}
+
+.toolbar-btn:focus-visible {
+  outline: 2px solid #4ec9b0;
+  outline-offset: 2px;
+}
+
+.toolbar-btn.muted {
+  background: #3a2020;
+  border-color: #f48771;
+  color: #f48771;
+}
+
+.toolbar-btn.active {
+  background: #1e3a35;
+  border-color: #4ec9b0;
+  color: #4ec9b0;
+}
+
+.toolbar-btn .codicon {
+  font-size: 16px;
+}
+
+.toolbar-hint {
+  color: #858585;
+  font-size: 0.75em;
+  margin-left: auto;
+}
+
+.difficulty-badge {
+  display: none;
+  padding: 4px 10px;
+  background: #1e3a35;
+  border: 1px solid #4ec9b0;
+  border-radius: 4px;
+  color: #4ec9b0;
+  font-size: 0.75em;
+  font-weight: 600;
+}
+
+/* ========================================
+   GAME CONTAINER (shared)
+======================================== */
+.game-viewport .game-container {
+  border-radius: 0 0 12px 12px;
+  border-top: none;
+}
+
+/* ========================================
+   DIFFICULTY SELECTION (shared)
+======================================== */
+.difficulty-selection {
+  display: block;
+}
+
+.difficulty-title {
+  text-align: center;
+  margin-bottom: 20px;
+  color: #d4d4d4;
+  font-size: 1em;
+  font-family: "Press Start 2P", cursive;
+}
+
+.difficulty-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.difficulty-card {
+  background: #1e1e1e;
+  border: 2px solid #3e3e42;
+  border-radius: 8px;
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.difficulty-card:hover {
+  border-color: #4ec9b0;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(78, 201, 176, 0.15);
+}
+
+.difficulty-card.active {
+  border-color: #4ec9b0;
+  background: #1e3a35;
+}
+
+.difficulty-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.difficulty-indicator {
+  font-size: 1.2em;
+}
+
+.difficulty-name {
+  font-size: 1em;
+  font-weight: 600;
+  color: #4ec9b0;
+}
+
+.difficulty-description {
+  color: #858585;
+  font-size: 0.85em;
+  line-height: 1.4;
+  margin-left: 30px;
+}
+
+.start-game-btn {
+  margin-top: 16px;
+  width: 100%;
+}
+
+/* ========================================
+   SCORE PANEL (shared enhancement)
+======================================== */
+.score-panel,
+.game-info {
+  border: 1px solid #3e3e42;
+}
+
+.score-value,
+.info-value {
+  text-shadow: 0 0 8px rgba(78, 201, 176, 0.3);
+}
+
+/* ========================================
+   BUTTONS (shared)
+======================================== */
+.btn {
+  transition: background 0.2s, transform 0.1s;
+}
+
+.btn:focus-visible {
+  outline: 2px solid #4ec9b0;
+  outline-offset: 2px;
+}
+
+.btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+/* ========================================
+   COLLAPSIBLE INSTRUCTIONS
+======================================== */
+.instructions details {
+  cursor: pointer;
+}
+
+.instructions summary {
+  color: #4ec9b0;
+  font-family: "Press Start 2P", cursive;
+  font-size: 0.85em;
+  padding: 4px 0;
+  list-style: none;
+}
+
+.instructions summary::-webkit-details-marker {
+  display: none;
+}
+
+.instructions summary::before {
+  content: "▸ ";
+  display: inline-block;
+  transition: transform 0.2s;
+}
+
+.instructions details[open] summary::before {
+  transform: rotate(90deg);
+}
+
+.instructions details[open] summary {
+  margin-bottom: 10px;
+}
+
+/* ========================================
+   FOCUS PLAY MODE (80% overlay dialog)
+======================================== */
+body.focus-play-active {
+  overflow: hidden;
+}
+
+.focus-play-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(2px);
+}
+
+.focus-play-overlay[hidden] {
+  display: none !important;
+}
+
+.focus-play-dialog {
+  position: relative;
+  width: 80%;
+  height: 80%;
+  max-width: 100%;
+  max-height: 100%;
+  background: #252526;
+  border: 2px solid #4ec9b0;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.65);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.focus-play-header {
+  flex-shrink: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: rgba(30, 30, 30, 0.97);
+  border-bottom: 1px solid #3e3e42;
+  padding: 10px 16px;
+}
+
+.focus-play-score {
+  flex: 1;
+  min-width: 0;
+}
+
+.focus-play-header .focus-play-exit-btn {
+  flex-shrink: 0;
+  margin-left: 0;
+}
+
+.focus-play-stage-wrap {
+  flex: 1;
+  position: relative;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.focus-play-game-over-slot {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.focus-play-game-over-slot > * {
+  pointer-events: auto;
+}
+
+.focus-play-game-over-slot .game-over-alert {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 20;
+}
+
+.focus-play-game-over-slot .game-over {
+  margin: 0;
+  max-width: 90%;
+  z-index: 15;
+}
+
+.focus-play-restart-btn {
+  margin-left: auto;
+}
+
+.focus-play-restart-btn:hover {
+  background: #1e3a35;
+  border-color: #4ec9b0;
+  color: #4ec9b0;
+}
+
+.focus-play-score-compact {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 10px;
+}
+
+.focus-play-score-label {
+  color: #858585;
+  font-family: "Orbitron", sans-serif;
+  font-size: 0.8em;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.focus-play-score-value {
+  color: #4ec9b0;
+  font-family: "Orbitron", sans-serif;
+  font-size: 1.6em;
+  font-weight: 700;
+  text-shadow: 0 0 10px rgba(78, 201, 176, 0.35);
+}
+
+.focus-play-score .score-panel,
+.focus-play-score .game-info {
+  margin: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+}
+
+.focus-play-stage {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  padding: 16px;
+  background: #1e1e1e;
+}
+
+.focus-play-stage .game-area {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.focus-play-stage #gameCanvas {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto !important;
+  height: auto !important;
+  object-fit: contain;
+}
+
+.focus-play-stage .game-grid {
+  width: fit-content;
+  height: fit-content;
+  max-width: 100%;
+  max-height: 100%;
+  margin: 0 auto;
+  padding: 12px;
+  gap: 10px;
+  grid-template-columns: repeat(3, 72px);
+  grid-template-rows: repeat(3, 72px);
+  align-content: center;
+  justify-content: center;
+}
+
+.focus-play-stage .hole {
+  min-height: unset;
+  width: 72px;
+  height: 72px;
+  aspect-ratio: unset;
+}
+
+.focus-play-controls {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px;
+  background: rgba(30, 30, 30, 0.97);
+  border-top: 1px solid #3e3e42;
+}
+
+.focus-play-control-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: #1e1e1e;
+  border: 1px solid #3e3e42;
+  border-radius: 4px;
+  color: #d4d4d4;
+  font-family: "Orbitron", sans-serif;
+  font-size: 0.65em;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.focus-play-control-btn:hover {
+  background: #252526;
+  border-color: #4ec9b0;
+}
+
+.focus-play-control-btn .codicon {
+  font-size: 12px;
+}
+
+.focus-play-control-btn[aria-pressed="true"] {
+  background: #1e3a35;
+  border-color: #4ec9b0;
+  color: #4ec9b0;
+}
+
+.focus-play-control-hint {
+  flex: 1;
+  text-align: center;
+  color: #858585;
+  font-family: "Orbitron", sans-serif;
+  font-size: 0.65em;
+}
+
+.focus-play-exit-btn:hover {
+  background: #3a2020;
+  border-color: #f48771;
+  color: #f48771;
+}
