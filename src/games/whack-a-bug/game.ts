@@ -1,6 +1,6 @@
 /**
  * game.ts - Whack-a-Bug Game Logic
- * 
+ *
  */
 
 // ========================================
@@ -12,7 +12,6 @@ declare const vscode: {
     postMessage(message: any): void;
 };
 
-// Declare SoundManager as global (injected by WebviewManager)
 declare const soundManager: {
     playById(id: string): void;
     setMuted(muted: boolean): void;
@@ -35,18 +34,30 @@ declare const gameChrome: {
 // TYPE DEFINITIONS
 // ========================================
 
+type BugKind = 'whack' | 'avoid';
+
+interface BugTypeDef {
+    id: string;
+    kind: BugKind;
+    points: number;
+    cssClass: string;
+    weight: number;
+}
+
 interface Difficulty {
     name: string;
     spawnMin: number;
     spawnMax: number;
     bugDuration: number;
-    pointsPerBug: number;
+    bugTypes: BugTypeDef[];
+    legend: string;
 }
 
 interface BugState {
     active: boolean;
     holeIndex: number;
     timer: number | null;
+    typeId: string | null;
 }
 
 // ========================================
@@ -65,13 +76,62 @@ const gameOverAlert = document.getElementById('gameOverAlert') as HTMLElement;
 const alertScore = document.getElementById('alertScore') as HTMLElement;
 const startBtn = document.getElementById('startBtn') as HTMLButtonElement;
 const pauseBtn = document.getElementById('pauseBtn') as HTMLButtonElement;
+const bugLegend = document.getElementById('bugLegend') as HTMLElement;
 
 // ========================================
 // GAME CONSTANTS
 // ========================================
 
-const GAME_DURATION: number = 60; // seconds
+const GAME_DURATION: number = 60;
 const HOLE_COUNT: number = 9;
+
+const BUG_TYPE_COMMON: BugTypeDef = {
+    id: 'common',
+    kind: 'whack',
+    points: 10,
+    cssClass: 'bug--common',
+    weight: 1
+};
+
+const BUG_TYPE_SYNTAX: BugTypeDef = {
+    id: 'syntax',
+    kind: 'whack',
+    points: 10,
+    cssClass: 'bug--syntax',
+    weight: 3
+};
+
+const BUG_TYPE_NULL_REF: BugTypeDef = {
+    id: 'nullRef',
+    kind: 'whack',
+    points: 15,
+    cssClass: 'bug--null-ref',
+    weight: 3
+};
+
+const BUG_TYPE_OVERFLOW: BugTypeDef = {
+    id: 'overflow',
+    kind: 'whack',
+    points: 20,
+    cssClass: 'bug--overflow',
+    weight: 2
+};
+
+const BUG_TYPE_FEATURE: BugTypeDef = {
+    id: 'feature',
+    kind: 'avoid',
+    points: -25,
+    cssClass: 'bug--feature',
+    weight: 2
+};
+
+const BUG_TYPE_CRITICAL: BugTypeDef = {
+    id: 'critical',
+    kind: 'whack',
+    points: 30,
+    cssClass: 'bug--critical',
+    weight: 1
+};
 
 // ========================================
 // DIFFICULTY SETTINGS
@@ -83,21 +143,30 @@ const difficulties: Record<string, Difficulty> = {
         spawnMin: 800,
         spawnMax: 1500,
         bugDuration: 1500,
-        pointsPerBug: 10
+        bugTypes: [BUG_TYPE_COMMON],
+        legend: ''
     },
     medium: {
         name: 'Medium',
         spawnMin: 600,
         spawnMax: 1200,
         bugDuration: 1200,
-        pointsPerBug: 15
+        bugTypes: [BUG_TYPE_SYNTAX, BUG_TYPE_NULL_REF, BUG_TYPE_OVERFLOW],
+        legend: 'Syntax +10 · Null +15 · Overflow +20 — squash them all'
     },
     hard: {
         name: 'Hard',
-        spawnMin: 400,
-        spawnMax: 1000,
-        bugDuration: 900,
-        pointsPerBug: 20
+        spawnMin: 500,
+        spawnMax: 1100,
+        bugDuration: 1150,
+        bugTypes: [
+            BUG_TYPE_SYNTAX,
+            BUG_TYPE_NULL_REF,
+            BUG_TYPE_OVERFLOW,
+            BUG_TYPE_FEATURE,
+            BUG_TYPE_CRITICAL
+        ],
+        legend: 'Green features = avoid (−25) · Critical = +30'
     }
 };
 
@@ -138,6 +207,8 @@ function loadHighScore(): void {
     const saved = localStorage.getItem(`whackBugHighScore_${selectedDifficulty}`);
     if (saved) {
         highScore = parseInt(saved, 10);
+    } else {
+        highScore = 0;
     }
 }
 
@@ -147,6 +218,7 @@ function saveHighScore(): void {
 
 function createHoles(): void {
     gameGrid.innerHTML = '';
+    bugs = [];
 
     for (let i = 0; i < HOLE_COUNT; i++) {
         const hole = document.createElement('div');
@@ -155,69 +227,156 @@ function createHoles(): void {
 
         const bug = document.createElement('div');
         bug.className = 'bug';
-        bug.innerHTML = createBugSVG();
+        bug.innerHTML = createBugSVG('common');
         bug.addEventListener('click', () => whackBug(i));
 
         hole.appendChild(bug);
         gameGrid.appendChild(hole);
 
-        bugs.push({ active: false, holeIndex: i, timer: null });
+        bugs.push({ active: false, holeIndex: i, timer: null, typeId: null });
     }
 }
 
-function createBugSVG(): string {
+// ========================================
+// BUG VISUALS
+// ========================================
+
+function createBugSVG(typeId: string): string {
+    switch (typeId) {
+        case 'syntax':
+            return createThemedBugSVG('#e5c07b', '{;}');
+        case 'nullRef':
+            return createThemedBugSVG('#61afef', 'null');
+        case 'overflow':
+            return createThemedBugSVG('#c678dd', '∞');
+        case 'feature':
+            return createThemedBugSVG('#98c379', '★');
+        case 'critical':
+            return createThemedBugSVG('#ff6b6b', '!!');
+        case 'common':
+        default:
+            return `
+                <svg viewBox="0 0 60 80" width="60" height="80" aria-hidden="true">
+                    <ellipse cx="30" cy="40" rx="25" ry="32" fill="#cc0000"/>
+                    <line x1="30" y1="10" x2="30" y2="70" stroke="#000" stroke-width="3"/>
+                    <circle cx="20" cy="25" r="5" fill="#000"/>
+                    <circle cx="40" cy="25" r="5" fill="#000"/>
+                    <circle cx="20" cy="45" r="4" fill="#000"/>
+                    <circle cx="40" cy="45" r="4" fill="#000"/>
+                    <line x1="20" y1="8" x2="15" y2="0" stroke="#000" stroke-width="2"/>
+                    <line x1="40" y1="8" x2="45" y2="0" stroke="#000" stroke-width="2"/>
+                    <circle cx="15" cy="0" r="2" fill="#000"/>
+                    <circle cx="45" cy="0" r="2" fill="#000"/>
+                </svg>
+            `;
+    }
+}
+
+function createThemedBugSVG(fill: string, label: string): string {
     return `
-        <svg viewBox="0 0 60 80" width="60" height="80">
-            <ellipse cx="30" cy="40" rx="25" ry="32" fill="#cc0000"/>
-            <line x1="30" y1="10" x2="30" y2="70" stroke="#000" stroke-width="3"/>
-            <circle cx="20" cy="25" r="5" fill="#000"/>
-            <circle cx="40" cy="25" r="5" fill="#000"/>
-            <circle cx="20" cy="45" r="4" fill="#000"/>
-            <circle cx="40" cy="45" r="4" fill="#000"/>
-            <line x1="20" y1="8" x2="15" y2="0" stroke="#000" stroke-width="2"/>
-            <line x1="40" y1="8" x2="45" y2="0" stroke="#000" stroke-width="2"/>
-            <circle cx="15" cy="0" r="2" fill="#000"/>
-            <circle cx="45" cy="0" r="2" fill="#000"/>
+        <svg viewBox="0 0 60 80" width="60" height="80" aria-hidden="true">
+            <ellipse cx="30" cy="40" rx="25" ry="32" fill="${fill}"/>
+            <line x1="30" y1="10" x2="30" y2="70" stroke="#1e1e1e" stroke-width="3"/>
+            <circle cx="20" cy="25" r="5" fill="#1e1e1e"/>
+            <circle cx="40" cy="25" r="5" fill="#1e1e1e"/>
+            <circle cx="20" cy="45" r="4" fill="#1e1e1e"/>
+            <circle cx="40" cy="45" r="4" fill="#1e1e1e"/>
+            <line x1="20" y1="8" x2="15" y2="0" stroke="#1e1e1e" stroke-width="2"/>
+            <line x1="40" y1="8" x2="45" y2="0" stroke="#1e1e1e" stroke-width="2"/>
+            <circle cx="15" cy="0" r="2" fill="#1e1e1e"/>
+            <circle cx="45" cy="0" r="2" fill="#1e1e1e"/>
+            <text x="30" y="58" text-anchor="middle" fill="#1e1e1e"
+                font-family="Orbitron, sans-serif" font-size="11" font-weight="700">${label}</text>
         </svg>
     `;
+}
+
+function getBugTypeById(typeId: string | null): BugTypeDef | null {
+    if (!typeId) {
+        return null;
+    }
+    return currentDifficulty.bugTypes.find(t => t.id === typeId) ?? null;
+}
+
+function pickWeightedBugType(): BugTypeDef {
+    const types = currentDifficulty.bugTypes;
+    const totalWeight = types.reduce((sum, t) => sum + t.weight, 0);
+    let roll = Math.random() * totalWeight;
+
+    for (const type of types) {
+        roll -= type.weight;
+        if (roll <= 0) {
+            return type;
+        }
+    }
+
+    return types[types.length - 1];
+}
+
+function applyBugAppearance(bugElement: HTMLElement, type: BugTypeDef): void {
+    bugElement.className = `bug ${type.cssClass}`;
+    bugElement.innerHTML = createBugSVG(type.id);
+}
+
+function clearBugAppearance(bugElement: HTMLElement): void {
+    bugElement.className = 'bug';
+    bugElement.innerHTML = createBugSVG('common');
 }
 
 // ========================================
 // DIFFICULTY SELECTION
 // ========================================
 
-function selectDifficulty(difficulty: string): void {
-    // Only allow easy for now
-    if (difficulty !== 'easy') {
+function selectDifficulty(difficulty: string, options: { openAccordion?: boolean } = {}): void {
+    if (!difficulties[difficulty]) {
         return;
     }
 
-    selectedDifficulty = difficulty;
+    const openAccordion = options.openAccordion !== false;
 
-    // Update UI
+    selectedDifficulty = difficulty;
+    currentDifficulty = difficulties[difficulty];
+
     document.querySelectorAll('.difficulty-card').forEach(card => {
-        card.classList.remove('active');
+        const details = card as HTMLDetailsElement;
+        const isSelected = details.dataset.difficulty === difficulty;
+        details.classList.toggle('active', isSelected);
+        if (openAccordion) {
+            details.open = isSelected;
+        }
     });
 
-    const selectedCard = document.getElementById(`${difficulty}Card`);
-    if (selectedCard) {
-        selectedCard.classList.add('active');
-    }
+    loadHighScore();
+    updateScoreDisplay();
 }
 
 function notifyGameStateChanged(): void {
     window.dispatchEvent(new CustomEvent('gameChrome:gameStateChanged'));
 }
 
+function updateBugLegend(): void {
+    if (!bugLegend) {
+        return;
+    }
+
+    if (currentDifficulty.legend) {
+        bugLegend.textContent = currentDifficulty.legend;
+        bugLegend.hidden = false;
+    } else {
+        bugLegend.textContent = '';
+        bugLegend.hidden = true;
+    }
+}
+
 function enterGame(): void {
-    if (selectedDifficulty !== 'easy') {
-        alert('Only Easy mode is available in this version!');
+    if (!difficulties[selectedDifficulty]) {
         return;
     }
 
     currentDifficulty = difficulties[selectedDifficulty];
     loadHighScore();
     updateScoreDisplay();
+    updateBugLegend();
 
     difficultySelection.style.display = 'none';
     gameArea.style.display = 'block';
@@ -245,6 +404,10 @@ function backToMenu(): void {
 
     startBtn.style.display = 'inline-block';
     pauseBtn.style.display = 'none';
+
+    if (bugLegend) {
+        bugLegend.hidden = true;
+    }
 
     if (typeof gameChrome !== 'undefined') {
         gameChrome.setDifficultyBadge('');
@@ -276,10 +439,7 @@ function startGame(): void {
     gameOverAlert.classList.remove('show');
 
     bugs.forEach(bug => {
-        bug.active = false;
-        const holeElement = gameGrid.children[bug.holeIndex] as HTMLElement;
-        const bugElement = holeElement.querySelector('.bug') as HTMLElement;
-        bugElement.classList.remove('active');
+        hideBug(bug.holeIndex);
     });
 
     startBtn.style.display = 'none';
@@ -344,6 +504,16 @@ function stopGame(): void {
             bug.timer = null;
         }
         bug.active = false;
+        bug.typeId = null;
+
+        const holeElement = gameGrid.children[bug.holeIndex] as HTMLElement | undefined;
+        if (holeElement) {
+            const bugElement = holeElement.querySelector('.bug') as HTMLElement | null;
+            if (bugElement) {
+                bugElement.classList.remove('active', 'squashed');
+                clearBugAppearance(bugElement);
+            }
+        }
     });
 }
 
@@ -361,7 +531,6 @@ function endGame(): void {
         updateScoreDisplay();
     }
 
-    // ✅ Send game over message to extension
     sendGameOver(score);
 
     showGameOverAlert();
@@ -451,11 +620,14 @@ function spawnBug(): void {
     const randomHole = availableHoles[Math.floor(Math.random() * availableHoles.length)];
     const holeIndex = randomHole.index;
     const bug = bugs[holeIndex];
+    const bugType = pickWeightedBugType();
 
     bug.active = true;
+    bug.typeId = bugType.id;
 
     const holeElement = gameGrid.children[holeIndex] as HTMLElement;
     const bugElement = holeElement.querySelector('.bug') as HTMLElement;
+    applyBugAppearance(bugElement, bugType);
     bugElement.classList.add('active');
 
     bug.timer = window.setTimeout(() => {
@@ -472,10 +644,12 @@ function hideBug(holeIndex: number): void {
     }
 
     bug.active = false;
+    bug.typeId = null;
 
     const holeElement = gameGrid.children[holeIndex] as HTMLElement;
     const bugElement = holeElement.querySelector('.bug') as HTMLElement;
-    bugElement.classList.remove('active');
+    bugElement.classList.remove('active', 'squashed');
+    clearBugAppearance(bugElement);
 }
 
 function whackBug(holeIndex: number): void {
@@ -485,18 +659,24 @@ function whackBug(holeIndex: number): void {
         return;
     }
 
-    if (typeof soundManager !== 'undefined') {
-        soundManager.playById('slurpSound');
+    const bugType = getBugTypeById(bug.typeId);
+    if (!bugType) {
+        hideBug(holeIndex);
+        return;
     }
-    score += currentDifficulty.pointsPerBug;
+
+    if (typeof soundManager !== 'undefined') {
+        soundManager.playById(bugType.kind === 'avoid' ? 'popSound' : 'slurpSound');
+    }
+
+    score = Math.max(0, score + bugType.points);
     updateScoreDisplay();
 
     const holeElement = gameGrid.children[holeIndex] as HTMLElement;
     const bugElement = holeElement.querySelector('.bug') as HTMLElement;
 
     bugElement.classList.add('squashed');
-
-    showScorePopup(holeElement, currentDifficulty.pointsPerBug);
+    showScorePopup(holeElement, bugType.points);
 
     setTimeout(() => {
         bugElement.classList.remove('squashed');
@@ -507,8 +687,8 @@ function whackBug(holeIndex: number): void {
 
 function showScorePopup(holeElement: HTMLElement, points: number): void {
     const popup = document.createElement('div');
-    popup.className = 'score-popup';
-    popup.textContent = `+${points}`;
+    popup.className = points < 0 ? 'score-popup score-popup--penalty' : 'score-popup';
+    popup.textContent = points > 0 ? `+${points}` : `${points}`;
 
     holeElement.appendChild(popup);
 
@@ -540,10 +720,6 @@ function updateTimerDisplay(): void {
 // VS CODE COMMUNICATION
 // ========================================
 
-/**
- * Send game over message to VS Code extension
- * This decrements the play counter
- */
 function sendGameOver(finalScore: number): void {
     try {
         vscode.postMessage({
@@ -555,9 +731,6 @@ function sendGameOver(finalScore: number): void {
     }
 }
 
-/**
- * Resets the high score to 0
- */
 function resetHighScore(): void {
     if (isPlaying) {
         return;
@@ -570,33 +743,37 @@ function resetHighScore(): void {
     }
 }
 
-
 // ========================================
-// EVENT LISTENERS - NO INLINE ONCLICK
+// EVENT LISTENERS
 // ========================================
 
 function setupButtons(): void {
-
-    // Initialize game
     init();
 
-    // Difficulty cards
-    const easyCard = document.getElementById('easyCard');
-    if (easyCard) {
-        easyCard.addEventListener('click', () => selectDifficulty('easy'));
-    }
+    document.querySelectorAll('.difficulty-card[data-difficulty]').forEach(card => {
+        const details = card as HTMLDetailsElement;
+        const difficulty = details.dataset.difficulty;
+        if (!difficulty) {
+            return;
+        }
 
-    const mediumCard = document.getElementById('mediumCard');
-    if (mediumCard) {
-        mediumCard.addEventListener('click', () => selectDifficulty('medium'));
-    }
+        details.addEventListener('toggle', () => {
+            if (!details.open) {
+                return;
+            }
 
-    const hardCard = document.getElementById('hardCard');
-    if (hardCard) {
-        hardCard.addEventListener('click', () => selectDifficulty('hard'));
-    }
+            // Close sibling accordions, then select this difficulty.
+            document.querySelectorAll('.difficulty-card').forEach(other => {
+                const otherDetails = other as HTMLDetailsElement;
+                if (otherDetails !== details) {
+                    otherDetails.open = false;
+                }
+            });
+            selectDifficulty(difficulty, { openAccordion: false });
+            details.classList.add('active');
+        });
+    });
 
-    // Choose difficulty button
     const startGameBtn = document.querySelector('.start-game-btn');
     if (startGameBtn) {
         startGameBtn.addEventListener('click', enterGame);
@@ -636,27 +813,21 @@ function setupButtons(): void {
         }
     });
 
-    // Restart buttons (multiple)
     const restartButtons = document.querySelectorAll('[data-action="restart"]');
     restartButtons.forEach(btn => {
         btn.addEventListener('click', restartGame);
     });
 
-    // Back to menu buttons (multiple)
     const backButtons = document.querySelectorAll('[data-action="back"]');
     backButtons.forEach(btn => {
         btn.addEventListener('click', backToMenu);
     });
-    // Reset high score button
+
     const resetHighScoreBtn = document.getElementById('resetHighScoreBtn') as HTMLButtonElement;
     if (resetHighScoreBtn) {
         resetHighScoreBtn.addEventListener('click', resetHighScore);
     }
 }
-
-// ========================================
-// INITIALIZE ON LOAD
-// ========================================
 
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', setupButtons);

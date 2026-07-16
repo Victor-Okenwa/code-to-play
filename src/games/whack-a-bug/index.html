@@ -43,37 +43,95 @@
           <h2 class="difficulty-title">Choose Difficulty</h2>
 
           <div class="difficulty-options">
-            <div class="difficulty-card active" id="easyCard" data-difficulty="easy">
-              <div class="difficulty-header">
+            <details class="difficulty-card active" id="easyCard" data-difficulty="easy" open>
+              <summary class="difficulty-summary">
                 <span class="difficulty-indicator">🟢</span>
                 <span class="difficulty-name">EASY - Simple &amp; Clean</span>
+                <span class="difficulty-chevron" aria-hidden="true"></span>
+              </summary>
+              <div class="difficulty-body">
+                <p class="difficulty-description">
+                  Single bug type • Click fast and score high • Perfect for quick breaks
+                </p>
+                <ul class="bug-rules">
+                  <li>
+                    <span class="bug-swatch" style="--bug-color: #cc0000"></span>
+                    <span class="bug-rule-label">Classic ladybug</span>
+                    <span class="bug-rule-points bug-rule-points--gain">+10</span>
+                  </li>
+                </ul>
               </div>
-              <div class="difficulty-description">
-                Single bug type • Click fast and score high • Perfect for quick breaks
-              </div>
-            </div>
+            </details>
 
-            <div class="difficulty-card locked" id="mediumCard" data-difficulty="medium">
-              <span class="coming-soon-badge">COMING SOON</span>
-              <div class="difficulty-header">
+            <details class="difficulty-card" id="mediumCard" data-difficulty="medium">
+              <summary class="difficulty-summary">
                 <span class="difficulty-indicator">🟡</span>
                 <span class="difficulty-name">MEDIUM - Bug Squasher</span>
+                <span class="difficulty-chevron" aria-hidden="true"></span>
+              </summary>
+              <div class="difficulty-body">
+                <p class="difficulty-description">
+                  Code-themed bugs • Harder to spot • Test your focus
+                </p>
+                <ul class="bug-rules">
+                  <li>
+                    <span class="bug-swatch" style="--bug-color: #e5c07b"></span>
+                    <span class="bug-rule-label">Syntax</span>
+                    <span class="bug-rule-points bug-rule-points--gain">+10</span>
+                  </li>
+                  <li>
+                    <span class="bug-swatch" style="--bug-color: #61afef"></span>
+                    <span class="bug-rule-label">Null</span>
+                    <span class="bug-rule-points bug-rule-points--gain">+15</span>
+                  </li>
+                  <li>
+                    <span class="bug-swatch" style="--bug-color: #c678dd"></span>
+                    <span class="bug-rule-label">Overflow</span>
+                    <span class="bug-rule-points bug-rule-points--gain">+20</span>
+                  </li>
+                </ul>
               </div>
-              <div class="difficulty-description">
-                Code-themed bugs • Harder to spot • Test your focus
-              </div>
-            </div>
+            </details>
 
-            <div class="difficulty-card locked" id="hardCard" data-difficulty="hard">
-              <span class="coming-soon-badge">COMING SOON</span>
-              <div class="difficulty-header">
+            <details class="difficulty-card" id="hardCard" data-difficulty="hard">
+              <summary class="difficulty-summary">
                 <span class="difficulty-indicator">🔴</span>
                 <span class="difficulty-name">HARD - Error Whacker</span>
+                <span class="difficulty-chevron" aria-hidden="true"></span>
+              </summary>
+              <div class="difficulty-body">
+                <p class="difficulty-description">
+                  Multiple bug types • Green features cost points — don’t click them • Risk vs reward
+                </p>
+                <ul class="bug-rules">
+                  <li>
+                    <span class="bug-swatch" style="--bug-color: #e5c07b"></span>
+                    <span class="bug-rule-label">Syntax</span>
+                    <span class="bug-rule-points bug-rule-points--gain">+10</span>
+                  </li>
+                  <li>
+                    <span class="bug-swatch" style="--bug-color: #61afef"></span>
+                    <span class="bug-rule-label">Null</span>
+                    <span class="bug-rule-points bug-rule-points--gain">+15</span>
+                  </li>
+                  <li>
+                    <span class="bug-swatch" style="--bug-color: #c678dd"></span>
+                    <span class="bug-rule-label">Overflow</span>
+                    <span class="bug-rule-points bug-rule-points--gain">+20</span>
+                  </li>
+                  <li>
+                    <span class="bug-swatch" style="--bug-color: #ff6b6b"></span>
+                    <span class="bug-rule-label">Critical (rare)</span>
+                    <span class="bug-rule-points bug-rule-points--gain">+30</span>
+                  </li>
+                  <li>
+                    <span class="bug-swatch" style="--bug-color: #98c379"></span>
+                    <span class="bug-rule-label">Feature — avoid</span>
+                    <span class="bug-rule-points bug-rule-points--loss">−25</span>
+                  </li>
+                </ul>
               </div>
-              <div class="difficulty-description">
-                Multiple bug types • Avoid features • Risk vs reward • Maximum challenge
-              </div>
-            </div>
+            </details>
           </div>
 
           <button class="btn start-game-btn">Choose Difficulty</button>
@@ -97,6 +155,8 @@
 
           <div class="game-grid focus-play-target" id="gameGrid"></div>
 
+          <p class="bug-legend" id="bugLegend" hidden></p>
+
           <div class="game-over" id="gameOver">
             <h2>Time's Up!</h2>
             <p>Final Score: <span id="finalScore">0</span> bugs squashed</p>
@@ -116,7 +176,9 @@
             <summary>How to Play</summary>
             <ul>
               <li>Click on bugs as they pop up from holes</li>
-              <li>Each bug squashed = points based on difficulty</li>
+              <li><strong>Easy</strong> — classic ladybugs, +10 each</li>
+              <li><strong>Medium</strong> — code-themed bugs (syntax, null, overflow) with different point values</li>
+              <li><strong>Hard</strong> — same plus rare criticals (+30); green features are avoid — clicking them costs points</li>
               <li>Bugs appear faster as time goes on</li>
               <li>You have 60 seconds — make every click count!</li>
               <li><strong>Ctrl+M</strong> — Toggle sound</li>
