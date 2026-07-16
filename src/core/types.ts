@@ -43,14 +43,115 @@ export interface IGame {
  * Tracks the current state of a game for a user
  */
 export interface GameState  {
-    /** High score achieved in this game */
-    highScore: number;
+    /**
+     * High scores keyed by difficulty id.
+     * Games without difficulty levels use DEFAULT_DIFFICULTY_KEY ('default').
+     */
+    highScores: Record<string, number>;
 
     /** Total number of times this game has been played */
     totalPlays: number;
 
     /** Timestamp of last play session */
     lastPlayed?: number;
+}
+
+/** Key used when a game has no difficulty levels or omits difficulty on gameOver */
+export const DEFAULT_DIFFICULTY_KEY = 'default';
+
+export function resolveDifficultyKey(difficulty?: string): string {
+    const trimmed = difficulty?.trim();
+    return trimmed ? trimmed : DEFAULT_DIFFICULTY_KEY;
+}
+
+export function getHighScoreFor(state: GameState, difficulty?: string): number {
+    const key = resolveDifficultyKey(difficulty);
+    return state.highScores?.[key] ?? 0;
+}
+
+export function getBestHighScore(state: GameState): number {
+    const scores = Object.values(state.highScores ?? {});
+    if (scores.length === 0) {
+        return 0;
+    }
+    return Math.max(...scores);
+}
+
+export function formatHighScores(state: GameState): string {
+    const entries = Object.entries(state.highScores ?? {})
+        .filter(([, score]) => score > 0)
+        .sort(([a], [b]) => a.localeCompare(b));
+
+    if (entries.length === 0) {
+        return '0';
+    }
+
+    if (entries.length === 1 && entries[0][0] === DEFAULT_DIFFICULTY_KEY) {
+        return String(entries[0][1]);
+    }
+
+    return entries.map(([key, score]) => `${key} ${score}`).join(', ');
+}
+
+/**
+ * Returns a new highScores map with score applied for the given difficulty
+ * when it beats the previous best for that key. Unchanged if not higher.
+ */
+export function withUpdatedHighScore(
+    state: GameState,
+    score: number,
+    difficulty?: string
+): { highScores: Record<string, number>; improved: boolean; key: string } {
+    const key = resolveDifficultyKey(difficulty);
+    const previous = state.highScores?.[key] ?? 0;
+    const improved = score > previous;
+
+    if (!improved) {
+        return {
+            highScores: { ...(state.highScores ?? {}) },
+            improved: false,
+            key
+        };
+    }
+
+    return {
+        highScores: {
+            ...(state.highScores ?? {}),
+            [key]: score
+        },
+        improved: true,
+        key
+    };
+}
+
+/**
+ * Normalizes legacy GameState ({ highScore: number }) to the highScores map shape.
+ */
+export function normalizeGameState(raw: unknown): GameState {
+    if (!raw || typeof raw !== 'object') {
+        return {
+            highScores: {},
+            totalPlays: 0,
+            lastPlayed: undefined
+        };
+    }
+
+    const data = raw as Partial<GameState> & { highScore?: number };
+
+    if (data.highScores && typeof data.highScores === 'object') {
+        return {
+            highScores: { ...data.highScores },
+            totalPlays: data.totalPlays ?? 0,
+            lastPlayed: data.lastPlayed
+        };
+    }
+
+    const legacy = typeof data.highScore === 'number' ? data.highScore : 0;
+    return {
+        highScores: legacy > 0 ? { [DEFAULT_DIFFICULTY_KEY]: legacy } : {},
+        totalPlays: data.totalPlays ?? 0,
+        lastPlayed: data.lastPlayed
+    };
 }
 
 /**
@@ -224,7 +325,7 @@ export const DEFAULT_CONFIG: ExtensionConfig = {
  * Default game state for new games
  */
 export const DEFAULT_GAME_STATE: GameState = {
-    highScore: 0,
+    highScores: {},
     totalPlays: 0,
     lastPlayed: undefined
 };

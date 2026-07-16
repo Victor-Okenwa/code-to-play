@@ -13,7 +13,8 @@ import {
     PlayAttemptResult,
     GameEvent,
     CodeChange,
-    ExtensionConfig
+    ExtensionConfig,
+    withUpdatedHighScore
 } from './types';
 import { StorageManager } from './StorageManager';
 import { CodeTracker } from './CodeTracker';
@@ -88,7 +89,7 @@ export class GameManager {
         const state = this.storageManager.getGameState(game.id);
         if (!state) {
             this.storageManager.saveGameState(game.id, {
-                highScore: 0,
+                highScores: {},
                 totalPlays: 0
             });
         }
@@ -158,7 +159,7 @@ export class GameManager {
      * @param gameId - ID of game that was played
      * @param score - Final score achieved (optional)
      */
-    async endPlay(gameId: string, score?: number): Promise<void> {
+    async endPlay(gameId: string, score?: number, difficulty?: string): Promise<void> {
         const gameState = this.storageManager.getGameState(gameId);
         const globalState = this.storageManager.getGlobalPlayState();
 
@@ -168,9 +169,12 @@ export class GameManager {
             lastPlayed: Date.now()
         };
 
-        // Update high score if provided and higher than current
-        if (score !== undefined && score > gameState.highScore) {
-            updates.highScore = score;
+        // Update high score for this difficulty when provided and higher
+        if (score !== undefined) {
+            const result = withUpdatedHighScore(gameState, score, difficulty);
+            if (result.improved) {
+                updates.highScores = result.highScores;
+            }
         }
 
         await this.storageManager.updateGameState(gameId, updates);
@@ -201,7 +205,7 @@ export class GameManager {
         this.eventEmitter.fire({
             event: GameEvent.PLAY_ENDED,
             gameId,
-            data: { score }
+            data: { score, difficulty }
         });
     }
 

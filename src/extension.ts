@@ -13,7 +13,7 @@ import { createActivityBarView } from './ui/ActivityBarProvider';
 import { createStatusBar } from './ui/StatusBarManager';
 import { createWebviewManager } from './ui/WebViewManager';
 import { AllGames } from './games/registry';
-import { GameEvent } from './core/types';
+import { GameEvent, formatHighScores, DEFAULT_DIFFICULTY_KEY } from './core/types';
 
 /** * Activates the extension
  * 
@@ -104,7 +104,12 @@ export function activate(context: vscode.ExtensionContext) {
 			const playsRemaining = gameManager.getPlaysRemaining();
 			stats += `${game.name}\n`;
 			stats += `   Plays Remaining: ${playsRemaining}\n`;
-			stats += `   High Score: ${state.highScore}\n`;
+			const highScoreText = formatHighScores(state);
+			const scoreLabel = Object.keys(state.highScores ?? {}).length === 1
+				&& Object.keys(state.highScores)[0] === DEFAULT_DIFFICULTY_KEY
+				? 'High Score'
+				: 'High Scores';
+			stats += `   ${scoreLabel}: ${highScoreText}\n`;
 			stats += `   Total Plays: ${state.totalPlays}\n\n`;
 		});
 

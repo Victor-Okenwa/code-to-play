@@ -10,7 +10,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { IGame } from '../core/types';
+import { IGame, getHighScoreFor, DEFAULT_DIFFICULTY_KEY, resolveDifficultyKey } from '../core/types';
 import { GameManager } from '../core/GameManager';
 
 export class WebviewManager {
@@ -466,7 +466,7 @@ export class WebviewManager {
     private async handleWebviewMessage(gameId: string, message: any): Promise<void> {
         switch (message.command) {
             case 'gameOver':
-                await this.handleGameOver(gameId, message.score);
+                await this.handleGameOver(gameId, message.score, message.difficulty);
                 break;
 
             case 'log':
@@ -488,8 +488,14 @@ export class WebviewManager {
         }
     }
 
-    private async handleGameOver(gameId: string, score?: number): Promise<void> {
-        await this.gameManager.endPlay(gameId, score);
+    private async handleGameOver(gameId: string, score?: number, difficulty?: string): Promise<void> {
+        const storageManager = (this.gameManager as any).storageManager;
+        const previousBest = score !== undefined
+            ? getHighScoreFor(storageManager.getGameState(gameId), difficulty)
+            : 0;
+        const improved = score !== undefined && score > previousBest;
+
+        await this.gameManager.endPlay(gameId, score, difficulty);
 
         const playsAfter = this.gameManager.getPlaysRemaining();
 
@@ -505,15 +511,14 @@ export class WebviewManager {
         }
 
         const state = this.gameManager.getGame(gameId);
-        if (score && state) {
-            const storageManager = (this.gameManager as any).storageManager;
-            const gameState = storageManager.getGameState(gameId);
-
-            if (score >= gameState.highScore) {
-                vscode.window.showInformationMessage(
-                    `New high score in ${state.name}: ${score}!`
-                );
-            }
+        if (improved && score !== undefined && state) {
+            const key = resolveDifficultyKey(difficulty);
+            const difficultyLabel = key === DEFAULT_DIFFICULTY_KEY
+                ? ''
+                : ` ${key.charAt(0).toUpperCase()}${key.slice(1)}`;
+            vscode.window.showInformationMessage(
+                `New${difficultyLabel} high score in ${state.name}: ${score}!`
+            );
         }
     }
 
