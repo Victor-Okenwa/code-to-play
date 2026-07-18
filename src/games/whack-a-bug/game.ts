@@ -748,18 +748,6 @@ function sendGameOver(finalScore: number): void {
     }
 }
 
-function resetHighScore(): void {
-    if (isPlaying) {
-        return;
-    }
-
-    if (confirm('Are you sure you want to reset your high score? This cannot be undone.')) {
-        highScore = 0;
-        saveHighScore();
-        updateScoreDisplay();
-    }
-}
-
 // ========================================
 // EVENT LISTENERS
 // ========================================
@@ -839,11 +827,6 @@ function setupButtons(): void {
     backButtons.forEach(btn => {
         btn.addEventListener('click', backToMenu);
     });
-
-    const resetHighScoreBtn = document.getElementById('resetHighScoreBtn') as HTMLButtonElement;
-    if (resetHighScoreBtn) {
-        resetHighScoreBtn.addEventListener('click', resetHighScore);
-    }
 }
 
 if (document.readyState === 'loading') {

@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.0.3] - 2026-07-18
+
+### Added in 0.0.3
+
+- **Whack-a-Bug Full Difficulty Levels**:
+  - Unlocked Medium and Hard alongside Easy
+  - Code-themed bug types (syntax, null, overflow) with distinct point values
+  - Hard mode avoidable green “feature” bugs (−25) and rare criticals (+30)
+  - Accordion difficulty cards with color swatches and scoring rules per level
+  - In-game bug legend for Medium/Hard
+- **Per-Difficulty High Scores** (Debug Snake and Whack-a-Bug):
+  - Separate high scores for each difficulty level
+  - Extension host stores scores in a `highScores` map (uses `default` for games without difficulty)
+  - Best score shown on each difficulty card before play
+  - View Stats and activity-bar tooltips list scores by difficulty
+  - “New high score” toast is scoped to the difficulty that improved
+
+### Changed
+
+- **Whack-a-Bug Hard pacing**:
+  - Tuned spawn interval and bug visibility to keep Hard challenging but more playable
+- **High score persistence**:
+  - Legacy single `highScore` values migrate to `highScores.default` on load
+
 ## [0.0.2] - 2026-07-06
 
 ### Added in 0.0.2
