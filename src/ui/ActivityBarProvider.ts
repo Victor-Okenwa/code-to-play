@@ -6,7 +6,7 @@
  */
 
 import * as vscode from 'vscode';
-import { IGame, GameState, getBestHighScore, formatHighScores } from '../core/types';
+import { IGame, GameState, getBestHighScore, formatHighScores, DEFAULT_CONFIG } from '../core/types';
 import { GameManager } from '../core/GameManager';
 import { StorageManager } from '../core/StorageManager';
 
@@ -92,7 +92,7 @@ class GameTreeItem extends vscode.TreeItem {
         const manager = (this as any).manager;
         const totalLines = manager?.storageManager?.getTotalLinesWritten() || 0;
         const config = manager?.storageManager?.getConfig();
-        const linesNeeded = config?.unlock?.linesToUnlock || 100;
+        const linesNeeded = config?.unlock?.linesToUnlock ?? DEFAULT_CONFIG.unlock.linesToUnlock;
         return Math.min(totalLines / linesNeeded, 1);
     }
 

@@ -311,7 +311,7 @@ export interface ExtensionConfig {
 export const DEFAULT_CONFIG: ExtensionConfig = {
     unlock: {
         initialPlays: 5,
-        linesToUnlock: 100,
+        linesToUnlock: 1000,
         playsPerUnlock: 5,
         countMeaningfulLinesOnly: true
     },
