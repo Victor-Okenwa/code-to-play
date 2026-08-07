@@ -218,6 +218,7 @@
     "@typescript-eslint/parser": "^8.39.0",
     "@vscode/test-cli": "^0.0.11",
     "@vscode/test-electron": "^2.5.2",
+    "@vscode/vsce": "^3.7.1",
     "chokidar": "^5.0.0",
     "concurrently": "^8.2.0",
     "copyfiles": "^2.4.1",
