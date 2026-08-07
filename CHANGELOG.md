@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.0.0] - 2026-08-07
+
+### Changed
+
+- **Unlock threshold increased to 1000 lines**:
+  - Default lines required to unlock games raised from 100 to 1000 meaningful lines of code
+  - Activity bar progress fallback now uses the shared default config instead of a hardcoded value
+  - Status bar, unlock notifications, and in-game messages reflect the new threshold automatically
+
+### Notes
+
+- First major release (1.0.0) — marks a stable milestone for Code to Play
+- Users with a previously saved custom config may still have the old 100-line threshold until config is reset
+
 ## [0.0.3] - 2026-07-18
 
 ### Added in 0.0.3
