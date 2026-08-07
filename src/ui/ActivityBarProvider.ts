@@ -6,7 +6,7 @@
  */
 
 import * as vscode from 'vscode';
-import { IGame, GameState } from '../core/types';
+import { IGame, GameState, getBestHighScore, formatHighScores, DEFAULT_CONFIG } from '../core/types';
 import { GameManager } from '../core/GameManager';
 import { StorageManager } from '../core/StorageManager';
 
@@ -62,8 +62,9 @@ class GameTreeItem extends vscode.TreeItem {
             tooltip.appendMarkdown(`📝 **Write ${remaining} more lines to unlock**\n`);
         }
 
-        if (this.state.highScore > 0) {
-            tooltip.appendMarkdown(`\n🏆 **High Score:** ${this.state.highScore}`);
+        const bestHighScore = getBestHighScore(this.state);
+        if (bestHighScore > 0) {
+            tooltip.appendMarkdown(`\n🏆 **High Scores:** ${formatHighScores(this.state)}`);
         }
 
         if (this.state.totalPlays > 0) {
@@ -91,7 +92,7 @@ class GameTreeItem extends vscode.TreeItem {
         const manager = (this as any).manager;
         const totalLines = manager?.storageManager?.getTotalLinesWritten() || 0;
         const config = manager?.storageManager?.getConfig();
-        const linesNeeded = config?.unlock?.linesToUnlock || 100;
+        const linesNeeded = config?.unlock?.linesToUnlock ?? DEFAULT_CONFIG.unlock.linesToUnlock;
         return Math.min(totalLines / linesNeeded, 1);
     }
 
@@ -148,9 +149,10 @@ class GameTreeItem extends vscode.TreeItem {
         baseContexts.push(`game-${this.game.id}`);
 
         // Add performance context
-        if (this.state.highScore > 1000) {
+        const bestHighScore = getBestHighScore(this.state);
+        if (bestHighScore > 1000) {
             baseContexts.push('highPerformer');
-        } else if (this.state.highScore > 100) {
+        } else if (bestHighScore > 100) {
             baseContexts.push('goodPerformer');
         }
 

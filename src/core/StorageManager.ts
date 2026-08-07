@@ -13,7 +13,8 @@ import {
     DEFAULT_GAME_STATE,
     DEFAULT_CONFIG,
     DEFAULT_GLOBAL_PLAY_STATE,
-    GlobalPlayState
+    GlobalPlayState,
+    normalizeGameState
 } from './types';
 
 /**
@@ -58,10 +59,13 @@ export class StorageManager implements vscode.Disposable {
      */
     getGameState(gameId: string): GameState {
         const key = this.getGameStateKey(gameId);
-        const savedState = this.globalState.get<GameState>(key);
+        const savedState = this.globalState.get<unknown>(key);
 
-        // Return saved state or default
-        return savedState || { ...DEFAULT_GAME_STATE };
+        if (!savedState) {
+            return { ...DEFAULT_GAME_STATE, highScores: {} };
+        }
+
+        return normalizeGameState(savedState);
     }
 
     /**
@@ -117,9 +121,9 @@ export class StorageManager implements vscode.Disposable {
         for (const key of keys) {
             if (key.startsWith(StorageKey.GAME_STATE_PREFIX)) {
                 const gameId = key.replace(StorageKey.GAME_STATE_PREFIX, '');
-                const state = this.globalState.get<GameState>(key);
+                const state = this.globalState.get<unknown>(key);
                 if (state) {
-                    states.set(gameId, state);
+                    states.set(gameId, normalizeGameState(state));
                 }
             }
         }

@@ -253,30 +253,6 @@ body {
   font-weight: bold;
 }
 
-/* Reset High Score Button Styles */
-.reset-container {
-  margin-top: 20px;
-  text-align: center;
-  padding-top: 15px;
-  border-top: 1px solid #3e3e42;
-}
-
-/* Reset Button */
-.reset-btn {
-  background: #d32f2f !important;
-  color: white !important;
-  font-size: 0.9em !important;
-  padding: 10px 20px !important;
-}
-
-.reset-btn:hover {
-  background: #f44336 !important;
-}
-
-.reset-btn:active {
-  background: #b71c1c !important;
-}
-
 .back-btn {
   background: #3e3e42;
 }

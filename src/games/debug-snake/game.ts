@@ -250,11 +250,29 @@ function loadHighScore(): void {
     const saved = localStorage.getItem(`snakeHighScore_${selectedDifficulty}`);
     if (saved) {
         highScore = parseInt(saved, 10);
+    } else {
+        highScore = 0;
     }
+    refreshDifficultyBestScores();
 }
 
 function saveHighScore(): void {
     localStorage.setItem(`snakeHighScore_${selectedDifficulty}`, highScore.toString());
+    refreshDifficultyBestScores();
+}
+
+function getStoredHighScore(difficulty: string): number {
+    const saved = localStorage.getItem(`snakeHighScore_${difficulty}`);
+    return saved ? parseInt(saved, 10) : 0;
+}
+
+function refreshDifficultyBestScores(): void {
+    document.querySelectorAll('[data-difficulty-best]').forEach(el => {
+        const difficulty = (el as HTMLElement).dataset.difficultyBest;
+        if (difficulty) {
+            el.textContent = String(getStoredHighScore(difficulty));
+        }
+    });
 }
 
 function notifyGameStateChanged(): void {
@@ -715,7 +733,8 @@ function sendGameOver(finalScore: number): void {
     try {
         vscode.postMessage({
             command: 'gameOver',
-            score: finalScore
+            score: finalScore,
+            difficulty: selectedDifficulty
         });
     } catch (error) {
         console.warn('Debug Snake Could not send message:', error);
