@@ -1,7 +1,7 @@
 # Code to Play - Unlock Games While You Code
 
 Code to Play gamifies your coding experience by unlocking fun mini-games
-as you write code. Every 100 lines unlocks 5 plays across all games.
+as you write code. Every 1000 lines unlocks 5 plays across all games.
 Track your progress, compete against your high scores, and take fun
 breaks without leaving VS Code.
 
@@ -41,7 +41,7 @@ Play classic games with a coding twist:
 ### Progressive Unlock System
 
 - Write code to unlock plays
-- Default: 100 lines = 5 plays.
+- Default: 1000 lines = 5 plays.
 - Global play counter shared across all games
 - Visual progress in status bar
 - Unlock notifications to celebrate milestones
@@ -93,7 +93,7 @@ Open any supported code file (`.ts`, `.js`, `.py`, `.java`, etc.) and start writ
 
 Check the status bar (bottom of VS Code):
 
-- **Locked:** `45/100 lines` - Keep coding!
+- **Locked:** `450/1000 lines` - Keep coding!
 - **Unlocked:** `5 plays` - Ready to play!
 
 #### 3️⃣ Play Games!
@@ -165,13 +165,13 @@ All data is stored locally using VS Code's storage API:
 ### General
 
 **Q: How do I unlock games?**  
-A: Write code! Default is 100 meaningful lines = 5 plays. Watch the status bar for progress.
+A: Write code! Default is 1000 meaningful lines = 5 plays. Watch the status bar for progress.
 
 **Q: What languages are supported?**  
 A: JavaScript, TypeScript, Python, Java, C/C++, C#, Go, Rust, PHP, Ruby, Swift, Kotlin, and more. [Click to check supported files](./TRACKEDEXTENSIONS.md)
 
 **Q: Can I adjust the unlock threshold?**  
-A: Yes! Settings → Code to Play → Adjust "Lines to Unlock" and "Plays Per Unlock"
+A: The default unlock threshold is 1000 meaningful lines of code for 5 plays. This is configured in the extension's default settings.
 
 **Q: Do games work offline?**  
 A: Yes! Everything runs locally. No internet required.
