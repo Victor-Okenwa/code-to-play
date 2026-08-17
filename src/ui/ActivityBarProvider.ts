@@ -44,6 +44,10 @@ class GameTreeItem extends vscode.TreeItem {
         tooltip.appendMarkdown(`### 🎮 ${this.game.name}\n\n`);
         tooltip.appendMarkdown(`${this.game.description}\n\n`);
 
+        if (this.game.isPremium) {
+            tooltip.appendMarkdown(`⭐ **Pro** — playable while checkout is coming soon.\n\n`);
+        }
+
         if (this.globalState.isUnlocked) {
             tooltip.appendMarkdown(`✅ **Unlocked**\n`);
             tooltip.appendMarkdown(`🎯 **Plays remaining:** ${this.globalState.playsRemaining}\n`);
@@ -75,16 +79,18 @@ class GameTreeItem extends vscode.TreeItem {
     }
 
     private createDescription(): string {
+        const prefix = this.game.isPremium ? 'Pro · ' : '';
+
         if (this.globalState.isUnlocked) {
             if (this.globalState.playsRemaining > 0) {
-                return `▶️ ${this.globalState.playsRemaining} plays`;
+                return `${prefix}▶️ ${this.globalState.playsRemaining} plays`;
             } else {
-                return `⏸️ No plays`;
+                return `${prefix}⏸️ No plays`;
             }
         } else {
             const progress = this.calculateUnlockProgress();
             const progressBar = this.createProgressBar(progress);
-            return `${progressBar} Locked`;
+            return `${prefix}${progressBar} Locked`;
         }
     }
 
@@ -224,13 +230,17 @@ export class ActivityBarProvider implements vscode.TreeDataProvider<GameTreeItem
             // Spacer
             items.push(this.createSpacer() as any);
 
-            // Category header
-            const categoryHeader = this.createCategoryHeader('Free Games');
-            items.push(categoryHeader as any);
+            const freeItems = this.getGameTreeItems(false);
+            const proItems = this.getGameTreeItems(true);
 
-            // Game items
-            const gameItems = this.getGameTreeItems();
-            items.push(...gameItems);
+            items.push(this.createCategoryHeader('Free Games') as any);
+            items.push(...freeItems);
+
+            if (proItems.length > 0) {
+                items.push(this.createSpacer() as any);
+                items.push(this.createCategoryHeader('Pro Games', 'star') as any);
+                items.push(...proItems);
+            }
 
             // STICKY FOOTER BUTTONS
             items.push(this.createSpacer() as any);
@@ -324,10 +334,10 @@ export class ActivityBarProvider implements vscode.TreeDataProvider<GameTreeItem
         }
     }
 
-    private createCategoryHeader(label: string): GameTreeItem {
+    private createCategoryHeader(label: string, icon = 'folder-opened'): GameTreeItem {
         const categoryItem = new vscode.TreeItem(label, vscode.TreeItemCollapsibleState.None);
         categoryItem.contextValue = 'categoryHeader';
-        categoryItem.iconPath = new vscode.ThemeIcon('folder-opened');
+        categoryItem.iconPath = new vscode.ThemeIcon(icon);
 
         return categoryItem as any;
     }
@@ -345,8 +355,8 @@ export class ActivityBarProvider implements vscode.TreeDataProvider<GameTreeItem
         return undefined;
     }
 
-    private getGameTreeItems(): GameTreeItem[] {
-        const games = this.gameManager.getAllGames();
+    private getGameTreeItems(premium: boolean): GameTreeItem[] {
+        const games = this.gameManager.getAllGames().filter(game => game.isPremium === premium);
         const globalState = this.storageManager.getGlobalPlayState();
         const items: GameTreeItem[] = [];
 

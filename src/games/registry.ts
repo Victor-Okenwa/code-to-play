@@ -6,7 +6,9 @@
  */
 
 import { IGame } from '../core/types';
+import { CallStackGame } from './call-stack/config';
 import { DebugSnakeGame } from './debug-snake/config';
+import { MergeConflictGame } from './merge-conflict/config';
 import { WhackABugGame } from './whack-a-bug/config';
 
 /**
@@ -15,7 +17,9 @@ import { WhackABugGame } from './whack-a-bug/config';
  */
 export const AllGames: IGame[] = [
     DebugSnakeGame,
-    WhackABugGame
+    WhackABugGame,
+    CallStackGame,
+    MergeConflictGame
 ];
 
 /**

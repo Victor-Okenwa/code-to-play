@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Call Stack</title>
+  </head>
+  <body>
+      <audio id="popSound" preload="auto" style="display: none;">
+        <source src="SOUND_SRC_POP_MP3" type="audio/mpeg">
+      </audio>
+      <audio id="slurpSound" preload="auto" style="display: none;">
+        <source src="SOUND_SRC_SLURP_MP3" type="audio/mpeg">
+      </audio>
+      <audio id="lockSound" preload="auto" style="display: none;">
+        <source src="SOUND_SRC_LOCK_WAV" type="audio/wav">
+      </audio>
+      <audio id="swapSound" preload="auto" style="display: none;">
+        <source src="SOUND_SRC_SWAP_WAV" type="audio/wav">
+      </audio>
+      <audio id="comboSound" preload="auto" style="display: none;">
+        <source src="SOUND_SRC_COMBO_WAV" type="audio/wav">
+      </audio>
+      <audio id="warningSound" preload="auto" style="display: none;">
+        <source src="SOUND_SRC_WARNING_WAV" type="audio/wav">
+      </audio>
+      <audio id="crashSound" preload="auto" style="display: none;">
+        <source src="SOUND_SRC_CRASH_WAV" type="audio/wav">
+      </audio>
+
+    <div class="game-viewport" id="gameViewport">
+      <div class="game-toolbar" id="gameToolbar">
+        <button type="button" class="toolbar-btn" id="muteBtn" title="Toggle sound (Ctrl+M)" aria-pressed="false">
+          <i class="codicon codicon-unmute" id="muteIcon"></i>
+          <span id="muteLabel">Sound On</span>
+        </button>
+        <button type="button" class="toolbar-btn" id="fullscreenBtn" title="Toggle focus play mode (Ctrl+F)">
+          <i class="codicon codicon-screen-full" id="fullscreenIcon"></i>
+          <span id="fullscreenLabel">Focus Play</span>
+        </button>
+        <span class="difficulty-badge" id="difficultyBadge"></span>
+        <span class="toolbar-hint">Choose difficulty</span>
+      </div>
+
+      <div class="game-container">
+        <div class="game-over-alert" id="gameOverAlert">
+          <h2>STACK OVERFLOW!</h2>
+          <p id="alertScore">Frames popped: 0</p>
+        </div>
+
+        <div class="game-header">
+          <h1>Call Stack</h1>
+          <p>Land a return on a matching call to pop the frame.</p>
+        </div>
+
+        <div class="difficulty-selection" id="difficultySelection">
+          <h2 class="difficulty-title">Choose Difficulty</h2>
+          <div class="difficulty-options">
+            <div class="difficulty-card active" id="easyCard" data-difficulty="easy">
+              <div class="difficulty-header">
+                <span class="difficulty-indicator">🟢</span>
+                <span class="difficulty-name">EASY</span>
+              </div>
+              <div class="difficulty-description">
+                3 frame colors • Slow drop • Deep stack
+              </div>
+              <div class="difficulty-best">Best: <span data-difficulty-best="easy">0</span></div>
+            </div>
+            <div class="difficulty-card" id="mediumCard" data-difficulty="medium">
+              <div class="difficulty-header">
+                <span class="difficulty-indicator">🟡</span>
+                <span class="difficulty-name">MEDIUM</span>
+              </div>
+              <div class="difficulty-description">
+                4 frame colors • Faster drop • Same stack depth
+              </div>
+              <div class="difficulty-best">Best: <span data-difficulty-best="medium">0</span></div>
+            </div>
+            <div class="difficulty-card" id="hardCard" data-difficulty="hard">
+              <div class="difficulty-header">
+                <span class="difficulty-indicator">🔴</span>
+                <span class="difficulty-name">HARD</span>
+              </div>
+              <div class="difficulty-description">
+                5 frame colors • Fast drop • Shallower stack
+              </div>
+              <div class="difficulty-best">Best: <span data-difficulty-best="hard">0</span></div>
+            </div>
+          </div>
+          <button class="btn start-game-btn" id="enterGameBtn">Choose Difficulty</button>
+        </div>
+
+        <div class="game-play" id="gamePlay" style="display: none" data-focus-pause-key="Space">
+          <div class="score-panel focus-play-scores">
+            <div class="score-item">
+              <div class="score-label">Score</div>
+              <div class="score-value" id="score">0</div>
+            </div>
+            <div class="score-item">
+              <div class="score-label">High Score</div>
+              <div class="score-value" id="highScore">0</div>
+            </div>
+            <div class="score-item">
+              <div class="score-label">Combo</div>
+              <div class="score-value" id="combo">0</div>
+            </div>
+            <div class="score-item">
+              <div class="score-label">Stack</div>
+              <div class="score-value" id="stackHeight">0</div>
+            </div>
+          </div>
+
+          <div class="game-area focus-play-target">
+            <canvas id="gameCanvas" width="320" height="504"></canvas>
+          </div>
+
+          <div class="game-over" id="gameOver">
+            <h2>Stack Overflow</h2>
+            <p>Score: <span id="finalScore">0</span></p>
+            <button class="btn" id="restartBtn">Pop Again</button>
+          </div>
+
+          <div class="controls">
+            <button class="btn" id="startBtn">Start Debugging</button>
+            <button class="btn" id="pauseBtn" style="display: none">Pause (SPC)</button>
+            <button class="btn back-btn" id="backToMenuBtn">Change Difficulty</button>
+          </div>
+        </div>
+
+        <div class="instructions">
+          <details>
+            <summary>How to Play</summary>
+            <h3>Controls</h3>
+            <ul>
+              <li><strong>Left / Right</strong> — Move the falling frame</li>
+              <li><strong>Up</strong> — Rotate (swap call / return)</li>
+              <li><strong>Down</strong> — Soft drop</li>
+              <li><strong>X</strong> — Hard drop</li>
+              <li><strong>Space</strong> — Pause/Resume</li>
+              <li><strong>Ctrl+M</strong> — Toggle sound</li>
+              <li><strong>Ctrl+F</strong> — Toggle focus play mode</li>
+            </ul>
+            <h3>Rules</h3>
+            <ul>
+              <li>Each piece is a call stacked on a return, or the reverse</li>
+              <li>A return sitting on a matching-color call pops both frames</li>
+              <li>Chain pops for combo score. Touch the top row and you overflow</li>
+            </ul>
+          </details>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Merge Conflict</title>
+  </head>
+  <body>
+      <audio id="popSound" preload="auto" style="display: none;">
+        <source src="SOUND_SRC_POP_MP3" type="audio/mpeg">
+      </audio>
+      <audio id="slurpSound" preload="auto" style="display: none;">
+        <source src="SOUND_SRC_SLURP_MP3" type="audio/mpeg">
+      </audio>
+      <audio id="lockSound" preload="auto" style="display: none;">
+        <source src="SOUND_SRC_LOCK_WAV" type="audio/wav">
+      </audio>
+      <audio id="swapSound" preload="auto" style="display: none;">
+        <source src="SOUND_SRC_SWAP_WAV" type="audio/wav">
+      </audio>
+      <audio id="comboSound" preload="auto" style="display: none;">
+        <source src="SOUND_SRC_COMBO_WAV" type="audio/wav">
+      </audio>
+      <audio id="warningSound" preload="auto" style="display: none;">
+        <source src="SOUND_SRC_WARNING_WAV" type="audio/wav">
+      </audio>
+      <audio id="crashSound" preload="auto" style="display: none;">
+        <source src="SOUND_SRC_CRASH_WAV" type="audio/wav">
+      </audio>
+
+    <div class="game-viewport" id="gameViewport">
+      <div class="game-toolbar" id="gameToolbar">
+        <button type="button" class="toolbar-btn" id="muteBtn" title="Toggle sound (Ctrl+M)" aria-pressed="false">
+          <i class="codicon codicon-unmute" id="muteIcon"></i>
+          <span id="muteLabel">Sound On</span>
+        </button>
+        <button type="button" class="toolbar-btn" id="fullscreenBtn" title="Toggle focus play mode (Ctrl+F)">
+          <i class="codicon codicon-screen-full" id="fullscreenIcon"></i>
+          <span id="fullscreenLabel">Focus Play</span>
+        </button>
+        <span class="difficulty-badge" id="difficultyBadge"></span>
+        <span class="toolbar-hint">Choose difficulty</span>
+      </div>
+
+      <div class="game-container">
+        <div class="game-over-alert" id="gameOverAlert">
+          <h2>HEAD DIVERGED!</h2>
+          <p id="alertScore">Hunks merged: 0</p>
+        </div>
+
+        <div class="game-header">
+          <h1>Merge Conflict</h1>
+          <p>Swap hunks to merge matching lines before HEAD overflows.</p>
+        </div>
+
+        <div class="difficulty-selection" id="difficultySelection">
+          <h2 class="difficulty-title">Choose Difficulty</h2>
+          <div class="difficulty-options">
+            <div class="difficulty-card active" id="easyCard" data-difficulty="easy">
+              <div class="difficulty-header">
+                <span class="difficulty-indicator">🟢</span>
+                <span class="difficulty-name">EASY</span>
+              </div>
+              <div class="difficulty-description">
+                Ours / theirs / base • Slow rising rows
+              </div>
+              <div class="difficulty-best">Best: <span data-difficulty-best="easy">0</span></div>
+            </div>
+            <div class="difficulty-card" id="mediumCard" data-difficulty="medium">
+              <div class="difficulty-header">
+                <span class="difficulty-indicator">🟡</span>
+                <span class="difficulty-name">MEDIUM</span>
+              </div>
+              <div class="difficulty-description">
+                4 hunk colors • Faster rises
+              </div>
+              <div class="difficulty-best">Best: <span data-difficulty-best="medium">0</span></div>
+            </div>
+            <div class="difficulty-card" id="hardCard" data-difficulty="hard">
+              <div class="difficulty-header">
+                <span class="difficulty-indicator">🔴</span>
+                <span class="difficulty-name">HARD</span>
+              </div>
+              <div class="difficulty-description">
+                5 hunk colors • Aggressive rises
+              </div>
+              <div class="difficulty-best">Best: <span data-difficulty-best="hard">0</span></div>
+            </div>
+          </div>
+          <button class="btn start-game-btn" id="enterGameBtn">Choose Difficulty</button>
+        </div>
+
+        <div class="game-play" id="gamePlay" style="display: none" data-focus-pause-key="Space">
+          <div class="score-panel focus-play-scores">
+            <div class="score-item">
+              <div class="score-label">Score</div>
+              <div class="score-value" id="score">0</div>
+            </div>
+            <div class="score-item">
+              <div class="score-label">High Score</div>
+              <div class="score-value" id="highScore">0</div>
+            </div>
+            <div class="score-item">
+              <div class="score-label">Combo</div>
+              <div class="score-value" id="combo">0</div>
+            </div>
+          </div>
+
+          <div class="game-area focus-play-target">
+            <canvas id="gameCanvas" width="360" height="480"></canvas>
+          </div>
+
+          <div class="game-over" id="gameOver">
+            <h2>Merge Failed</h2>
+            <p>Score: <span id="finalScore">0</span></p>
+            <button class="btn" id="restartBtn">Rebase Again</button>
+          </div>
+
+          <div class="controls">
+            <button class="btn" id="startBtn">Start Merge</button>
+            <button class="btn" id="pauseBtn" style="display: none">Pause (SPC)</button>
+            <button class="btn back-btn" id="backToMenuBtn">Change Difficulty</button>
+          </div>
+        </div>
+
+        <div class="instructions">
+          <details>
+            <summary>How to Play</summary>
+            <h3>Controls</h3>
+            <ul>
+              <li><strong>Arrow Keys</strong> — Move the cursor</li>
+              <li><strong>Enter</strong> — Swap with the hunk on the right</li>
+              <li><strong>Space</strong> — Pause/Resume</li>
+              <li><strong>Ctrl+M</strong> — Toggle sound</li>
+              <li><strong>Ctrl+F</strong> — Toggle focus play mode</li>
+            </ul>
+            <h3>Rules</h3>
+            <ul>
+              <li>Match 3 or more of the same hunk in a row or column to merge</li>
+              <li>Chains are rebases — they score extra</li>
+              <li>New rows rise from the bottom. If hunks hit the top, HEAD diverges</li>
+            </ul>
+          </details>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

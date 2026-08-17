@@ -319,7 +319,15 @@ export class WebviewManager {
         const soundDir = path.join(this.context.extensionPath, 'dist', 'media', 'sfx');
         const uris = new Map<string, vscode.Uri>();
 
-        const sounds = ['slurp.mp3', 'pop.mp3'];
+        const sounds = [
+            'slurp.mp3',
+            'pop.mp3',
+            'lock.wav',
+            'swap.wav',
+            'combo.wav',
+            'warning.wav',
+            'crash.wav'
+        ];
 
         for (const soundFile of sounds) {
             const soundUri = vscode.Uri.file(path.join(soundDir, soundFile));

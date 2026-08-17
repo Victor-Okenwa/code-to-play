@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <rect x="16" y="38" width="32" height="12" rx="2" fill="#4fc1ff" stroke="#2d2d30" stroke-width="2"/>
+  <rect x="20" y="24" width="24" height="12" rx="2" fill="#c586c0" stroke="#2d2d30" stroke-width="2"/>
+  <rect x="24" y="10" width="16" height="12" rx="2" fill="#4ec9b0" stroke="#2d2d30" stroke-width="2"/>
+  <text x="32" y="47" text-anchor="middle" font-size="7" fill="#1e1e1e" font-family="sans-serif">ret</text>
+  <text x="32" y="33" text-anchor="middle" font-size="7" fill="#1e1e1e" font-family="sans-serif">fn</text>
+</svg>
