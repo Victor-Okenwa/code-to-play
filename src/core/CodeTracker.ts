@@ -20,9 +20,14 @@ export class CodeTracker {
     private disposables: vscode.Disposable[] = [];
 
     /**
-     * Debounce timer to prevent counting rapid changes as multiple lines
+     * Per-document debounce timers so multi-file agent applies all count
      */
-    private debounceTimer: NodeJS.Timeout | null = null;
+    private debounceTimers = new Map<string, NodeJS.Timeout>();
+
+    /**
+     * New file URIs already credited, so create events are not double-counted
+     */
+    private creditedNewFiles = new Set<string>();
 
     /**
      * Event emitter for code change events
@@ -64,17 +69,35 @@ export class CodeTracker {
      * @private
      */
     private setupListeners(): void {
-        // Listen for document changes
-        const changeDisposable = vscode.workspace.onDidChangeTextDocument(
-            this.handleDocumentChange.bind(this)
+        this.disposables.push(
+            vscode.workspace.onDidChangeTextDocument(
+                this.handleDocumentChange.bind(this)
+            ),
+            vscode.workspace.onDidSaveTextDocument(
+                this.handleDocumentSave.bind(this)
+            ),
+            vscode.workspace.onDidOpenTextDocument(
+                this.handleDocumentOpen.bind(this)
+            ),
+            vscode.workspace.onDidCreateFiles(
+                this.handleFilesCreated.bind(this)
+            )
         );
 
-        // Listen for document saves (for more accurate counting)
-        const saveDisposable = vscode.workspace.onDidSaveTextDocument(
-            this.handleDocumentSave.bind(this)
+        const watcher = vscode.workspace.createFileSystemWatcher('**/*');
+        this.disposables.push(
+            watcher,
+            watcher.onDidCreate((uri) => {
+                void this.creditNewFile(uri);
+            }),
+            watcher.onDidChange((uri) => {
+                this.handleFileChangedOnDisk(uri);
+            })
         );
 
-        this.disposables.push(changeDisposable, saveDisposable);
+        for (const document of vscode.workspace.textDocuments) {
+            this.seedBaseline(document);
+        }
     }
 
     // ========================================
@@ -96,24 +119,59 @@ export class CodeTracker {
             return;
         }
 
-        // Ignore untitled or unsaved documents
         if (event.document.isUntitled) {
             return;
         }
 
-        // Check if we should track this file type
         if (!this.shouldTrackDocument(event.document)) {
             return;
         }
 
-        // Debounce to avoid counting rapid typing as multiple lines
-        if (this.debounceTimer) {
-            clearTimeout(this.debounceTimer);
+        this.scheduleDocumentProcess(event.document);
+    }
+
+    /**
+     * Seeds a baseline when a file is opened so the next apply or edit is a diff
+     *
+     * @param document - Opened document
+     * @private
+     */
+    private handleDocumentOpen(document: vscode.TextDocument): void {
+        this.seedBaseline(document);
+    }
+
+    /**
+     * Credits meaningful lines in files created by the editor or an agent
+     *
+     * @param event - File create event
+     * @private
+     */
+    private handleFilesCreated(event: vscode.FileCreateEvent): void {
+        for (const uri of event.files) {
+            void this.creditNewFile(uri);
+        }
+    }
+
+    /**
+     * Diffs a disk write against a known baseline (open or previously seen file)
+     *
+     * @param uri - Changed file
+     * @private
+     */
+    private handleFileChangedOnDisk(uri: vscode.Uri): void {
+        if (uri.scheme !== 'file') {
+            return;
         }
 
-        this.debounceTimer = setTimeout(() => {
-            this.processDocumentChange(event.document);
-        }, this.config.debounceTime);
+        if (!this.shouldTrackFileName(uri.fsPath)) {
+            return;
+        }
+
+        if (!this.documentCache.has(uri.toString())) {
+            return;
+        }
+
+        this.scheduleUriProcess(uri);
     }
 
     /**
@@ -124,18 +182,11 @@ export class CodeTracker {
      * @private
      */
     private handleDocumentSave(document: vscode.TextDocument): void {
-        // Check if we should track this file type
-        if (!this.shouldTrackDocument(document)) {
+        if (document.isUntitled || !this.shouldTrackDocument(document)) {
             return;
         }
 
-        // Cancel any pending debounced change
-        if (this.debounceTimer) {
-            clearTimeout(this.debounceTimer);
-            this.debounceTimer = null;
-        }
-
-        // Process the final saved state
+        this.cancelScheduledProcess(document.uri.toString());
         this.processDocumentChange(document);
     }
 
@@ -150,14 +201,16 @@ export class CodeTracker {
      * @private
      */
     private processDocumentChange(document: vscode.TextDocument): void {
+        const key = document.uri.toString();
         const currentContent = document.getText();
-        const cachedContent = this.documentCache.get(document.uri.toString());
 
-        // If no cached content, this is the first time seeing this document
-        if (!cachedContent) {
-            this.documentCache.set(document.uri.toString(), currentContent);
+        // First time seeing this document: store a baseline, do not count
+        if (!this.documentCache.has(key)) {
+            this.documentCache.set(key, currentContent);
             return;
         }
+
+        const cachedContent = this.documentCache.get(key) ?? '';
 
         // Calculate line changes
         const change = this.calculateLineChanges(
@@ -167,8 +220,7 @@ export class CodeTracker {
             resolveTrackedExtension(document.fileName, this.config.trackedExtensions)
         );
 
-        // Update cache
-        this.documentCache.set(document.uri.toString(), currentContent);
+        this.documentCache.set(key, currentContent);
 
         // Only emit if there's a meaningful change
         if (change.isMeaningful && change.netChange > 0) {
@@ -398,16 +450,156 @@ export class CodeTracker {
      * @private
      */
     private shouldTrackDocument(document: vscode.TextDocument): boolean {
-        // Always track if trackAllFiles is enabled
+        if (document.isUntitled) {
+            return false;
+        }
+
+        return this.shouldTrackFileName(document.fileName);
+    }
+
+    /**
+     * Whether a file path uses a tracked extension
+     *
+     * @param fileName - File path or name
+     * @returns True if the file should be tracked
+     * @private
+     */
+    private shouldTrackFileName(fileName: string): boolean {
+        if (this.isIgnoredPath(fileName)) {
+            return false;
+        }
+
         if (this.config.trackAllFiles) {
             return true;
         }
 
-        // Check if file extension is in tracked list
-        const fileName = document.fileName;
-        return this.config.trackedExtensions.some(ext =>
-            fileName.endsWith(ext)
+        const lowerName = fileName.toLowerCase();
+        return this.config.trackedExtensions.some((ext) =>
+            lowerName.endsWith(ext.toLowerCase())
         );
+    }
+
+    /**
+     * Skips generated and dependency folders so installs do not count as writing
+     *
+     * @param fileName - File path
+     * @returns True if the path should be ignored
+     * @private
+     */
+    private isIgnoredPath(fileName: string): boolean {
+        const normalized = fileName.replace(/\\/g, '/').toLowerCase();
+        return [
+            '/node_modules/',
+            '/.git/',
+            '/dist/',
+            '/out/',
+            '/build/',
+            '/.next/',
+            '/coverage/',
+            '/vendor/'
+        ].some((segment) => normalized.includes(segment));
+    }
+
+    /**
+     * Stores current content as the baseline without crediting lines
+     *
+     * @param document - Document to seed
+     * @private
+     */
+    private seedBaseline(document: vscode.TextDocument): void {
+        if (!this.shouldTrackDocument(document)) {
+            return;
+        }
+
+        const key = document.uri.toString();
+        if (!this.documentCache.has(key)) {
+            this.documentCache.set(key, document.getText());
+        }
+    }
+
+    /**
+     * Credits a newly created file as a diff from empty
+     *
+     * @param uri - Created file
+     * @private
+     */
+    private async creditNewFile(uri: vscode.Uri): Promise<void> {
+        if (uri.scheme !== 'file') {
+            return;
+        }
+
+        if (!this.shouldTrackFileName(uri.fsPath)) {
+            return;
+        }
+
+        const key = uri.toString();
+        if (this.creditedNewFiles.has(key)) {
+            return;
+        }
+
+        this.creditedNewFiles.add(key);
+        this.documentCache.set(key, '');
+
+        try {
+            const document = await vscode.workspace.openTextDocument(uri);
+            this.processDocumentChange(document);
+        } catch {
+            this.creditedNewFiles.delete(key);
+            this.documentCache.delete(key);
+        }
+    }
+
+    /**
+     * Debounces processing for an already-loaded document
+     *
+     * @param document - Document to process
+     * @private
+     */
+    private scheduleDocumentProcess(document: vscode.TextDocument): void {
+        const key = document.uri.toString();
+        this.cancelScheduledProcess(key);
+        this.debounceTimers.set(
+            key,
+            setTimeout(() => {
+                this.debounceTimers.delete(key);
+                this.processDocumentChange(document);
+            }, this.config.debounceTime)
+        );
+    }
+
+    /**
+     * Debounces processing for a file that changed on disk
+     *
+     * @param uri - Changed file
+     * @private
+     */
+    private scheduleUriProcess(uri: vscode.Uri): void {
+        const key = uri.toString();
+        this.cancelScheduledProcess(key);
+        this.debounceTimers.set(
+            key,
+            setTimeout(() => {
+                this.debounceTimers.delete(key);
+                void vscode.workspace.openTextDocument(uri).then(
+                    (document) => this.processDocumentChange(document),
+                    () => undefined
+                );
+            }, this.config.debounceTime)
+        );
+    }
+
+    /**
+     * Cancels a pending debounced process for a document
+     *
+     * @param key - Document URI string
+     * @private
+     */
+    private cancelScheduledProcess(key: string): void {
+        const timer = this.debounceTimers.get(key);
+        if (timer) {
+            clearTimeout(timer);
+            this.debounceTimers.delete(key);
+        }
     }
 
     // ========================================
@@ -438,6 +630,7 @@ export class CodeTracker {
      */
     clearCache(): void {
         this.documentCache.clear();
+        this.creditedNewFiles.clear();
     }
 
     /**
@@ -482,17 +675,16 @@ export class CodeTracker {
      * Call when extension is deactivated
      */
     dispose(): void {
-        // Clear debounce timer
-        if (this.debounceTimer) {
-            clearTimeout(this.debounceTimer);
+        for (const timer of this.debounceTimers.values()) {
+            clearTimeout(timer);
         }
+        this.debounceTimers.clear();
 
-        // Dispose all event listeners
         this.disposables.forEach(d => d.dispose());
         this.disposables = [];
 
-        // Clear cache
         this.documentCache.clear();
+        this.creditedNewFiles.clear();
 
         // Dispose event emitter
         this.onCodeWrittenEmitter.dispose();

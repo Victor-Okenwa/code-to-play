@@ -440,22 +440,37 @@ export class AuthManager implements vscode.Disposable {
         }
     }
 
+    async authorizedFetch(
+        path: string,
+        options: {
+            method: 'GET' | 'POST' | 'PUT';
+            body?: unknown;
+            signal?: AbortSignal;
+        }
+    ): Promise<Response | undefined> {
+        const token = await this.context.secrets.get(SESSION_TOKEN_SECRET_KEY);
+        if (!token) {
+            return undefined;
+        }
+
+        return this.request(path, { ...options, token });
+    }
+
     private async request(
         path: string,
         options: {
-            method: 'GET' | 'POST';
-            body?: Record<string, string>;
+            method: 'GET' | 'POST' | 'PUT';
+            body?: unknown;
             token?: string;
             signal?: AbortSignal;
         }
     ): Promise<Response> {
         const baseUrl = this.getApiBaseUrl();
         const headers = new Headers({
-            Accept: 'application/json',
-            Origin: baseUrl
+            Accept: 'application/json'
         });
 
-        if (options.body) {
+        if (options.body !== undefined) {
             headers.set('Content-Type', 'application/json');
         }
 
@@ -466,7 +481,7 @@ export class AuthManager implements vscode.Disposable {
         return fetch(`${baseUrl}${path}`, {
             method: options.method,
             headers,
-            body: options.body ? JSON.stringify(options.body) : undefined,
+            body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
             signal: options.signal
         });
     }

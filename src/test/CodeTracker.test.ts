@@ -387,6 +387,94 @@ suite('CodeTracker Test Suite', () => {
     });
 
     // ========================================
+    // AGENT APPLY / BASELINE TESTS
+    // ========================================
+
+    test('Opening an existing file does not count its current lines', () => {
+        let fired = false;
+        codeTracker.onCodeWritten(() => {
+            fired = true;
+        });
+
+        (codeTracker as any).seedBaseline({
+            uri: { toString: () => 'file:///existing.ts' },
+            getText: () => 'const x = 5;\nconst y = 10;',
+            languageId: 'typescript',
+            fileName: '/existing.ts',
+            isUntitled: false
+        });
+
+        assert.strictEqual(fired, false);
+        assert.strictEqual(codeTracker.getTrackedDocumentCount(), 1);
+    });
+
+    test('Apply after a seeded baseline counts only the new lines', () => {
+        (codeTracker as any).seedBaseline({
+            uri: { toString: () => 'file:///open.ts' },
+            getText: () => 'const x = 5;',
+            languageId: 'typescript',
+            fileName: '/open.ts',
+            isUntitled: false
+        });
+
+        let netChange = 0;
+        codeTracker.onCodeWritten((change: { netChange: number }) => {
+            netChange = change.netChange;
+        });
+
+        (codeTracker as any).processDocumentChange({
+            uri: { toString: () => 'file:///open.ts' },
+            getText: () => 'const x = 5;\nconst y = 10;\nconst z = 15;',
+            languageId: 'typescript',
+            fileName: '/open.ts'
+        });
+
+        assert.strictEqual(netChange, 2);
+    });
+
+    test('New file apply from an empty baseline counts meaningful lines', () => {
+        (codeTracker as any).documentCache.set('file:///generated.ts', '');
+
+        let netChange = 0;
+        codeTracker.onCodeWritten((change: { netChange: number }) => {
+            netChange = change.netChange;
+        });
+
+        (codeTracker as any).processDocumentChange({
+            uri: { toString: () => 'file:///generated.ts' },
+            getText: () => 'const x = 5;\nconst y = 10;',
+            languageId: 'typescript',
+            fileName: '/generated.ts'
+        });
+
+        assert.strictEqual(netChange, 2);
+    });
+
+    test('First sight of an existing file still does not count it', () => {
+        let fired = false;
+        codeTracker.onCodeWritten(() => {
+            fired = true;
+        });
+
+        (codeTracker as any).processDocumentChange({
+            uri: { toString: () => 'file:///unseen.ts' },
+            getText: () => 'const x = 5;\nconst y = 10;',
+            languageId: 'typescript',
+            fileName: '/unseen.ts'
+        });
+
+        assert.strictEqual(fired, false);
+    });
+
+    test('Does not track files in node_modules', () => {
+        const shouldTrack = (codeTracker as any).shouldTrackFileName.bind(codeTracker);
+        assert.strictEqual(
+            shouldTrack('/project/node_modules/lib/index.js'),
+            false
+        );
+    });
+
+    // ========================================
     // FILE EXTENSION TRACKING TESTS
     // ========================================
 

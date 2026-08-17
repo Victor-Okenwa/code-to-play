@@ -15,6 +15,7 @@ import { createWebviewManager } from './ui/WebViewManager';
 import { AllGames } from './games/registry';
 import { GameEvent, formatHighScores, DEFAULT_DIFFICULTY_KEY } from './core/types';
 import { AuthManager } from './auth/AuthManager';
+import { StatsSync } from './stats/StatsSync';
 
 /** * Activates the extension
  * 
@@ -40,18 +41,14 @@ export function activate(context: vscode.ExtensionContext) {
 
 	// Game manager to handle game logic
 	const gameManager = new GameManager(storageManager, codeTracker);
+	gameManager.registerGames(AllGames);
 
 	const authManager = new AuthManager(context);
-	void authManager.refreshSession();
+	const statsSync = new StatsSync(authManager, storageManager, gameManager);
+	void authManager.refreshSession().then(() => statsSync.start());
 
 	// Set the context key (controls the "when" clause)
 	vscode.commands.executeCommand('setContext', 'codeToPlay:isDev', isLocalDev);
-
-	// ========================================
-	// REGISTER GAMES
-	// ========================================
-
-	gameManager.registerGames(AllGames);
 
 	// ========================================
 	// CREATE UI COMPONENTS
@@ -347,6 +344,7 @@ export function activate(context: vscode.ExtensionContext) {
 		resetAllGamesCommand,
 
 		authManager,
+		statsSync,
 
 		// Admin Commands (in dev mode only)
 		unlockAllGames,
