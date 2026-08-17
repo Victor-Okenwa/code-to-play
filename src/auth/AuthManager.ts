@@ -252,9 +252,11 @@ export class AuthManager implements vscode.Disposable {
     }
 
     async openDashboard(): Promise<void> {
-        await vscode.env.openExternal(
-            vscode.Uri.parse(`${this.getApiBaseUrl()}/dashboard`)
-        );
+        await this.openSitePath('/dashboard');
+    }
+
+    async openPricing(): Promise<void> {
+        await this.openSitePath('/pricing');
     }
 
     async handleAccountClick(): Promise<void> {
@@ -276,11 +278,31 @@ export class AuthManager implements vscode.Disposable {
 
         const selected = await vscode.window.showQuickPick(
             [
-                { label: 'Open dashboard', action: 'dashboard' as const },
-                { label: 'Sign out', action: 'signOut' as const }
+                {
+                    label: 'Go Pro',
+                    description: 'Call Stack, Merge Conflict, and extra play spaces',
+                    action: 'pricing' as const
+                },
+                {
+                    label: 'Get more Play Spaces',
+                    description: 'Buy extra spaces when you need a break',
+                    action: 'pricing' as const
+                },
+                {
+                    label: 'Open dashboard',
+                    action: 'dashboard' as const
+                },
+                {
+                    label: 'Sign out',
+                    action: 'signOut' as const
+                }
             ],
             { placeHolder: state.profile.email }
         );
+
+        if (selected?.action === 'pricing') {
+            await this.openPricing();
+        }
 
         if (selected?.action === 'dashboard') {
             await this.openDashboard();
@@ -289,6 +311,34 @@ export class AuthManager implements vscode.Disposable {
         if (selected?.action === 'signOut') {
             await this.signOut();
         }
+    }
+
+    async handlePlaysClick(): Promise<void> {
+        const selected = await vscode.window.showQuickPick(
+            [
+                {
+                    label: 'Go Pro',
+                    description: 'Call Stack, Merge Conflict, and extra play spaces',
+                    action: 'pricing' as const
+                },
+                {
+                    label: 'Get more Play Spaces',
+                    description: 'Buy extra spaces when you need a break',
+                    action: 'pricing' as const
+                }
+            ],
+            { placeHolder: 'Get more plays' }
+        );
+
+        if (selected?.action === 'pricing') {
+            await this.openPricing();
+        }
+    }
+
+    private async openSitePath(path: string): Promise<void> {
+        await vscode.env.openExternal(
+            vscode.Uri.parse(`${this.getApiBaseUrl()}${path}`)
+        );
     }
 
     dispose(): void {

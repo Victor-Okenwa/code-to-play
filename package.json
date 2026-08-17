@@ -101,6 +101,10 @@
         {
           "command": "codeToPlay.accountAction",
           "when": "false"
+        },
+        {
+          "command": "codeToPlay.playsAction",
+          "when": "false"
         }
       ]
     },
@@ -178,8 +182,18 @@
         "category": "Code to Play"
       },
       {
+        "command": "codeToPlay.openPricing",
+        "title": "Open Pricing",
+        "category": "Code to Play"
+      },
+      {
         "command": "codeToPlay.accountAction",
         "title": "Account",
+        "category": "Code to Play"
+      },
+      {
+        "command": "codeToPlay.playsAction",
+        "title": "Get more plays",
         "category": "Code to Play"
       }
     ],

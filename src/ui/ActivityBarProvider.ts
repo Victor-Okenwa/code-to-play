@@ -390,7 +390,10 @@ export class ActivityBarProvider implements vscode.TreeDataProvider<GamesTreeIte
         }
 
         headerItem.tooltip = tooltip;
-        headerItem.command = undefined;
+        headerItem.command = {
+            command: 'codeToPlay.playsAction',
+            title: 'Get more plays'
+        };
 
         return headerItem as any;
     }

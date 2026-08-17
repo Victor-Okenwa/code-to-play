@@ -89,8 +89,16 @@ export function activate(context: vscode.ExtensionContext) {
 		return authManager.openDashboard();
 	});
 
+	const openPricingCommand = vscode.commands.registerCommand('codeToPlay.openPricing', () => {
+		return authManager.openPricing();
+	});
+
 	const accountActionCommand = vscode.commands.registerCommand('codeToPlay.accountAction', () => {
 		return authManager.handleAccountClick();
+	});
+
+	const playsActionCommand = vscode.commands.registerCommand('codeToPlay.playsAction', () => {
+		return authManager.handlePlaysClick();
 	});
 
 	// Command to reset all games
@@ -313,7 +321,9 @@ export function activate(context: vscode.ExtensionContext) {
 		signInCommand,
 		signOutCommand,
 		openDashboardCommand,
+		openPricingCommand,
 		accountActionCommand,
+		playsActionCommand,
 		viewStatsCommand,
 		exportDataCommand,
 		resetAllGamesCommand,
