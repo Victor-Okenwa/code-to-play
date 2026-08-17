@@ -75,6 +75,46 @@
             </div>
           </div>
           <button class="btn start-game-btn" id="enterGameBtn">Choose Difficulty</button>
+
+          <details class="about-game">
+            <summary>About this game</summary>
+            <div class="about-game-body">
+              <h3>What it is</h3>
+              <p>
+                Classic snake with a debugging twist. Steer a green snake, eat
+                red ladybugs, and grow without hitting a wall or yourself.
+                Each bug you catch is a “bug fixed” on the scoreboard.
+              </p>
+              <h3>Difficulty</h3>
+              <ul>
+                <li>
+                  <strong>Easy</strong> — Slow movement. Speed steps up every
+                  6 bugs. Best for a short break.
+                </li>
+                <li>
+                  <strong>Hard</strong> — Faster start. Speed ramps every 5
+                  bugs.
+                </li>
+                <li>
+                  <strong>Very Hard</strong> — Fastest start and the quickest
+                  acceleration. Speed steps up every 4 bugs.
+                </li>
+              </ul>
+              <h3>How to play</h3>
+              <p>
+                Pick a difficulty, then Choose Difficulty. On the play screen,
+                press Start Debugging. One play is spent when the snake dies.
+                High scores are stored per difficulty on this machine.
+              </p>
+              <ul>
+                <li><strong>Arrow keys</strong> — Steer. You cannot reverse into yourself.</li>
+                <li><strong>Space</strong> — Pause or resume.</li>
+                <li><strong>Ctrl+M</strong> — Mute. <strong>Ctrl+F</strong> — Focus play.</li>
+                <li>Eat ladybugs to grow and score. Speed increases as you clear more bugs.</li>
+                <li>Hit a wall or your own tail and the debug session is over.</li>
+              </ul>
+            </div>
+          </details>
         </div>
 
         <div class="game-play" id="gamePlay" style="display: none" data-focus-pause-key="Space">

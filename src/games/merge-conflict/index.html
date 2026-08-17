@@ -88,6 +88,50 @@
             </div>
           </div>
           <button class="btn start-game-btn" id="enterGameBtn">Choose Difficulty</button>
+
+          <details class="about-game">
+            <summary>About this game</summary>
+            <div class="about-game-body">
+              <h3>What it is</h3>
+              <p>
+                A git-themed match-3. The board is a 6×12 grid of hunks —
+                labeled ours, theirs, and base (plus index and stash on
+                harder settings). Swap neighbors so three or more of the same
+                hunk line up. They merge and clear. New rows rise from the
+                bottom. If hunks reach the top, HEAD diverges and the merge
+                fails.
+              </p>
+              <h3>Difficulty</h3>
+              <ul>
+                <li>
+                  <strong>Easy</strong> — ours / theirs / base only. A new
+                  row every 6 seconds.
+                </li>
+                <li>
+                  <strong>Medium</strong> — 4 hunk types (adds index). A new
+                  row every 4 seconds.
+                </li>
+                <li>
+                  <strong>Hard</strong> — 5 hunk types (adds stash). A new
+                  row every 2.5 seconds.
+                </li>
+              </ul>
+              <h3>How to play</h3>
+              <p>
+                Pick a difficulty, then Choose Difficulty. Press Start Merge.
+                The white box is a two-cell cursor: the hunk under it and the
+                one to its right. One play is spent when HEAD overflows.
+              </p>
+              <ul>
+                <li><strong>Arrow keys</strong> — Move the cursor.</li>
+                <li><strong>Enter</strong> — Swap those two cells. Space does not swap.</li>
+                <li><strong>Space</strong> — Pause. <strong>Ctrl+M</strong> — Mute. <strong>Ctrl+F</strong> — Focus play.</li>
+                <li>You can swap a hunk with an empty cell so gravity drops it.</li>
+                <li>Match 3+ of the same label in a row or column to merge. Gravity then chains — those are rebase combos and score extra.</li>
+                <li>Score is hunks cleared × 10 × chain waves. Keep the board low. The top two rows are the danger zone.</li>
+              </ul>
+            </div>
+          </details>
         </div>
 
         <div class="game-play" id="gamePlay" style="display: none" data-focus-pause-key="Space">

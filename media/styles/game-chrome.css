@@ -167,6 +167,85 @@ body {
   width: 100%;
 }
 
+.about-game {
+  margin-top: 16px;
+  background: #1e1e1e;
+  border: 1px solid #3e3e42;
+  border-radius: 8px;
+  padding: 12px 16px;
+}
+
+.about-game > summary {
+  color: #4ec9b0;
+  font-family: "Press Start 2P", cursive;
+  font-size: 0.75em;
+  line-height: 1.5;
+  cursor: pointer;
+  list-style: none;
+}
+
+.about-game > summary::-webkit-details-marker {
+  display: none;
+}
+
+.about-game > summary::before {
+  content: "▸ ";
+  display: inline-block;
+  transition: transform 0.2s;
+}
+
+.about-game[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.about-game[open] > summary {
+  margin-bottom: 12px;
+}
+
+.about-game-body {
+  color: #d4d4d4;
+  font-size: 0.85em;
+  line-height: 1.5;
+}
+
+.about-game-body h3 {
+  color: #4ec9b0;
+  font-family: "Press Start 2P", cursive;
+  font-size: 0.7em;
+  margin: 14px 0 8px;
+  letter-spacing: 0.5px;
+}
+
+.about-game-body h3:first-child {
+  margin-top: 0;
+}
+
+.about-game-body p {
+  color: #c8c8c8;
+  margin-bottom: 8px;
+}
+
+.about-game-body ul {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 8px;
+}
+
+.about-game-body li {
+  margin-bottom: 6px;
+  color: #c8c8c8;
+}
+
+.about-game-body li::before {
+  content: "▸ ";
+  color: #4ec9b0;
+  font-weight: bold;
+}
+
+.game-container:has(#difficultySelection:not([style*="display: none"])) > .instructions {
+  display: none;
+}
+
 .difficulty-best {
   margin-top: 10px;
   margin-left: 30px;

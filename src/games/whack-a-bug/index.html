@@ -138,6 +138,46 @@
           </div>
 
           <button class="btn start-game-btn">Choose Difficulty</button>
+
+          <details class="about-game">
+            <summary>About this game</summary>
+            <div class="about-game-body">
+              <h3>What it is</h3>
+              <p>
+                A timed reflex game. Bugs pop out of a 3×3 grid of holes.
+                Squash the ones you are supposed to hit before they duck back
+                in. You have 60 seconds per play.
+              </p>
+              <h3>Difficulty</h3>
+              <ul>
+                <li>
+                  <strong>Easy</strong> — Only classic ladybugs. +10 each.
+                  Slowest spawn, longest time on screen.
+                </li>
+                <li>
+                  <strong>Medium</strong> — Syntax (+10), Null (+15), and
+                  Overflow (+20). Faster spawns and shorter pop time.
+                </li>
+                <li>
+                  <strong>Hard</strong> — Medium bugs plus rare Criticals
+                  (+30). Green Features are avoid: clicking one costs 25
+                  points. Fastest spawns.
+                </li>
+              </ul>
+              <h3>How to play</h3>
+              <p>
+                Expand a difficulty card to see its bug types, then Choose
+                Difficulty. Press Start Game. Click bugs as they appear. One
+                play is spent when the timer hits zero.
+              </p>
+              <ul>
+                <li>Click a hole while a valid bug is up to score.</li>
+                <li>On Hard, do not click green Features.</li>
+                <li>Missed bugs are just missed — keep scanning the grid.</li>
+                <li><strong>Space</strong> — Pause. <strong>Ctrl+M</strong> — Mute. <strong>Ctrl+F</strong> — Focus play.</li>
+              </ul>
+            </div>
+          </details>
         </div>
 
         <div class="game-area" id="gameArea" data-focus-pause-key="Space">

@@ -88,6 +88,50 @@
             </div>
           </div>
           <button class="btn start-game-btn" id="enterGameBtn">Choose Difficulty</button>
+
+          <details class="about-game">
+            <summary>About this game</summary>
+            <div class="about-game-body">
+              <h3>What it is</h3>
+              <p>
+                A falling-block puzzle about the call stack. Each piece is two
+                frames in one column: a filled <strong>fn</strong> (call) and
+                an outlined <strong>ret</strong> (return), each in a color.
+                Land a return on a matching-color call to pop both frames.
+                Fill the top row and you overflow.
+              </p>
+              <h3>Difficulty</h3>
+              <ul>
+                <li>
+                  <strong>Easy</strong> — 3 colors, slow drop, 14-row stack.
+                </li>
+                <li>
+                  <strong>Medium</strong> — 4 colors, faster drop, same 14-row
+                  depth.
+                </li>
+                <li>
+                  <strong>Hard</strong> — 5 colors, fastest drop, 12-row stack
+                  so you overflow sooner.
+                </li>
+              </ul>
+              <h3>How to play</h3>
+              <p>
+                Pick a difficulty, then Choose Difficulty. Press Start
+                Debugging. Pieces spawn at the top and fall. Score 10 per
+                popped pair, more for chain pops, plus a small bonus for hard
+                drops. One play is spent when the stack overflows.
+              </p>
+              <ul>
+                <li><strong>Left / Right</strong> — Move the falling frame.</li>
+                <li><strong>Up</strong> — Rotate (swap the two frames).</li>
+                <li><strong>Down</strong> — Soft drop one row.</li>
+                <li><strong>X</strong> — Hard drop (locks immediately).</li>
+                <li><strong>Space</strong> — Pause. <strong>Ctrl+M</strong> — Mute. <strong>Ctrl+F</strong> — Focus play.</li>
+                <li>A ret sitting directly on a same-color fn pops. Gravity fills the gap; chains are combos.</li>
+                <li>The top two rows are the danger zone. Touch the top row and the session ends.</li>
+              </ul>
+            </div>
+          </details>
         </div>
 
         <div class="game-play" id="gamePlay" style="display: none" data-focus-pause-key="Space">
