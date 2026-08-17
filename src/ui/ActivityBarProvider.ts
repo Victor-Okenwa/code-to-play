@@ -9,6 +9,8 @@ import * as vscode from 'vscode';
 import { IGame, GameState, getBestHighScore, formatHighScores, DEFAULT_CONFIG } from '../core/types';
 import { GameManager } from '../core/GameManager';
 import { StorageManager } from '../core/StorageManager';
+import { AuthManager } from '../auth/AuthManager';
+import { AuthState } from '../auth/types';
 
 /**
  * Represents a single item in the game tree view
@@ -194,57 +196,126 @@ class FooterButtonItem extends vscode.TreeItem {
     }
 }
 
+class AccountTreeItem extends vscode.TreeItem {
+    constructor(state: AuthState) {
+        super(accountLabel(state), vscode.TreeItemCollapsibleState.None);
+
+        this.description = accountDescription(state);
+        this.tooltip = accountTooltip(state);
+        this.iconPath = new vscode.ThemeIcon(accountIcon(state));
+        this.contextValue = `account-${state.status}`;
+        this.command = {
+            command: 'codeToPlay.accountAction',
+            title: 'Account'
+        };
+    }
+}
+
+function accountLabel(state: AuthState): string {
+    if (state.status === 'signedIn') {
+        return state.profile.name;
+    }
+
+    if (state.status === 'pending') {
+        return state.userCode;
+    }
+
+    return 'Sign in with GitHub';
+}
+
+function accountDescription(state: AuthState): string {
+    if (state.status === 'signedIn') {
+        return `Free · ${state.profile.email}`;
+    }
+
+    if (state.status === 'pending') {
+        return 'Waiting for approval…';
+    }
+
+    return 'Optional — required later for Pro';
+}
+
+function accountTooltip(state: AuthState): string {
+    if (state.status === 'signedIn') {
+        return `${state.profile.name} (${state.profile.email})`;
+    }
+
+    if (state.status === 'pending') {
+        return `Approve ${state.userCode} in the browser, or click to copy the code.`;
+    }
+
+    return 'Sign in with GitHub to link this editor. Free games still work without an account.';
+}
+
+function accountIcon(state: AuthState): string {
+    if (state.status === 'signedIn') {
+        return 'account';
+    }
+
+    if (state.status === 'pending') {
+        return 'loading~spin';
+    }
+
+    return 'github';
+}
+
+type GamesTreeItem = GameTreeItem | FooterButtonItem | AccountTreeItem;
+
 /**
  * Provides tree data for the games activity bar view
  */
-export class ActivityBarProvider implements vscode.TreeDataProvider<GameTreeItem | FooterButtonItem> {
-    private _onDidChangeTreeData = new vscode.EventEmitter<GameTreeItem | FooterButtonItem | undefined | null | void>();
+export class ActivityBarProvider implements vscode.TreeDataProvider<GamesTreeItem> {
+    private _onDidChangeTreeData = new vscode.EventEmitter<GamesTreeItem | undefined | null | void>();
     readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
     constructor(
         private gameManager: GameManager,
-        private storageManager: StorageManager
+        private storageManager: StorageManager,
+        private authManager: AuthManager
     ) {
         this.setupEventListeners();
     }
 
     private setupEventListeners(): void {
-        this.gameManager.onGameEvent((event) => {
+        this.gameManager.onGameEvent(() => {
+            this.refresh();
+        });
+        this.authManager.onDidChange(() => {
             this.refresh();
         });
     }
 
-    getTreeItem(element: GameTreeItem | FooterButtonItem): vscode.TreeItem {
+    getTreeItem(element: GamesTreeItem): vscode.TreeItem {
         return element;
     }
 
-    getChildren(element?: GameTreeItem | FooterButtonItem): Thenable<(GameTreeItem | FooterButtonItem)[]> {
+    getChildren(element?: GamesTreeItem): Thenable<GamesTreeItem[]> {
         if (!element) {
-            const items: (GameTreeItem | FooterButtonItem)[] = [];
+            const items: GamesTreeItem[] = [];
             const globalState = this.storageManager.getGlobalPlayState();
 
-            // Header: Plays remaining
-            const headerItem = this.createPlaysHeader(globalState);
-            items.push(headerItem as any);
+            items.push(new AccountTreeItem(this.authManager.getState()));
+            items.push(this.createSpacer() as GameTreeItem);
 
-            // Spacer
-            items.push(this.createSpacer() as any);
+            const headerItem = this.createPlaysHeader(globalState);
+            items.push(headerItem as GameTreeItem);
+
+            items.push(this.createSpacer() as GameTreeItem);
 
             const freeItems = this.getGameTreeItems(false);
             const proItems = this.getGameTreeItems(true);
 
-            items.push(this.createCategoryHeader('Free Games') as any);
+            items.push(this.createCategoryHeader('Free Games') as GameTreeItem);
             items.push(...freeItems);
 
             if (proItems.length > 0) {
-                items.push(this.createSpacer() as any);
-                items.push(this.createCategoryHeader('Pro Games', 'star') as any);
+                items.push(this.createSpacer() as GameTreeItem);
+                items.push(this.createCategoryHeader('Pro Games', 'star') as GameTreeItem);
                 items.push(...proItems);
             }
 
-            // STICKY FOOTER BUTTONS
-            items.push(this.createSpacer() as any);
-            items.push(this.createFooterSeparator() as any);
+            items.push(this.createSpacer() as GameTreeItem);
+            items.push(this.createFooterSeparator() as GameTreeItem);
             items.push(this.createFooterButtons()[0]);
             items.push(this.createFooterButtons()[1]);
 
@@ -351,7 +422,7 @@ export class ActivityBarProvider implements vscode.TreeDataProvider<GameTreeItem
         return spacerItem as any;
     }
 
-    getParent(element: GameTreeItem | FooterButtonItem): vscode.ProviderResult<GameTreeItem | FooterButtonItem> {
+    getParent(element: GamesTreeItem): vscode.ProviderResult<GamesTreeItem> {
         return undefined;
     }
 
@@ -397,9 +468,10 @@ export class ActivityBarProvider implements vscode.TreeDataProvider<GameTreeItem
 export function createActivityBarView(
     context: vscode.ExtensionContext,
     gameManager: GameManager,
-    storageManager: StorageManager
-): vscode.TreeView<GameTreeItem | FooterButtonItem> {
-    const provider = new ActivityBarProvider(gameManager, storageManager);
+    storageManager: StorageManager,
+    authManager: AuthManager
+): vscode.TreeView<GamesTreeItem> {
+    const provider = new ActivityBarProvider(gameManager, storageManager, authManager);
 
     const treeView = vscode.window.createTreeView('codeToPlayGames', {
         treeDataProvider: provider,

@@ -96,6 +96,12 @@
           "when": "view == codeToPlayGames",
           "group": "actions@3"
         }
+      ],
+      "commandPalette": [
+        {
+          "command": "codeToPlay.accountAction",
+          "when": "false"
+        }
       ]
     },
     "commands": [
@@ -155,6 +161,26 @@
         "title": "Command to Import Data",
         "category": "Code to Play",
         "when": "codeToPlay:isDev"
+      },
+      {
+        "command": "codeToPlay.signIn",
+        "title": "Sign in with GitHub",
+        "category": "Code to Play"
+      },
+      {
+        "command": "codeToPlay.signOut",
+        "title": "Sign out",
+        "category": "Code to Play"
+      },
+      {
+        "command": "codeToPlay.openDashboard",
+        "title": "Open Dashboard",
+        "category": "Code to Play"
+      },
+      {
+        "command": "codeToPlay.accountAction",
+        "title": "Account",
+        "category": "Code to Play"
       }
     ],
     "configuration": {
@@ -190,6 +216,11 @@
           "type": "boolean",
           "default": false,
           "description": "Automatically open focus play mode when a game is opened"
+        },
+        "codeToPlay.apiBaseUrl": {
+          "type": "string",
+          "default": "",
+          "description": "Code to Play website URL used for editor sign-in. Leave empty to use http://localhost:4555 in development."
         }
       }
     }

@@ -14,6 +14,7 @@ import { createStatusBar } from './ui/StatusBarManager';
 import { createWebviewManager } from './ui/WebViewManager';
 import { AllGames } from './games/registry';
 import { GameEvent, formatHighScores, DEFAULT_DIFFICULTY_KEY } from './core/types';
+import { AuthManager } from './auth/AuthManager';
 
 /** * Activates the extension
  * 
@@ -40,6 +41,9 @@ export function activate(context: vscode.ExtensionContext) {
 	// Game manager to handle game logic
 	const gameManager = new GameManager(storageManager, codeTracker);
 
+	const authManager = new AuthManager(context);
+	void authManager.refreshSession();
+
 	// Set the context key (controls the "when" clause)
 	vscode.commands.executeCommand('setContext', 'codeToPlay:isDev', isLocalDev);
 
@@ -54,7 +58,7 @@ export function activate(context: vscode.ExtensionContext) {
 	// ========================================
 
 	// Activity bar tree view
-	const treeView = createActivityBarView(context, gameManager, storageManager);
+	const treeView = createActivityBarView(context, gameManager, storageManager, authManager);
 
 	// Status bar item
 	const statusBar = createStatusBar(context, gameManager, storageManager);
@@ -71,6 +75,22 @@ export function activate(context: vscode.ExtensionContext) {
 	// Command to open extension settings
 	const openSettingsCommand = vscode.commands.registerCommand('codeToPlay.openSettings', () => {
 		vscode.commands.executeCommand("workbench.action.openSettings", "codeToPlay");
+	});
+
+	const signInCommand = vscode.commands.registerCommand('codeToPlay.signIn', () => {
+		return authManager.signIn();
+	});
+
+	const signOutCommand = vscode.commands.registerCommand('codeToPlay.signOut', () => {
+		return authManager.signOut();
+	});
+
+	const openDashboardCommand = vscode.commands.registerCommand('codeToPlay.openDashboard', () => {
+		return authManager.openDashboard();
+	});
+
+	const accountActionCommand = vscode.commands.registerCommand('codeToPlay.accountAction', () => {
+		return authManager.handleAccountClick();
 	});
 
 	// Command to reset all games
@@ -290,9 +310,15 @@ export function activate(context: vscode.ExtensionContext) {
 		statusBar,
 		webviewManager,
 		openSettingsCommand,
+		signInCommand,
+		signOutCommand,
+		openDashboardCommand,
+		accountActionCommand,
 		viewStatsCommand,
 		exportDataCommand,
 		resetAllGamesCommand,
+
+		authManager,
 
 		// Admin Commands (in dev mode only)
 		unlockAllGames,
