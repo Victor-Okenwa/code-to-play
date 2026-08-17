@@ -252,12 +252,70 @@ export class StorageManager implements vscode.Disposable {
      * @param lines - Number of lines to add
      * @returns Promise that resolves when update is complete
      */
-    async addLinesWritten(lines: number): Promise<void> {
+    async addLinesWritten(lines: number, fileExtension?: string): Promise<void> {
         const current = this.getTotalLinesWritten();
         await this.globalState.update(
             StorageKey.TOTAL_LINES_WRITTEN,
             current + lines
         );
+
+        if (fileExtension) {
+            await this.addLinesWrittenForExtension(fileExtension, lines);
+        }
+    }
+
+    /**
+     * Gets lines written per tracked file extension
+     *
+     * @returns Map of extension to line count
+     */
+    getLinesByExtension(): Record<string, number> {
+        return {
+            ...(this.globalState.get<Record<string, number>>(
+                StorageKey.LINES_BY_EXTENSION,
+                {}
+            ) ?? {})
+        };
+    }
+
+    /**
+     * Increments the line count for a tracked file extension
+     *
+     * @param fileExtension - Tracked extension (e.g., '.ts')
+     * @param lines - Number of lines to add
+     */
+    async addLinesWrittenForExtension(
+        fileExtension: string,
+        lines: number
+    ): Promise<void> {
+        if (!fileExtension || lines <= 0) {
+            return;
+        }
+
+        const current = this.getLinesByExtension();
+        current[fileExtension] = (current[fileExtension] ?? 0) + lines;
+        await this.globalState.update(StorageKey.LINES_BY_EXTENSION, current);
+    }
+
+    /**
+     * Lines by extension, highest count first
+     *
+     * @returns Sorted extension totals
+     */
+    getLinesByExtensionSorted(): Array<{ extension: string; lines: number }> {
+        return Object.entries(this.getLinesByExtension())
+            .filter(([, lines]) => lines > 0)
+            .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+            .map(([extension, lines]) => ({ extension, lines }));
+    }
+
+    /**
+     * The file extension with the most written lines
+     *
+     * @returns Most active extension, or undefined when none recorded
+     */
+    getMostActiveExtension(): { extension: string; lines: number } | undefined {
+        return this.getLinesByExtensionSorted()[0];
     }
 
     /**
@@ -350,6 +408,7 @@ export class StorageManager implements vscode.Disposable {
         totalKeys: number;
         gameStates: number;
         totalLinesWritten: number;
+        trackedExtensions: number;
         hasConfig: boolean;
     } {
         const keys = this.globalState.keys();
@@ -362,6 +421,7 @@ export class StorageManager implements vscode.Disposable {
             totalKeys: extensionKeys.length,
             gameStates: gameStateKeys.length,
             totalLinesWritten: this.getTotalLinesWritten(),
+            trackedExtensions: this.getLinesByExtensionSorted().length,
             hasConfig: this.globalState.get(StorageKey.CONFIG) !== undefined
         };
     }

@@ -6,6 +6,7 @@
  */
 
 import * as vscode from 'vscode';
+import { resolveTrackedExtension } from '../constants/TrackedExtensions';
 import { CodeChange, ExtensionConfig } from './types';
 import { StorageManager } from './StorageManager';
 
@@ -162,7 +163,8 @@ export class CodeTracker {
         const change = this.calculateLineChanges(
             cachedContent,
             currentContent,
-            document.languageId
+            document.languageId,
+            resolveTrackedExtension(document.fileName, this.config.trackedExtensions)
         );
 
         // Update cache
@@ -180,13 +182,15 @@ export class CodeTracker {
      * @param oldContent - Previous content
      * @param newContent - Current content
      * @param languageId - Programming language identifier
+     * @param fileExtension - Tracked file extension
      * @returns CodeChange object with details about the change
      * @private
      */
     private calculateLineChanges(
         oldContent: string,
         newContent: string,
-        languageId: string
+        languageId: string,
+        fileExtension = ''
     ): CodeChange {
         const oldLines = oldContent.split('\n');
         const newLines = newContent.split('\n');
@@ -213,6 +217,7 @@ export class CodeTracker {
                 : netChange,
             isMeaningful: meaningfulNetChange > 0,
             languageId,
+            fileExtension,
             timestamp: Date.now()
         };
     }
@@ -460,6 +465,10 @@ export class CodeTracker {
             netChange: meaningfulCount,
             isMeaningful: meaningfulCount > 0,
             languageId: document.languageId,
+            fileExtension: resolveTrackedExtension(
+                document.fileName,
+                this.config.trackedExtensions
+            ),
             timestamp: Date.now()
         };
     }

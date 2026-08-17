@@ -222,7 +222,10 @@ export class GameManager {
      */
     private async handleCodeWritten(change: CodeChange): Promise<void> {
         // Add to total lines written
-        await this.storageManager.addLinesWritten(change.netChange);
+        await this.storageManager.addLinesWritten(
+            change.netChange,
+            change.fileExtension
+        );
 
         // Update global unlock progress
         await this.updateGlobalProgress(change.netChange);

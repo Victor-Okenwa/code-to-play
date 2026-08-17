@@ -204,6 +204,9 @@ export interface CodeChange {
     /** File language/type (e.g., 'typescript', 'javascript') */
     languageId: string;
 
+    /** Tracked file extension (e.g., '.ts', '.py') */
+    fileExtension: string;
+
     /** Timestamp of the change */
     timestamp: number;
 }
@@ -220,6 +223,9 @@ export enum StorageKey {
 
     /** Total lines of code written across all time */
     TOTAL_LINES_WRITTEN = 'codeToPlay.totalLinesWritten',
+
+    /** Lines written per tracked file extension */
+    LINES_BY_EXTENSION = 'codeToPlay.linesByExtension',
 
     /** Configuration settings */
     CONFIG = 'codeToPlay.config',
@@ -278,8 +284,11 @@ export interface CodingStats {
     /** Lines written this week */
     linesThisWeek: number;
 
-    /** Most active language */
-    mostActiveLanguage: string;
+    /** Most written tracked file extension (e.g., '.ts') */
+    mostActiveExtension: string;
+
+    /** Lines written per tracked file extension */
+    linesByExtension: Record<string, number>;
 
     /** Average lines per day */
     averageLinesPerDay: number;

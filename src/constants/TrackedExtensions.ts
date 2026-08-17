@@ -89,3 +89,31 @@ export const TRACKEDEXTENSION = [
     // '.themes',
     // '.tokens.json',
 ];
+
+/**
+ * Resolves the tracked file extension for a path.
+ * Longest match wins so `file.module.css` maps to `.module.css`, not `.css`.
+ * Falls back to the last suffix, or `unknown` when the file has no extension.
+ */
+export function resolveTrackedExtension(
+    fileName: string,
+    trackedExtensions: readonly string[] = TRACKEDEXTENSION
+): string {
+    const lowerName = fileName.toLowerCase();
+    const matches = trackedExtensions.filter((ext) =>
+        lowerName.endsWith(ext.toLowerCase())
+    );
+
+    if (matches.length > 0) {
+        return matches.reduce((longest, ext) =>
+            ext.length > longest.length ? ext : longest
+        );
+    }
+
+    const lastDot = lowerName.lastIndexOf('.');
+    if (lastDot <= 0 || lastDot === lowerName.length - 1) {
+        return 'unknown';
+    }
+
+    return lowerName.slice(lastDot);
+}

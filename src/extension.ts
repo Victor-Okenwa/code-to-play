@@ -119,12 +119,30 @@ export function activate(context: vscode.ExtensionContext) {
 	// Command to view stats
 	const viewStatsCommand = vscode.commands.registerCommand('codeToPlay.viewStats', () => {
 		const totalLines = storageManager.getTotalLinesWritten();
+		const linesByExtension = storageManager.getLinesByExtensionSorted();
+		const mostActive = linesByExtension[0];
 		const games = gameManager.getAllGames();
 		const unlocked = games.filter(() => gameManager.isGameUnlocked()).length;
 
 		let stats = `Code to Play Statistics\n\n`;
 		stats += `Total Lines of Code Written: ${totalLines}\n`;
+		if (mostActive) {
+			stats += `Most written: ${mostActive.extension} (${mostActive.lines})\n`;
+		}
 		stats += `Games Unlocked: ${unlocked} / ${games.length}\n\n`;
+
+		if (linesByExtension.length > 0) {
+			stats += `Lines by file type:\n`;
+			for (const { extension, lines } of linesByExtension) {
+				const marker = mostActive && extension === mostActive.extension
+					? ' (most)'
+					: '';
+				stats += `  ${extension}: ${lines}${marker}\n`;
+			}
+			stats += `\n`;
+		} else if (totalLines > 0) {
+			stats += `Lines by file type: none yet — counts start as you write in tracked files.\n\n`;
+		}
 
 		stats += `Games:\n`;
 		games.forEach(game => {

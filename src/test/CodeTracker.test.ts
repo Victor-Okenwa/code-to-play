@@ -7,6 +7,7 @@
 
 import * as assert from 'assert';
 import * as vscode from 'vscode';
+import { resolveTrackedExtension, TRACKEDEXTENSION } from '../constants/TrackedExtensions';
 import { CodeTracker } from '../core/CodeTracker';
 import { StorageManager } from '../core/StorageManager';
 import { DEFAULT_CONFIG } from '../core/types';
@@ -206,12 +207,13 @@ suite('CodeTracker Test Suite', () => {
         const oldContent = 'const x = 5;\nconst y = 10;';
         const newContent = 'const x = 5;\nconst y = 10;\nconst z = 15;';
 
-        const change = calculateLineChanges(oldContent, newContent, 'typescript');
+        const change = calculateLineChanges(oldContent, newContent, 'typescript', '.ts');
 
         assert.strictEqual(change.linesAdded, 1);
         assert.strictEqual(change.linesDeleted, 0);
         assert.strictEqual(change.netChange, 1);
         assert.strictEqual(change.isMeaningful, true);
+        assert.strictEqual(change.fileExtension, '.ts');
     });
 
     test('Calculate line changes for deletions', () => {
@@ -363,6 +365,7 @@ suite('CodeTracker Test Suite', () => {
             eventFired = true;
             assert.strictEqual(change.isMeaningful, true);
             assert.ok(change.netChange > 0);
+            assert.strictEqual(change.fileExtension, '.ts');
             done();
         });
 
@@ -376,9 +379,64 @@ suite('CodeTracker Test Suite', () => {
         const mockDoc = {
             uri: { toString: () => 'test-uri' },
             getText: () => 'const x = 5;\nconst y = 10;',
-            languageId: 'typescript'
+            languageId: 'typescript',
+            fileName: '/test/file.ts'
         };
 
         (codeTracker as any).processDocumentChange(mockDoc);
+    });
+
+    // ========================================
+    // FILE EXTENSION TRACKING TESTS
+    // ========================================
+
+    test('Resolves longest matching tracked extension', () => {
+        assert.strictEqual(
+            resolveTrackedExtension('app.module.css', TRACKEDEXTENSION),
+            '.module.css'
+        );
+        assert.strictEqual(
+            resolveTrackedExtension('app.tsx', TRACKEDEXTENSION),
+            '.tsx'
+        );
+        assert.strictEqual(
+            resolveTrackedExtension('main.py', TRACKEDEXTENSION),
+            '.py'
+        );
+        assert.strictEqual(
+            resolveTrackedExtension('Styles.SCSS', TRACKEDEXTENSION),
+            '.scss'
+        );
+    });
+
+    test('Falls back to file suffix when not in tracked list', () => {
+        assert.strictEqual(
+            resolveTrackedExtension('notes.txt', TRACKEDEXTENSION),
+            '.txt'
+        );
+        assert.strictEqual(
+            resolveTrackedExtension('Makefile', TRACKEDEXTENSION),
+            'unknown'
+        );
+    });
+
+    test('Stores lines written per file extension', async () => {
+        await storageManager.addLinesWritten(3, '.ts');
+        await storageManager.addLinesWritten(2, '.py');
+        await storageManager.addLinesWritten(1, '.ts');
+
+        assert.strictEqual(storageManager.getTotalLinesWritten(), 6);
+        assert.deepStrictEqual(storageManager.getLinesByExtension(), {
+            '.ts': 4,
+            '.py': 2
+        });
+        assert.deepStrictEqual(storageManager.getMostActiveExtension(), {
+            extension: '.ts',
+            lines: 4
+        });
+        assert.deepStrictEqual(storageManager.getLinesByExtensionSorted(), [
+            { extension: '.ts', lines: 4 },
+            { extension: '.py', lines: 2 }
+        ]);
     });
 });
