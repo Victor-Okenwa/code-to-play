@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { StorageKey } from '../core/types';
+import { StorageKey, PRO_TRIAL_DAYS } from '../core/types';
 import {
     AUTH_PROFILE_STATE_KEY,
     DEV_API_BASE_URL,
@@ -287,8 +287,10 @@ export class AuthManager implements vscode.Disposable {
         const selected = await vscode.window.showQuickPick(
             [
                 {
-                    label: this.isProUnlocked() ? 'Manage subscription' : 'Go Pro',
-                    description: 'Call Stack, Merge Conflict, and extra play spaces',
+                    label: this.isProUnlocked() ? 'Manage subscription' : `Start ${PRO_TRIAL_DAYS}-day Pro trial`,
+                    description: this.isProUnlocked()
+                        ? 'Call Stack, Merge Conflict, and extra play spaces'
+                        : `${PRO_TRIAL_DAYS}-day free trial · Call Stack, Merge Conflict, and extra play spaces`,
                     action: this.isProUnlocked() ? 'dashboard' as const : 'pricing' as const
                 },
                 {
@@ -325,8 +327,8 @@ export class AuthManager implements vscode.Disposable {
         const selected = await vscode.window.showQuickPick(
             [
                 {
-                    label: 'Go Pro',
-                    description: 'Call Stack, Merge Conflict, and extra play spaces',
+                    label: `Start ${PRO_TRIAL_DAYS}-day Pro trial`,
+                    description: `${PRO_TRIAL_DAYS}-day free trial · Call Stack, Merge Conflict, and extra play spaces`,
                     action: 'pricing' as const
                 },
                 {

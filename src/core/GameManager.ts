@@ -15,7 +15,8 @@ import {
     CodeChange,
     ExtensionConfig,
     withUpdatedHighScore,
-    PRO_EXTRA_PLAY_SPACES
+    PRO_EXTRA_PLAY_SPACES,
+    PRO_TRIAL_DAYS
 } from './types';
 import { StorageManager } from './StorageManager';
 import { CodeTracker } from './CodeTracker';
@@ -142,7 +143,7 @@ export class GameManager {
         if (game.isPremium && !globalState.isProUnlocked) {
             return {
                 success: false,
-                reason: 'Pro required. Subscribe to play Call Stack and Merge Conflict.'
+                reason: `Pro required. Start a ${PRO_TRIAL_DAYS}-day free trial to play Call Stack and Merge Conflict.`
             };
         }
 

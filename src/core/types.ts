@@ -158,6 +158,7 @@ export function normalizeGameState(raw: unknown): GameState {
  * Global play state shared across all games
  */
 export const PRO_EXTRA_PLAY_SPACES = 2;
+export const PRO_TRIAL_DAYS = 7;
 
 export type ProAdminOverride = 'unlocked' | 'locked';
 

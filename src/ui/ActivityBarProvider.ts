@@ -6,7 +6,7 @@
  */
 
 import * as vscode from 'vscode';
-import { IGame, GameState, getBestHighScore, formatHighScores, DEFAULT_CONFIG } from '../core/types';
+import { IGame, GameState, getBestHighScore, formatHighScores, DEFAULT_CONFIG, PRO_TRIAL_DAYS } from '../core/types';
 import { GameManager } from '../core/GameManager';
 import { StorageManager } from '../core/StorageManager';
 import { AuthManager } from '../auth/AuthManager';
@@ -51,7 +51,7 @@ class GameTreeItem extends vscode.TreeItem {
             if (this.globalState.isProUnlocked) {
                 tooltip.appendMarkdown(`⭐ **Pro**\n\n`);
             } else {
-                tooltip.appendMarkdown(`⭐ **Pro** — subscribe to unlock Call Stack and Merge Conflict.\n\n`);
+                tooltip.appendMarkdown(`⭐ **Pro** — ${PRO_TRIAL_DAYS}-day free trial to unlock Call Stack and Merge Conflict.\n\n`);
             }
         }
 
@@ -246,7 +246,7 @@ function accountDescription(state: AuthState, isPro: boolean): string {
         return 'Waiting for approval…';
     }
 
-    return 'Sign in to unlock Pro';
+    return `Sign in to start a ${PRO_TRIAL_DAYS}-day Pro trial`;
 }
 
 function accountTooltip(state: AuthState): string {
@@ -258,7 +258,7 @@ function accountTooltip(state: AuthState): string {
         return `Approve ${state.userCode} in the browser, or click to copy the code.`;
     }
 
-    return 'Sign in with GitHub to link this editor. Free games still work without an account.';
+    return `Sign in with GitHub to link this editor. Free games still work without an account. Pro includes a ${PRO_TRIAL_DAYS}-day free trial.`;
 }
 
 function accountIcon(state: AuthState): string {

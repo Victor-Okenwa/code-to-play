@@ -10,7 +10,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { IGame, getHighScoreFor, DEFAULT_DIFFICULTY_KEY, resolveDifficultyKey } from '../core/types';
+import { IGame, getHighScoreFor, DEFAULT_DIFFICULTY_KEY, resolveDifficultyKey, PRO_TRIAL_DAYS } from '../core/types';
 import { GameManager } from '../core/GameManager';
 
 export class WebviewManager {
@@ -51,11 +51,12 @@ export class WebviewManager {
         if (!playResult.success) {
             const reason = playResult.reason || 'Cannot play game';
             if (reason.startsWith('Pro required')) {
+                const trialAction = `Start ${PRO_TRIAL_DAYS}-day trial`;
                 const choice = await vscode.window.showWarningMessage(
                     reason,
-                    'View pricing'
+                    trialAction
                 );
-                if (choice === 'View pricing') {
+                if (choice === trialAction) {
                     await vscode.commands.executeCommand('codeToPlay.openPricing');
                 }
             } else {
