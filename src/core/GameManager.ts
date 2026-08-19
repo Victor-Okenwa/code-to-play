@@ -14,7 +14,8 @@ import {
     GameEvent,
     CodeChange,
     ExtensionConfig,
-    withUpdatedHighScore
+    withUpdatedHighScore,
+    PRO_EXTRA_PLAY_SPACES
 } from './types';
 import { StorageManager } from './StorageManager';
 import { CodeTracker } from './CodeTracker';
@@ -138,6 +139,13 @@ export class GameManager {
             };
         }
 
+        if (game.isPremium && !globalState.isProUnlocked) {
+            return {
+                success: false,
+                reason: 'Pro required. Subscribe to play Call Stack and Merge Conflict.'
+            };
+        }
+
         // Check if plays remaining
         if (globalState.playsRemaining <= 0) {
             return {
@@ -258,8 +266,9 @@ export class GameManager {
         if (newLinesWritten >= this.config.unlock.linesToUnlock) {
             // Unlock all games!
             const newState: GlobalPlayState = {
+                ...globalState,
                 isUnlocked: true,
-                playsRemaining: this.config.unlock.playsPerUnlock,
+                playsRemaining: this.playsGrantedOnUnlock(),
                 linesWritten: 0 // Reset counter
             };
 
@@ -362,6 +371,17 @@ export class GameManager {
         return globalState.playsRemaining;
     }
 
+    isProUnlocked(): boolean {
+        return this.storageManager.getGlobalPlayState().isProUnlocked;
+    }
+
+    playsGrantedOnUnlock(): number {
+        const extra = this.storageManager.getGlobalPlayState().isProUnlocked
+            ? PRO_EXTRA_PLAY_SPACES
+            : 0;
+        return this.config.unlock.playsPerUnlock + extra;
+    }
+
     /**
      * Gets remaining lines needed to unlock games (global)
      * 
@@ -410,16 +430,15 @@ export class GameManager {
      * @param gameId - ID of game to unlock (ignored, kept for compatibility)
      */
     async unlockAllGames(): Promise<void> {
-        // Reset global play state
-
+        const current = this.storageManager.getGlobalPlayState();
         const globalState: GlobalPlayState = {
+            ...current,
             isUnlocked: true,
-            playsRemaining: this.config.unlock.playsPerUnlock,
+            playsRemaining: this.playsGrantedOnUnlock(),
             linesWritten: this.config.unlock.linesToUnlock
         };
 
-        await this.storageManager.resetGlobalPlayState();
-
+        await this.storageManager.saveGlobalPlayState(globalState);
 
         this.eventEmitter.fire({
             event: GameEvent.UNLOCKED,
@@ -428,22 +447,160 @@ export class GameManager {
         });
     }
 
-    /**
-     * Manually locks games (for testing/admin purposes)
-     * 
-     * @param gameId - ID of game to lock (ignored, kept for compatibility)
-     */
     async lockAllGames(): Promise<void> {
+        const current = this.storageManager.getGlobalPlayState();
         const globalState: GlobalPlayState = {
+            ...current,
             isUnlocked: false,
             playsRemaining: 0,
             linesWritten: 0
         };
 
-        await this.storageManager.updateGlobalPlayState(globalState);
+        await this.storageManager.saveGlobalPlayState(globalState);
 
         this.eventEmitter.fire({
             event: GameEvent.LOCKED,
+            gameId: '__global__',
+            data: globalState
+        });
+    }
+
+    async grantPro(): Promise<void> {
+        const state = this.storageManager.getGlobalPlayState();
+        if (state.isProUnlocked && state.proSpacesApplied) {
+            return;
+        }
+
+        if (state.isUnlocked) {
+            const globalState: GlobalPlayState = {
+                ...state,
+                isProUnlocked: true,
+                proSpacesApplied: true,
+                playsRemaining: state.proSpacesApplied
+                    ? state.playsRemaining
+                    : state.playsRemaining + PRO_EXTRA_PLAY_SPACES
+            };
+            await this.storageManager.saveGlobalPlayState(globalState);
+            this.eventEmitter.fire({
+                event: GameEvent.UNLOCKED,
+                gameId: '__global__',
+                data: globalState
+            });
+            return;
+        }
+
+        const globalState: GlobalPlayState = {
+            ...state,
+            isProUnlocked: true,
+            proSpacesApplied: true,
+            isUnlocked: true,
+            playsRemaining: this.config.unlock.playsPerUnlock + PRO_EXTRA_PLAY_SPACES,
+            linesWritten: 0
+        };
+        await this.storageManager.saveGlobalPlayState(globalState);
+        this.eventEmitter.fire({
+            event: GameEvent.UNLOCKED,
+            gameId: '__global__',
+            data: globalState
+        });
+    }
+
+    async revokePro(): Promise<void> {
+        const state = this.storageManager.getGlobalPlayState();
+        if (!state.isProUnlocked && !state.proSpacesApplied) {
+            if (state.proAdminOverride) {
+                await this.storageManager.updateGlobalPlayState({
+                    proAdminOverride: undefined
+                });
+            }
+            return;
+        }
+
+        let playsRemaining = state.playsRemaining;
+        if (state.proSpacesApplied) {
+            playsRemaining = Math.max(0, playsRemaining - PRO_EXTRA_PLAY_SPACES);
+        }
+
+        const locked = playsRemaining === 0;
+        const globalState: GlobalPlayState = {
+            ...state,
+            isProUnlocked: false,
+            proSpacesApplied: false,
+            playsRemaining,
+            isUnlocked: locked ? false : state.isUnlocked,
+            linesWritten: locked ? 0 : state.linesWritten
+        };
+
+        await this.storageManager.saveGlobalPlayState(globalState);
+        this.eventEmitter.fire({
+            event: locked ? GameEvent.LOCKED : GameEvent.UNLOCKED,
+            gameId: '__global__',
+            data: globalState
+        });
+    }
+
+    async unlockPro(): Promise<void> {
+        await this.grantPro();
+        await this.storageManager.updateGlobalPlayState({
+            proAdminOverride: 'unlocked'
+        });
+    }
+
+    async lockPro(): Promise<void> {
+        await this.revokePro();
+        await this.storageManager.updateGlobalPlayState({
+            proAdminOverride: 'locked'
+        });
+    }
+
+    async applyServerEntitlements(payload: {
+        isPro: boolean;
+        purchasedPlaySpaces: number;
+    }): Promise<void> {
+        const state = this.storageManager.getGlobalPlayState();
+        let override = state.proAdminOverride;
+
+        if (override === 'locked' && !payload.isPro) {
+            await this.storageManager.updateGlobalPlayState({
+                proAdminOverride: undefined
+            });
+            override = undefined;
+        } else if (override === 'unlocked' && payload.isPro) {
+            await this.storageManager.updateGlobalPlayState({
+                proAdminOverride: undefined
+            });
+            override = undefined;
+        }
+
+        if (override !== 'locked' && payload.isPro && !state.isProUnlocked) {
+            await this.grantPro();
+        } else if (override !== 'unlocked' && !payload.isPro && state.isProUnlocked) {
+            await this.revokePro();
+        }
+
+        const latest = this.storageManager.getGlobalPlayState();
+        const applied = latest.appliedPurchasedPlaySpaces;
+        const pending = payload.purchasedPlaySpaces - applied;
+        if (pending > 0) {
+            await this.applyPurchasedPlaySpaces(pending, payload.purchasedPlaySpaces);
+        }
+    }
+
+    private async applyPurchasedPlaySpaces(
+        pending: number,
+        totalPurchased: number
+    ): Promise<void> {
+        const state = this.storageManager.getGlobalPlayState();
+        const globalState: GlobalPlayState = {
+            ...state,
+            isUnlocked: true,
+            playsRemaining: state.playsRemaining + pending,
+            appliedPurchasedPlaySpaces: totalPurchased
+        };
+
+        await this.storageManager.saveGlobalPlayState(globalState);
+        this.eventEmitter.fire({
+            event: GameEvent.UNLOCKED,
             gameId: '__global__',
             data: globalState
         });

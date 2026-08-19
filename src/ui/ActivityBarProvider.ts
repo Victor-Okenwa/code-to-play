@@ -30,7 +30,8 @@ class GameTreeItem extends vscode.TreeItem {
         this.contextValue = this.getContextValue();
 
         // Make playable games clickable
-        if (globalState.isUnlocked && globalState.playsRemaining > 0) {
+        const proAllowed = !game.isPremium || Boolean(globalState.isProUnlocked);
+        if (globalState.isUnlocked && globalState.playsRemaining > 0 && proAllowed) {
             this.command = {
                 command: 'codeToPlay.playGame',
                 title: 'Play Game',
@@ -47,7 +48,11 @@ class GameTreeItem extends vscode.TreeItem {
         tooltip.appendMarkdown(`${this.game.description}\n\n`);
 
         if (this.game.isPremium) {
-            tooltip.appendMarkdown(`⭐ **Pro** — playable while checkout is coming soon.\n\n`);
+            if (this.globalState.isProUnlocked) {
+                tooltip.appendMarkdown(`⭐ **Pro**\n\n`);
+            } else {
+                tooltip.appendMarkdown(`⭐ **Pro** — subscribe to unlock Call Stack and Merge Conflict.\n\n`);
+            }
         }
 
         if (this.globalState.isUnlocked) {
@@ -81,7 +86,9 @@ class GameTreeItem extends vscode.TreeItem {
     }
 
     private createDescription(): string {
-        const prefix = this.game.isPremium ? 'Pro · ' : '';
+        const prefix = this.game.isPremium
+            ? (this.globalState.isProUnlocked ? 'Pro · ' : 'Pro locked · ')
+            : '';
 
         if (this.globalState.isUnlocked) {
             if (this.globalState.playsRemaining > 0) {
@@ -111,6 +118,13 @@ class GameTreeItem extends vscode.TreeItem {
     }
 
     private getIcon(): vscode.ThemeIcon | vscode.Uri | { light: vscode.Uri; dark: vscode.Uri } | undefined {
+        if (this.game.isPremium && !this.globalState.isProUnlocked) {
+            return new vscode.ThemeIcon(
+                'star',
+                new vscode.ThemeColor('statusBarItem.warningForeground')
+            );
+        }
+
         if (this.globalState.isUnlocked) {
             if (this.globalState.playsRemaining > 0) {
                 return new vscode.ThemeIcon('play-circle', this.getDynamicIconColor());
@@ -197,10 +211,10 @@ class FooterButtonItem extends vscode.TreeItem {
 }
 
 class AccountTreeItem extends vscode.TreeItem {
-    constructor(state: AuthState) {
+    constructor(state: AuthState, isPro: boolean) {
         super(accountLabel(state), vscode.TreeItemCollapsibleState.None);
 
-        this.description = accountDescription(state);
+        this.description = accountDescription(state, isPro);
         this.tooltip = accountTooltip(state);
         this.iconPath = new vscode.ThemeIcon(accountIcon(state));
         this.contextValue = `account-${state.status}`;
@@ -223,16 +237,16 @@ function accountLabel(state: AuthState): string {
     return 'Sign in with GitHub';
 }
 
-function accountDescription(state: AuthState): string {
+function accountDescription(state: AuthState, isPro: boolean): string {
     if (state.status === 'signedIn') {
-        return `Free · ${state.profile.email}`;
+        return `${isPro ? 'Pro' : 'Free'} · ${state.profile.email}`;
     }
 
     if (state.status === 'pending') {
         return 'Waiting for approval…';
     }
 
-    return 'Optional — required later for Pro';
+    return 'Sign in to unlock Pro';
 }
 
 function accountTooltip(state: AuthState): string {
@@ -294,7 +308,10 @@ export class ActivityBarProvider implements vscode.TreeDataProvider<GamesTreeIte
             const items: GamesTreeItem[] = [];
             const globalState = this.storageManager.getGlobalPlayState();
 
-            items.push(new AccountTreeItem(this.authManager.getState()));
+            items.push(new AccountTreeItem(
+                this.authManager.getState(),
+                this.gameManager.isProUnlocked()
+            ));
             items.push(this.createSpacer() as GameTreeItem);
 
             const headerItem = this.createPlaysHeader(globalState);

@@ -161,6 +161,18 @@
         "when": "codeToPlay:isDev"
       },
       {
+        "command": "codeToPlay.unlockPro",
+        "title": "Unlock Pro",
+        "category": "Code to Play",
+        "when": "codeToPlay:isDev"
+      },
+      {
+        "command": "codeToPlay.lockPro",
+        "title": "Lock Pro (Free plan)",
+        "category": "Code to Play",
+        "when": "codeToPlay:isDev"
+      },
+      {
         "command": "codeToPlay.importData",
         "title": "Command to Import Data",
         "category": "Code to Play",

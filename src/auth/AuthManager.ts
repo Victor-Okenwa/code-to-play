@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { StorageKey } from '../core/types';
 import {
     AUTH_PROFILE_STATE_KEY,
     DEV_API_BASE_URL,
@@ -259,6 +260,13 @@ export class AuthManager implements vscode.Disposable {
         await this.openSitePath('/pricing');
     }
 
+    private isProUnlocked(): boolean {
+        const state = this.context.globalState.get<{ isProUnlocked?: boolean }>(
+            StorageKey.GLOBAL_PLAY_STATE
+        );
+        return state?.isProUnlocked === true;
+    }
+
     async handleAccountClick(): Promise<void> {
         const state = this.getState();
 
@@ -279,9 +287,9 @@ export class AuthManager implements vscode.Disposable {
         const selected = await vscode.window.showQuickPick(
             [
                 {
-                    label: 'Go Pro',
+                    label: this.isProUnlocked() ? 'Manage subscription' : 'Go Pro',
                     description: 'Call Stack, Merge Conflict, and extra play spaces',
-                    action: 'pricing' as const
+                    action: this.isProUnlocked() ? 'dashboard' as const : 'pricing' as const
                 },
                 {
                     label: 'Get more Play Spaces',

@@ -157,6 +157,10 @@ export function normalizeGameState(raw: unknown): GameState {
 /**
  * Global play state shared across all games
  */
+export const PRO_EXTRA_PLAY_SPACES = 2;
+
+export type ProAdminOverride = 'unlocked' | 'locked';
+
 export interface GlobalPlayState {
     /** Number of play sessions remaining before lock */
     playsRemaining: number;
@@ -166,6 +170,18 @@ export interface GlobalPlayState {
 
     /** Whether games are currently unlocked and playable */
     isUnlocked: boolean;
+
+    /** Whether Pro games (Call Stack, Merge Conflict) are allowed */
+    isProUnlocked: boolean;
+
+    /** Whether the +2 Pro play spaces have already been applied */
+    proSpacesApplied: boolean;
+
+    /** Lifetime purchased play spaces already added to the local pool */
+    appliedPurchasedPlaySpaces: number;
+
+    /** Dev-only override so Polar sync does not immediately undo admin lock/unlock */
+    proAdminOverride?: ProAdminOverride;
 }
 
 /**
@@ -345,5 +361,8 @@ export const DEFAULT_GAME_STATE: GameState = {
 export const DEFAULT_GLOBAL_PLAY_STATE: GlobalPlayState = {
     playsRemaining: DEFAULT_CONFIG.unlock.initialPlays,
     linesWritten: 0,
-    isUnlocked: true
+    isUnlocked: true,
+    isProUnlocked: false,
+    proSpacesApplied: false,
+    appliedPurchasedPlaySpaces: 0
 };

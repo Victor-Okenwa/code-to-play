@@ -49,7 +49,18 @@ export class WebviewManager {
         const playResult = await this.gameManager.attemptPlay(gameId);
 
         if (!playResult.success) {
-            vscode.window.showWarningMessage(playResult.reason || 'Cannot play game');
+            const reason = playResult.reason || 'Cannot play game';
+            if (reason.startsWith('Pro required')) {
+                const choice = await vscode.window.showWarningMessage(
+                    reason,
+                    'View pricing'
+                );
+                if (choice === 'View pricing') {
+                    await vscode.commands.executeCommand('codeToPlay.openPricing');
+                }
+            } else {
+                vscode.window.showWarningMessage(reason);
+            }
             return null;
         }
 

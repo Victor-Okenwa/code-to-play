@@ -146,7 +146,10 @@ export class StorageManager implements vscode.Disposable {
             StorageKey.GLOBAL_PLAY_STATE
         );
 
-        return savedState || { ...DEFAULT_GLOBAL_PLAY_STATE };
+        return {
+            ...DEFAULT_GLOBAL_PLAY_STATE,
+            ...savedState
+        };
     }
 
     /**

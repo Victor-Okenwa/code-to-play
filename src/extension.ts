@@ -16,6 +16,7 @@ import { AllGames } from './games/registry';
 import { GameEvent, formatHighScores, DEFAULT_DIFFICULTY_KEY } from './core/types';
 import { AuthManager } from './auth/AuthManager';
 import { StatsSync } from './stats/StatsSync';
+import { EntitlementsSync } from './billing/EntitlementsSync';
 
 /** * Activates the extension
  * 
@@ -45,7 +46,11 @@ export function activate(context: vscode.ExtensionContext) {
 
 	const authManager = new AuthManager(context);
 	const statsSync = new StatsSync(authManager, storageManager, gameManager);
-	void authManager.refreshSession().then(() => statsSync.start());
+	const entitlementsSync = new EntitlementsSync(authManager, gameManager);
+	void authManager.refreshSession().then(() => {
+		statsSync.start();
+		entitlementsSync.start();
+	});
 
 	// Set the context key (controls the "when" clause)
 	vscode.commands.executeCommand('setContext', 'codeToPlay:isDev', isLocalDev);
@@ -199,6 +204,28 @@ export function activate(context: vscode.ExtensionContext) {
 		vscode.window.showInformationMessage(`All games has been locked`);
 	});
 
+	const unlockPro = vscode.commands.registerCommand('codeToPlay.unlockPro', async () => {
+		if (!isLocalDev) {
+			return;
+		}
+
+		await gameManager.unlockPro();
+		vscode.window.showInformationMessage(
+			'Pro unlocked. Call Stack and Merge Conflict are playable, and plays were adjusted.'
+		);
+	});
+
+	const lockPro = vscode.commands.registerCommand('codeToPlay.lockPro', async () => {
+		if (!isLocalDev) {
+			return;
+		}
+
+		await gameManager.lockPro();
+		vscode.window.showInformationMessage(
+			'Pro locked. You are on the Free plan. Call Stack and Merge Conflict need a Pro subscription.'
+		);
+	});
+
 	// Command to import data
 	const importDataCommand = vscode.commands.registerCommand('codeToPlay.importData', async () => {
 		if (!isLocalDev) {
@@ -345,10 +372,13 @@ export function activate(context: vscode.ExtensionContext) {
 
 		authManager,
 		statsSync,
+		entitlementsSync,
 
 		// Admin Commands (in dev mode only)
 		unlockAllGames,
 		lockAllGames,
+		unlockPro,
+		lockPro,
 		importDataCommand,
 		resetGameStateCommand
 	);
