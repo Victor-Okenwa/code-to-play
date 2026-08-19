@@ -256,6 +256,10 @@ export class AuthManager implements vscode.Disposable {
         await this.openSitePath('/dashboard');
     }
 
+    async openSubscription(): Promise<void> {
+        await this.openSitePath('/dashboard/subscription');
+    }
+
     async openPricing(): Promise<void> {
         await this.openSitePath('/pricing');
     }
@@ -287,11 +291,11 @@ export class AuthManager implements vscode.Disposable {
         const selected = await vscode.window.showQuickPick(
             [
                 {
-                    label: this.isProUnlocked() ? 'Manage subscription' : `Start ${PRO_TRIAL_DAYS}-day Pro trial`,
+                    label: this.isProUnlocked() ? 'Manage subscription' : 'Go Pro',
                     description: this.isProUnlocked()
                         ? 'Call Stack, Merge Conflict, and extra play spaces'
                         : `${PRO_TRIAL_DAYS}-day free trial · Call Stack, Merge Conflict, and extra play spaces`,
-                    action: this.isProUnlocked() ? 'dashboard' as const : 'pricing' as const
+                    action: this.isProUnlocked() ? 'subscription' as const : 'pricing' as const
                 },
                 {
                     label: 'Get more Play Spaces',
@@ -314,6 +318,10 @@ export class AuthManager implements vscode.Disposable {
             await this.openPricing();
         }
 
+        if (selected?.action === 'subscription') {
+            await this.openSubscription();
+        }
+
         if (selected?.action === 'dashboard') {
             await this.openDashboard();
         }
@@ -327,7 +335,7 @@ export class AuthManager implements vscode.Disposable {
         const selected = await vscode.window.showQuickPick(
             [
                 {
-                    label: `Start ${PRO_TRIAL_DAYS}-day Pro trial`,
+                    label: 'Go Pro',
                     description: `${PRO_TRIAL_DAYS}-day free trial · Call Stack, Merge Conflict, and extra play spaces`,
                     action: 'pricing' as const
                 },
