@@ -323,7 +323,14 @@ export function activate(context: vscode.ExtensionContext) {
 				const lockedGame = gameManager.getGame(gameId);
 				if (lockedGame) {
 					const config = storageManager.getConfig();
-					vscode.window.showWarningMessage(`${lockedGame.name} locked. Write ${config.unlock.linesToUnlock} lines to unlock ${config.unlock.playsPerUnlock} new plays.`);
+					vscode.window.showWarningMessage(
+						`${lockedGame.name} locked. Write ${config.unlock.linesToUnlock} lines to unlock ${config.unlock.playsPerUnlock} new plays.`,
+						'Buy play spaces'
+					).then(selection => {
+						if (selection === 'Buy play spaces') {
+							void authManager.openSubscription();
+						}
+					});
 				}
 				break;
 
