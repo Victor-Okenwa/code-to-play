@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kernel Panic</title>
+  </head>
+  <body>
+      <audio id="popSound" preload="auto" style="display: none;">
+        <source src="SOUND_SRC_POP_MP3" type="audio/mpeg">
+      </audio>
+      <audio id="slurpSound" preload="auto" style="display: none;">
+        <source src="SOUND_SRC_SLURP_MP3" type="audio/mpeg">
+      </audio>
+      <audio id="lockSound" preload="auto" style="display: none;">
+        <source src="SOUND_SRC_LOCK_WAV" type="audio/wav">
+      </audio>
+      <audio id="swapSound" preload="auto" style="display: none;">
+        <source src="SOUND_SRC_SWAP_WAV" type="audio/wav">
+      </audio>
+      <audio id="comboSound" preload="auto" style="display: none;">
+        <source src="SOUND_SRC_COMBO_WAV" type="audio/wav">
+      </audio>
+      <audio id="warningSound" preload="auto" style="display: none;">
+        <source src="SOUND_SRC_WARNING_WAV" type="audio/wav">
+      </audio>
+      <audio id="crashSound" preload="auto" style="display: none;">
+        <source src="SOUND_SRC_CRASH_WAV" type="audio/wav">
+      </audio>
+      <audio id="shotSound" preload="auto" style="display: none;">
+        <source src="SOUND_SRC_SHOT_WAV" type="audio/wav">
+      </audio>
+      <audio id="explodeSound" preload="auto" style="display: none;">
+        <source src="SOUND_SRC_EXPLODE_WAV" type="audio/wav">
+      </audio>
+
+    <div class="game-viewport" id="gameViewport">
+      <div class="game-toolbar" id="gameToolbar">
+        <button type="button" class="toolbar-btn" id="muteBtn" title="Toggle sound (Ctrl+M)" aria-pressed="false">
+          <i class="codicon codicon-unmute" id="muteIcon"></i>
+          <span id="muteLabel">Sound On</span>
+        </button>
+        <button type="button" class="toolbar-btn" id="fullscreenBtn" title="Toggle focus play mode (Ctrl+F)">
+          <i class="codicon codicon-screen-full" id="fullscreenIcon"></i>
+          <span id="fullscreenLabel">Focus Play</span>
+        </button>
+        <span class="difficulty-badge" id="difficultyBadge"></span>
+        <span class="toolbar-hint">Choose difficulty</span>
+      </div>
+
+      <div class="game-container">
+        <div class="game-over-alert" id="gameOverAlert">
+          <h2>KERNEL PANIC!</h2>
+          <p id="alertScore">Score: 0</p>
+        </div>
+
+        <div class="game-header">
+          <h1>Kernel Panic</h1>
+          <p>Fly the kernel. Shoot threats. Don't shoot healthy processes.</p>
+        </div>
+
+        <div class="difficulty-selection" id="difficultySelection">
+          <h2 class="difficulty-title">Choose Difficulty</h2>
+          <div class="difficulty-options">
+            <div class="difficulty-card active" id="easyCard" data-difficulty="easy">
+              <div class="difficulty-header">
+                <span class="difficulty-indicator">🟢</span>
+                <span class="difficulty-name">EASY</span>
+              </div>
+              <div class="difficulty-description">
+                Segfaults only • Slow spawn • 3 HP
+              </div>
+              <div class="difficulty-best">Best: <span data-difficulty-best="easy">0</span></div>
+            </div>
+            <div class="difficulty-card" id="mediumCard" data-difficulty="medium">
+              <div class="difficulty-header">
+                <span class="difficulty-indicator">🟡</span>
+                <span class="difficulty-name">MEDIUM</span>
+              </div>
+              <div class="difficulty-description">
+                + zombie processes • Faster • 3 HP
+              </div>
+              <div class="difficulty-best">Best: <span data-difficulty-best="medium">0</span></div>
+            </div>
+            <div class="difficulty-card" id="hardCard" data-difficulty="hard">
+              <div class="difficulty-header">
+                <span class="difficulty-indicator">🔴</span>
+                <span class="difficulty-name">HARD</span>
+              </div>
+              <div class="difficulty-description">
+                Leaks + healthy processes • Panic waves • 2 HP
+              </div>
+              <div class="difficulty-best">Best: <span data-difficulty-best="hard">0</span></div>
+            </div>
+          </div>
+          <button class="btn start-game-btn" id="enterGameBtn">Choose Difficulty</button>
+
+          <details class="about-game">
+            <summary>About this game</summary>
+            <div class="about-game-body">
+              <h3>What it is</h3>
+              <p>
+                A vertical shmup. You fly the kernel. Threats fall from the
+                top — segfaults, zombie processes, and memory leaks. Last 60
+                seconds or until HP is gone. One play per run.
+              </p>
+              <h3>Difficulty</h3>
+              <ul>
+                <li>
+                  <strong>Easy</strong> — segfaults only, slow spawn, 3 HP.
+                </li>
+                <li>
+                  <strong>Medium</strong> — adds zombie processes, faster spawn,
+                  3 HP.
+                </li>
+                <li>
+                  <strong>Hard</strong> — memory leaks that split on hit,
+                  avoidable healthy processes (green, dashed), 2 HP, panic waves.
+                </li>
+              </ul>
+              <h3>How to play</h3>
+              <p>
+                Pick a difficulty, then Choose Difficulty. Press Boot Kernel.
+                Score 10 / 15 / 20 for segfault, zombie, and leak kills. Panic
+                waves add a bonus. Shooting a healthy process is −25 (floor 0).
+              </p>
+              <ul>
+                <li><strong>Arrows / WASD</strong> — Move.</li>
+                <li><strong>Space</strong> — Fire.</li>
+                <li><strong>P</strong> — Pause. <strong>Ctrl+M</strong> — Mute. <strong>Ctrl+F</strong> — Focus play.</li>
+                <li>Do not shoot green dashed processes. They are healthy.</li>
+                <li>Memory leaks split into smaller segfaults when hit.</li>
+              </ul>
+            </div>
+          </details>
+        </div>
+
+        <div class="game-play" id="gamePlay" style="display: none" data-focus-pause-key="P">
+          <div class="score-panel focus-play-scores">
+            <div class="score-item">
+              <div class="score-label">Score</div>
+              <div class="score-value" id="score">0</div>
+            </div>
+            <div class="score-item">
+              <div class="score-label">High Score</div>
+              <div class="score-value" id="highScore">0</div>
+            </div>
+            <div class="score-item">
+              <div class="score-label">HP</div>
+              <div class="score-value" id="hp">3</div>
+            </div>
+            <div class="score-item">
+              <div class="score-label">Time</div>
+              <div class="score-value" id="timeLeft">60</div>
+            </div>
+          </div>
+
+          <div class="game-area focus-play-target">
+            <canvas id="gameCanvas" width="360" height="480"></canvas>
+          </div>
+
+          <div class="game-over" id="gameOver">
+            <h2>Kernel Panic</h2>
+            <p>Score: <span id="finalScore">0</span></p>
+            <button class="btn" id="restartBtn">Reboot</button>
+          </div>
+
+          <div class="controls">
+            <button class="btn" id="startBtn">Boot Kernel</button>
+            <button class="btn" id="pauseBtn" style="display: none">Pause (P)</button>
+            <button class="btn back-btn" id="backToMenuBtn">Change Difficulty</button>
+          </div>
+        </div>
+
+        <div class="instructions">
+          <details>
+            <summary>How to Play</summary>
+            <h3>Controls</h3>
+            <ul>
+              <li><strong>Arrows / WASD</strong> — Move</li>
+              <li><strong>Space</strong> — Fire</li>
+              <li><strong>P</strong> — Pause/Resume</li>
+              <li><strong>Ctrl+M</strong> — Toggle sound</li>
+              <li><strong>Ctrl+F</strong> — Toggle focus play mode</li>
+            </ul>
+            <h3>Rules</h3>
+            <ul>
+              <li>Shoot red segfaults, purple zombies, and orange leaks</li>
+              <li>Do not shoot green dashed healthy processes (−25)</li>
+              <li>Leaks split when hit. Survive 60 seconds or until HP is gone</li>
+            </ul>
+          </details>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

@@ -211,7 +211,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 		await gameManager.unlockPro();
 		vscode.window.showInformationMessage(
-			'Pro unlocked. Call Stack and Merge Conflict are playable, and plays were adjusted.'
+			'Pro unlocked. Call Stack, Merge Conflict, and Kernel Panic are playable, and plays were adjusted.'
 		);
 	});
 
@@ -222,7 +222,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 		await gameManager.lockPro();
 		vscode.window.showInformationMessage(
-			'Pro locked. You are on the Free plan. Call Stack and Merge Conflict need a Pro subscription.'
+			'Pro locked. You are on the Free plan. Call Stack, Merge Conflict, and Kernel Panic need a Pro subscription.'
 		);
 	});
 

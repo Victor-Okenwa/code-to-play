@@ -338,7 +338,9 @@ export class WebviewManager {
             'swap.wav',
             'combo.wav',
             'warning.wav',
-            'crash.wav'
+            'crash.wav',
+            'shot.wav',
+            'explode.wav'
         ];
 
         for (const soundFile of sounds) {

@@ -172,7 +172,7 @@ export interface GlobalPlayState {
     /** Whether games are currently unlocked and playable */
     isUnlocked: boolean;
 
-    /** Whether Pro games (Call Stack, Merge Conflict) are allowed */
+    /** Whether Pro games (Call Stack, Merge Conflict, Kernel Panic) are allowed */
     isProUnlocked: boolean;
 
     /** Whether the +2 Pro play spaces have already been applied */

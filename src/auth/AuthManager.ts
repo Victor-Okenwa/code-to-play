@@ -293,8 +293,8 @@ export class AuthManager implements vscode.Disposable {
                 {
                     label: this.isProUnlocked() ? 'Manage subscription' : 'Go Pro',
                     description: this.isProUnlocked()
-                        ? 'Call Stack, Merge Conflict, and extra play spaces'
-                        : `${PRO_TRIAL_DAYS}-day free trial · Call Stack, Merge Conflict, and extra play spaces`,
+                        ? 'Call Stack, Merge Conflict, Kernel Panic, and extra play spaces'
+                        : `${PRO_TRIAL_DAYS}-day free trial · Call Stack, Merge Conflict, Kernel Panic, and extra play spaces`,
                     action: this.isProUnlocked() ? 'subscription' as const : 'pricing' as const
                 },
                 {
@@ -336,7 +336,7 @@ export class AuthManager implements vscode.Disposable {
             [
                 {
                     label: 'Go Pro',
-                    description: `${PRO_TRIAL_DAYS}-day free trial · Call Stack, Merge Conflict, and extra play spaces`,
+                    description: `${PRO_TRIAL_DAYS}-day free trial · Call Stack, Merge Conflict, Kernel Panic, and extra play spaces`,
                     action: 'pricing' as const
                 },
                 {

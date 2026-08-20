@@ -29,7 +29,7 @@ Play classic games with a coding twist:
 
 - **Debug Snake** - Catch bugs (ladybugs) and grow your debugging skills
 - **Whack-a-Bug** - Click bugs before they escape in this fast-paced game
-- **Call Stack** and **Merge Conflict** — Pro games. New Pro checkouts include a **7-day free trial**.
+- **Call Stack**, **Merge Conflict**, and **Kernel Panic** — Pro games. New Pro checkouts include a **7-day free trial**.
 
 ### Smart Code Tracking
 

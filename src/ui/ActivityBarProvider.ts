@@ -51,7 +51,7 @@ class GameTreeItem extends vscode.TreeItem {
             if (this.globalState.isProUnlocked) {
                 tooltip.appendMarkdown(`⭐ **Pro**\n\n`);
             } else {
-                tooltip.appendMarkdown(`⭐ **Pro** — ${PRO_TRIAL_DAYS}-day free trial to unlock Call Stack and Merge Conflict.\n\n`);
+                tooltip.appendMarkdown(`⭐ **Pro** — ${PRO_TRIAL_DAYS}-day free trial to unlock Call Stack, Merge Conflict, and Kernel Panic.\n\n`);
             }
         }
 
