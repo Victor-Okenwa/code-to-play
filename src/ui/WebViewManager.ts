@@ -50,18 +50,7 @@ export class WebviewManager {
 
         if (!playResult.success) {
             const reason = playResult.reason || 'Cannot play game';
-            if (reason.startsWith('Pro required')) {
-                const trialAction = 'Go Pro';
-                const choice = await vscode.window.showWarningMessage(
-                    reason,
-                    trialAction
-                );
-                if (choice === trialAction) {
-                    await vscode.commands.executeCommand('codeToPlay.openPricing');
-                }
-            } else {
-                vscode.window.showWarningMessage(reason);
-            }
+            await this.showPlayBlocked(reason);
             return null;
         }
 
@@ -77,6 +66,26 @@ export class WebviewManager {
         await this.loadGameContent(panel, game);
 
         return panel;
+    }
+
+    private async showPlayBlocked(reason: string): Promise<void> {
+        if (reason.startsWith('Pro required')) {
+            const trialAction = 'Go Pro';
+            const choice = await vscode.window.showWarningMessage(
+                reason,
+                trialAction
+            );
+            if (choice === trialAction) {
+                await vscode.commands.executeCommand('codeToPlay.openPricing');
+            }
+            return;
+        }
+
+        const buyAction = 'Buy play spaces';
+        const choice = await vscode.window.showWarningMessage(reason, buyAction);
+        if (choice === buyAction) {
+            await vscode.commands.executeCommand('codeToPlay.openSubscription');
+        }
     }
 
     private createWebviewPanel(game: IGame): vscode.WebviewPanel {
@@ -522,14 +531,18 @@ export class WebviewManager {
         const playsAfter = this.gameManager.getPlaysRemaining();
 
         if (playsAfter === 0) {
-            const config = (this.gameManager as any).config;
-            const linesToUnlock = config.unlock.linesToUnlock;
+            const linesToUnlock = this.gameManager.getRemainingLinesToUnlock();
 
             this.closeAllGames();
 
-            vscode.window.showInformationMessage(
-                `Your play allowance has been exhausted! Write ${linesToUnlock} lines of code to unlock more plays. Happy coding!`
+            const buyAction = 'Buy play spaces';
+            const selection = await vscode.window.showWarningMessage(
+                `Your play allowance has been exhausted. Write ${linesToUnlock} lines to unlock more plays, or buy play spaces.`,
+                buyAction
             );
+            if (selection === buyAction) {
+                await vscode.commands.executeCommand('codeToPlay.openSubscription');
+            }
         }
 
         const state = this.gameManager.getGame(gameId);

@@ -199,6 +199,11 @@
         "category": "Code to Play"
       },
       {
+        "command": "codeToPlay.openSubscription",
+        "title": "Open Subscription",
+        "category": "Code to Play"
+      },
+      {
         "command": "codeToPlay.accountAction",
         "title": "Account",
         "category": "Code to Play"

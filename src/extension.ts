@@ -95,6 +95,10 @@ export function activate(context: vscode.ExtensionContext) {
 		return authManager.openPricing();
 	});
 
+	const openSubscriptionCommand = vscode.commands.registerCommand('codeToPlay.openSubscription', () => {
+		return authManager.openSubscription();
+	});
+
 	const accountActionCommand = vscode.commands.registerCommand('codeToPlay.accountAction', () => {
 		return authManager.handleAccountClick();
 	});
@@ -319,19 +323,7 @@ export function activate(context: vscode.ExtensionContext) {
 				break;
 
 			case GameEvent.LOCKED:
-				// Game locked - user ran out of plays
-				const lockedGame = gameManager.getGame(gameId);
-				if (lockedGame) {
-					const config = storageManager.getConfig();
-					vscode.window.showWarningMessage(
-						`${lockedGame.name} locked. Write ${config.unlock.linesToUnlock} lines to unlock ${config.unlock.playsPerUnlock} new plays.`,
-						'Buy play spaces'
-					).then(selection => {
-						if (selection === 'Buy play spaces') {
-							void authManager.openSubscription();
-						}
-					});
-				}
+				// Status bar updates from this event. The buy-spaces toast is shown from game over.
 				break;
 
 			case GameEvent.PROGRESS_UPDATED:
@@ -371,6 +363,7 @@ export function activate(context: vscode.ExtensionContext) {
 		signOutCommand,
 		openDashboardCommand,
 		openPricingCommand,
+		openSubscriptionCommand,
 		accountActionCommand,
 		playsActionCommand,
 		viewStatsCommand,
