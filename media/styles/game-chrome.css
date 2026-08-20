@@ -175,31 +175,13 @@ body {
   padding: 12px 16px;
 }
 
-.about-game > summary {
+.about-game-title {
   color: #4ec9b0;
   font-family: "Press Start 2P", cursive;
   font-size: 0.75em;
   line-height: 1.5;
-  cursor: pointer;
-  list-style: none;
-}
-
-.about-game > summary::-webkit-details-marker {
-  display: none;
-}
-
-.about-game > summary::before {
-  content: "▸ ";
-  display: inline-block;
-  transition: transform 0.2s;
-}
-
-.about-game[open] > summary::before {
-  transform: rotate(90deg);
-}
-
-.about-game[open] > summary {
-  margin-bottom: 12px;
+  font-weight: normal;
+  margin: 0 0 12px;
 }
 
 .about-game-body {
