@@ -1,7 +1,7 @@
 /**
  * game.ts - Kernel Panic
  *
- * Vertical shmup. Fly the kernel, shoot falling threats, last 60s or until HP is gone.
+ * Vertical shmup. Fly the kernel craft, shoot falling threats, last 60s or until HP is gone.
  */
 
 declare const vscode: {
@@ -55,12 +55,17 @@ interface Enemy extends Rect {
     warned: boolean;
 }
 
+type TimedPowerKind = 'rapid' | 'spread' | 'shield' | 'weaker' | 'score';
+type PowerKind = TimedPowerKind | 'health';
+
 interface Bullet extends Rect {
     vy: number;
+    vx: number;
 }
 
 interface Pickup extends Rect {
     vy: number;
+    kind: PowerKind;
 }
 
 interface Particle {
@@ -105,6 +110,32 @@ const KIND_LABEL: Record<EnemyKind, string> = {
     zombie: 'zombie',
     leak: 'leak',
     healthy: 'ok'
+};
+
+const DROP_CHANCE = 0.3;
+const POWER_DURATION = 7;
+const WEAKER_SPEED = 0.55;
+const RAPID_FIRE = 0.45;
+
+const POWER_KINDS: PowerKind[] = ['shield', 'rapid', 'spread', 'weaker', 'score', 'health'];
+const TIMED_POWER_KINDS: TimedPowerKind[] = ['rapid', 'spread', 'shield', 'weaker', 'score'];
+
+const POWERUP_COLORS: Record<PowerKind, string> = {
+    shield: '#9e9e9e',
+    rapid: '#f44336',
+    spread: '#e040fb',
+    weaker: '#42a5f5',
+    score: '#ffeb3b',
+    health: '#4caf50'
+};
+
+const POWERUP_LABELS: Record<PowerKind, string> = {
+    shield: 'SH',
+    rapid: 'RF',
+    spread: 'SP',
+    weaker: 'WK',
+    score: '2x',
+    health: '+'
 };
 
 const canvas = document.getElementById('gameCanvas') as HTMLCanvasElement;
@@ -186,6 +217,7 @@ let enemies: Enemy[] = [];
 let bullets: Bullet[] = [];
 let pickups: Pickup[] = [];
 let particles: Particle[] = [];
+let activeMods: Partial<Record<TimedPowerKind, number>> = {};
 const stars: Star[] = Array.from({ length: 48 }, () => ({
     x: Math.random() * CANVAS_WIDTH,
     y: Math.random() * CANVAS_HEIGHT,
@@ -359,6 +391,7 @@ function resetRun(playing: boolean): void {
     bullets = [];
     pickups = [];
     particles = [];
+    activeMods = {};
     player = { x: CANVAS_WIDTH / 2 - 12, y: CANVAS_HEIGHT - 50, w: 24, h: 18 };
     isPaused = false;
     isRunning = playing;
@@ -416,13 +449,14 @@ function update(dt: number): void {
     }
 
     invuln = Math.max(0, invuln - dt);
+    tickMods(dt);
     spawnAcc += dt * 1000;
     fireAcc += dt * 1000;
 
     moveStars(dt);
     movePlayer(dt);
 
-    if (keys.fire && fireAcc >= currentDifficulty.fireMs) {
+    if (keys.fire && fireAcc >= fireInterval()) {
         fire();
         fireAcc = 0;
     }
@@ -475,14 +509,31 @@ function movePlayer(dt: number): void {
     player.y = Math.max(40, Math.min(CANVAS_HEIGHT - player.h - 8, player.y));
 }
 
+function fireInterval(): number {
+    return currentDifficulty.fireMs * (hasMod('rapid') ? RAPID_FIRE : 1);
+}
+
 function fire(): void {
-    bullets.push({
-        x: player.x + player.w / 2 - 1.5,
-        y: player.y - 8,
-        w: 3,
-        h: 10,
-        vy: -420
-    });
+    const cx = player.x + player.w / 2;
+    const y = player.y - 8;
+    const shots = hasMod('spread')
+        ? [
+            { x: cx - 1.5, vx: 0 },
+            { x: cx - 7, vx: -95 },
+            { x: cx + 4, vx: 95 }
+        ]
+        : [{ x: cx - 1.5, vx: 0 }];
+
+    for (const shot of shots) {
+        bullets.push({
+            x: shot.x,
+            y,
+            w: 3,
+            h: 10,
+            vy: -420,
+            vx: shot.vx
+        });
+    }
     playSound('shotSound');
 }
 
@@ -543,14 +594,18 @@ function startPanicWave(): void {
 function updateBullets(dt: number): void {
     for (const bullet of bullets) {
         bullet.y += bullet.vy * dt;
+        bullet.x += bullet.vx * dt;
     }
-    bullets = bullets.filter(bullet => bullet.y + bullet.h > 0);
+    bullets = bullets.filter(
+        bullet => bullet.y + bullet.h > 0 && bullet.x + bullet.w > 0 && bullet.x < CANVAS_WIDTH
+    );
 }
 
 function updateEnemies(dt: number): void {
+    const speedMul = hasMod('weaker') ? WEAKER_SPEED : 1;
     for (const enemy of enemies) {
-        enemy.y += enemy.vy * dt;
-        enemy.x += enemy.vx * dt;
+        enemy.y += enemy.vy * dt * speedMul;
+        enemy.x += enemy.vx * dt * speedMul;
         if (enemy.x < 4 || enemy.x + enemy.w > CANVAS_WIDTH - 4) {
             enemy.vx *= -1;
             enemy.x = Math.max(4, Math.min(CANVAS_WIDTH - enemy.w - 4, enemy.x));
@@ -611,7 +666,7 @@ function collide(): void {
         }
     }
 
-    if (invuln <= 0) {
+    if (invuln <= 0 && !hasMod('shield')) {
         for (const enemy of enemies) {
             if (aabb(player, enemy)) {
                 if (enemy.kind === 'healthy') {
@@ -625,11 +680,10 @@ function collide(): void {
     }
 
     for (let i = pickups.length - 1; i >= 0; i--) {
-        if (aabb(player, pickups[i])) {
+        const pickup = pickups[i];
+        if (aabb(player, pickup)) {
             pickups.splice(i, 1);
-            if (hp < maxHp) {
-                hp += 1;
-            }
+            applyPickup(pickup.kind);
             playSound('slurpSound');
         }
     }
@@ -647,7 +701,7 @@ function damageEnemy(enemy: Enemy, index: number): void {
 
     if (enemy.kind === 'leak') {
         splitLeak(enemy);
-        score += KIND_SCORE.leak;
+        score += threatScore('leak');
         playSound('explodeSound');
         spawnBurst(enemy.x + enemy.w / 2, enemy.y + enemy.h / 2, KIND_COLOR.leak);
         enemies.splice(index, 1);
@@ -657,7 +711,7 @@ function damageEnemy(enemy: Enemy, index: number): void {
         return;
     }
 
-    score += KIND_SCORE[enemy.kind];
+    score += threatScore(enemy.kind);
     playSound('explodeSound');
     spawnBurst(enemy.x + enemy.w / 2, enemy.y + enemy.h / 2, KIND_COLOR[enemy.kind]);
     enemies.splice(index, 1);
@@ -690,7 +744,7 @@ function destroyEnemy(enemy: Enemy, award: boolean): void {
         return;
     }
     if (award && enemy.kind !== 'healthy') {
-        score += KIND_SCORE[enemy.kind];
+        score += threatScore(enemy.kind);
         noteKill();
         maybeDropPickup(enemy);
     }
@@ -701,16 +755,54 @@ function destroyEnemy(enemy: Enemy, award: boolean): void {
 }
 
 function maybeDropPickup(enemy: Enemy): void {
-    if (Math.random() > 0.08) {
+    if (Math.random() > DROP_CHANCE) {
         return;
     }
+    const kind = POWER_KINDS[Math.floor(Math.random() * POWER_KINDS.length)] ?? 'health';
     pickups.push({
         x: enemy.x + enemy.w / 2 - 7,
         y: enemy.y,
         w: 14,
         h: 14,
-        vy: 70
+        vy: 70,
+        kind
     });
+}
+
+function applyPickup(kind: PowerKind): void {
+    if (kind === 'health') {
+        heal(1);
+        return;
+    }
+    activeMods[kind] = POWER_DURATION;
+}
+
+function heal(amount: number): void {
+    hp = Math.min(maxHp, hp + amount);
+}
+
+function hasMod(kind: TimedPowerKind): boolean {
+    return (activeMods[kind] ?? 0) > 0;
+}
+
+function tickMods(dt: number): void {
+    for (const kind of TIMED_POWER_KINDS) {
+        const remaining = activeMods[kind];
+        if (remaining === undefined) {
+            continue;
+        }
+        const next = remaining - dt;
+        if (next <= 0) {
+            delete activeMods[kind];
+        } else {
+            activeMods[kind] = next;
+        }
+    }
+}
+
+function threatScore(kind: EnemyKind): number {
+    const base = KIND_SCORE[kind];
+    return hasMod('score') ? base * 2 : base;
 }
 
 function noteKill(): void {
@@ -803,6 +895,7 @@ function endGame(): void {
     isRunning = false;
     isPaused = false;
     keys.fire = false;
+    activeMods = {};
     stopLoop();
 
     if (score > highScore) {
@@ -911,15 +1004,7 @@ function draw(_ts: number): void {
     ctx.globalAlpha = 1;
 
     for (const pickup of pickups) {
-        ctx.fillStyle = '#dcdcaa';
-        ctx.beginPath();
-        ctx.arc(pickup.x + pickup.w / 2, pickup.y + pickup.h / 2, pickup.w / 2, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#1e1e1e';
-        ctx.font = 'bold 10px Orbitron, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('+', pickup.x + pickup.w / 2, pickup.y + pickup.h / 2 + 0.5);
+        drawPickup(pickup);
     }
 
     for (const enemy of enemies) {
@@ -943,6 +1028,8 @@ function draw(_ts: number): void {
     }
     ctx.globalAlpha = 1;
 
+    drawModHud();
+
     if (isPaused && isRunning) {
         ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
         ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
@@ -954,21 +1041,135 @@ function draw(_ts: number): void {
     }
 }
 
-function drawShip(x: number, y: number, w: number, h: number): void {
-    ctx.fillStyle = '#4fc1ff';
+function isThrusting(): boolean {
+    return isRunning && !isPaused && (keys.left || keys.right || keys.up || keys.down || keys.fire);
+}
+
+function drawPickup(pickup: Pickup): void {
+    const color = POWERUP_COLORS[pickup.kind];
+    const cx = pickup.x + pickup.w / 2;
+    const cy = pickup.y + pickup.h / 2;
+
+    ctx.save();
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 10;
+    ctx.fillStyle = color;
     ctx.beginPath();
-    ctx.moveTo(x + w / 2, y);
-    ctx.lineTo(x + w, y + h);
-    ctx.lineTo(x + w * 0.65, y + h * 0.72);
-    ctx.lineTo(x + w * 0.35, y + h * 0.72);
-    ctx.lineTo(x, y + h);
-    ctx.closePath();
+    ctx.arc(cx, cy, pickup.w / 2, 0, Math.PI * 2);
     ctx.fill();
+    ctx.restore();
+
     ctx.fillStyle = '#1e1e1e';
     ctx.font = 'bold 8px Orbitron, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('k', x + w / 2, y + h * 0.62);
+    ctx.fillText(POWERUP_LABELS[pickup.kind], cx, cy + 0.5);
+}
+
+function drawModHud(): void {
+    const chips: { kind: TimedPowerKind; remaining: number }[] = [];
+    for (const kind of TIMED_POWER_KINDS) {
+        const remaining = activeMods[kind];
+        if (remaining && remaining > 0) {
+            chips.push({ kind, remaining });
+        }
+    }
+    if (chips.length === 0) {
+        return;
+    }
+
+    let x = 8;
+    const y = 14;
+    ctx.font = 'bold 9px Orbitron, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+
+    for (const chip of chips) {
+        const label = `${POWERUP_LABELS[chip.kind]} ${Math.ceil(chip.remaining)}s`;
+        const width = ctx.measureText(label).width + 10;
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.fillRect(x, y - 8, width, 16);
+        ctx.fillStyle = POWERUP_COLORS[chip.kind];
+        ctx.fillText(label, x + 5, y);
+        x += width + 6;
+    }
+}
+
+function drawShip(x: number, y: number, w: number, h: number): void {
+    const cx = x + w / 2;
+    const thrusting = isThrusting();
+
+    if (hasMod('shield')) {
+        ctx.save();
+        ctx.strokeStyle = POWERUP_COLORS.shield;
+        ctx.globalAlpha = 0.65;
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.ellipse(cx, y + h / 2, w * 0.78, h * 0.78, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    if (thrusting) {
+        const flicker = 0.55 + Math.random() * 0.45;
+        ctx.save();
+        ctx.globalAlpha = flicker;
+        ctx.fillStyle = '#7ee7ff';
+        ctx.beginPath();
+        ctx.moveTo(cx - 3.2, y + h - 2);
+        ctx.lineTo(cx + 3.2, y + h - 2);
+        ctx.lineTo(cx, y + h + 6 + Math.random() * 3);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#b8f4ff';
+        ctx.beginPath();
+        ctx.moveTo(cx - 1.4, y + h - 1);
+        ctx.lineTo(cx + 1.4, y + h - 1);
+        ctx.lineTo(cx, y + h + 3 + Math.random() * 2);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+    }
+
+    ctx.fillStyle = '#2b8fc4';
+    ctx.beginPath();
+    ctx.moveTo(cx - 3, y + h * 0.36);
+    ctx.lineTo(x - 3, y + h * 0.82);
+    ctx.lineTo(x + 3, y + h * 0.7);
+    ctx.lineTo(cx - 2, y + h * 0.5);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(cx + 3, y + h * 0.36);
+    ctx.lineTo(x + w + 3, y + h * 0.82);
+    ctx.lineTo(x + w - 3, y + h * 0.7);
+    ctx.lineTo(cx + 2, y + h * 0.5);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = '#4fc1ff';
+    ctx.beginPath();
+    ctx.moveTo(cx, y);
+    ctx.lineTo(cx + 4.2, y + h * 0.28);
+    ctx.lineTo(cx + 5.2, y + h * 0.62);
+    ctx.lineTo(cx + 3.6, y + h - 1);
+    ctx.lineTo(cx - 3.6, y + h - 1);
+    ctx.lineTo(cx - 5.2, y + h * 0.62);
+    ctx.lineTo(cx - 4.2, y + h * 0.28);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = '#2378a8';
+    ctx.fillRect(cx - 4.2, y + h - 4, 8.4, 3);
+
+    ctx.fillStyle = '#0b3a52';
+    ctx.beginPath();
+    ctx.ellipse(cx, y + h * 0.36, 2.5, 3.3, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#9ee7ff';
+    ctx.beginPath();
+    ctx.ellipse(cx, y + h * 0.32, 1.4, 1.7, 0, 0, Math.PI * 2);
+    ctx.fill();
 }
 
 function drawEnemy(enemy: Enemy): void {

@@ -56,7 +56,7 @@
 
         <div class="game-header">
           <h1>Kernel Panic</h1>
-          <p>Fly the kernel. Shoot threats. Don't shoot healthy processes.</p>
+          <p>Fly the kernel craft. Shoot threats. Don't shoot healthy processes.</p>
         </div>
 
         <div class="difficulty-selection" id="difficultySelection">
@@ -100,9 +100,9 @@
             <div class="about-game-body">
               <h3>What it is</h3>
               <p>
-                A vertical shmup. You fly the kernel. Threats fall from the
-                top — segfaults, zombie processes, and memory leaks. Last 60
-                seconds or until HP is gone. One play per run.
+                A vertical shmup. You fly a compact kernel craft. Threats fall
+                from the top — segfaults, zombie processes, and memory leaks.
+                Last 60 seconds or until HP is gone. One play per run.
               </p>
               <h3>Difficulty</h3>
               <ul>
@@ -130,6 +130,21 @@
                 <li><strong>P</strong> — Pause. <strong>Ctrl+M</strong> — Mute. <strong>Ctrl+F</strong> — Focus play.</li>
                 <li>Do not shoot green dashed processes. They are healthy.</li>
                 <li>Memory leaks split into smaller segfaults when hit.</li>
+              </ul>
+              <h3>Power-ups</h3>
+              <p>
+                Threat kills have a chance to drop a colored capsule. Collect
+                it. Timed mods last a few seconds and can overlap; grabbing
+                the same kind again refreshes the timer. Health heals on
+                collect.
+              </p>
+              <ul>
+                <li><strong>Grey shield</strong> — ignore enemy body hits.</li>
+                <li><strong>Red rapid fire</strong> — shoot faster.</li>
+                <li><strong>Magenta spread shot</strong> — fire three bolts.</li>
+                <li><strong>Blue weaker enemies</strong> — threats slow down.</li>
+                <li><strong>Yellow score boost</strong> — threat kills score double.</li>
+                <li><strong>Green health</strong> — restore 1 HP.</li>
               </ul>
             </div>
           </section>
@@ -188,6 +203,16 @@
               <li>Shoot red segfaults, purple zombies, and orange leaks</li>
               <li>Do not shoot green dashed healthy processes (−25)</li>
               <li>Leaks split when hit. Survive 60 seconds or until HP is gone</li>
+            </ul>
+            <h3>Power-ups</h3>
+            <p>Collect falling capsules. About 1 in 3 threat kills drop one:</p>
+            <ul>
+              <li><strong>Grey</strong> — shield (ignore body hits)</li>
+              <li><strong>Red</strong> — rapid fire</li>
+              <li><strong>Magenta</strong> — spread shot</li>
+              <li><strong>Blue</strong> — slower threats</li>
+              <li><strong>Yellow</strong> — double score on threat kills</li>
+              <li><strong>Green</strong> — heal 1 HP</li>
             </ul>
           </details>
         </div>
