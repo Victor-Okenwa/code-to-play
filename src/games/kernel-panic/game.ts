@@ -211,6 +211,7 @@ let waveId = 0;
 let nextWaveAt = 18;
 let killStreak = 0;
 let killStreakAt = 0;
+let killsSinceDrop = 0;
 let player: Rect = { x: 168, y: 430, w: 24, h: 18 };
 const keys = { left: false, right: false, up: false, down: false, fire: false };
 let enemies: Enemy[] = [];
@@ -386,6 +387,7 @@ function resetRun(playing: boolean): void {
     nextWaveAt = 18;
     killStreak = 0;
     killStreakAt = 0;
+    killsSinceDrop = 0;
     survived = false;
     enemies = [];
     bullets = [];
@@ -632,10 +634,23 @@ function updateEnemies(dt: number): void {
 }
 
 function updatePickups(dt: number): void {
+    const magnetR = 110;
+    const scx = player.x + player.w / 2;
+    const scy = player.y + player.h / 2;
     for (const pickup of pickups) {
         pickup.y += pickup.vy * dt;
+        const pcx = pickup.x + pickup.w / 2;
+        const pcy = pickup.y + pickup.h / 2;
+        const dx = scx - pcx;
+        const dy = scy - pcy;
+        const dist = Math.hypot(dx, dy);
+        if (dist < magnetR && dist > 1) {
+            const pull = (1 - dist / magnetR) * 160;
+            pickup.x += (dx / dist) * pull * dt;
+            pickup.y += (dy / dist) * pull * dt;
+        }
     }
-    pickups = pickups.filter(pickup => pickup.y < CANVAS_HEIGHT);
+    pickups = pickups.filter(pickup => pickup.y < CANVAS_HEIGHT + pickup.h);
 }
 
 function updateParticles(dt: number): void {
@@ -755,16 +770,19 @@ function destroyEnemy(enemy: Enemy, award: boolean): void {
 }
 
 function maybeDropPickup(enemy: Enemy): void {
-    if (Math.random() > DROP_CHANCE) {
+    killsSinceDrop += 1;
+    const pity = selectedDifficulty === 'easy' ? 3 : selectedDifficulty === 'medium' ? 4 : 5;
+    if (killsSinceDrop < pity && Math.random() > DROP_CHANCE) {
         return;
     }
+    killsSinceDrop = 0;
     const kind = POWER_KINDS[Math.floor(Math.random() * POWER_KINDS.length)] ?? 'health';
     pickups.push({
-        x: enemy.x + enemy.w / 2 - 7,
+        x: enemy.x + enemy.w / 2 - 9,
         y: enemy.y,
-        w: 14,
-        h: 14,
-        vy: 70,
+        w: 18,
+        h: 18,
+        vy: 48,
         kind
     });
 }
@@ -1003,10 +1021,6 @@ function draw(_ts: number): void {
     }
     ctx.globalAlpha = 1;
 
-    for (const pickup of pickups) {
-        drawPickup(pickup);
-    }
-
     for (const enemy of enemies) {
         drawEnemy(enemy);
     }
@@ -1014,6 +1028,10 @@ function draw(_ts: number): void {
     ctx.fillStyle = '#4fc1ff';
     for (const bullet of bullets) {
         ctx.fillRect(bullet.x, bullet.y, bullet.w, bullet.h);
+    }
+
+    for (const pickup of pickups) {
+        drawPickup(pickup);
     }
 
     const blink = invuln > 0 && Math.floor(invuln * 10) % 2 === 0;
@@ -1049,18 +1067,26 @@ function drawPickup(pickup: Pickup): void {
     const color = POWERUP_COLORS[pickup.kind];
     const cx = pickup.x + pickup.w / 2;
     const cy = pickup.y + pickup.h / 2;
+    const pulse = 1 + Math.sin(timeLeft * 10) * 0.12;
+    const radius = (pickup.w / 2) * pulse;
 
     ctx.save();
-    ctx.shadowColor = color;
-    ctx.shadowBlur = 10;
     ctx.fillStyle = color;
+    ctx.globalAlpha = 0.28;
     ctx.beginPath();
-    ctx.arc(cx, cy, pickup.w / 2, 0, Math.PI * 2);
+    ctx.arc(cx, cy, radius + 5, 0, Math.PI * 2);
     ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#1e1e1e';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
     ctx.restore();
 
     ctx.fillStyle = '#1e1e1e';
-    ctx.font = 'bold 8px Orbitron, sans-serif';
+    ctx.font = 'bold 9px Orbitron, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(POWERUP_LABELS[pickup.kind], cx, cy + 0.5);
@@ -1097,79 +1123,124 @@ function drawModHud(): void {
 
 function drawShip(x: number, y: number, w: number, h: number): void {
     const cx = x + w / 2;
+    const by = y + h;
     const thrusting = isThrusting();
 
+    ctx.save();
+
     if (hasMod('shield')) {
-        ctx.save();
         ctx.strokeStyle = POWERUP_COLORS.shield;
-        ctx.globalAlpha = 0.65;
-        ctx.lineWidth = 1.6;
+        ctx.globalAlpha = 0.75;
+        ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.ellipse(cx, y + h / 2, w * 0.78, h * 0.78, 0, 0, Math.PI * 2);
+        ctx.arc(cx, y + h / 2, 19, 0, Math.PI * 2);
         ctx.stroke();
-        ctx.restore();
+        ctx.globalAlpha = 1;
     }
 
     if (thrusting) {
-        const flicker = 0.55 + Math.random() * 0.45;
-        ctx.save();
-        ctx.globalAlpha = flicker;
-        ctx.fillStyle = '#7ee7ff';
-        ctx.beginPath();
-        ctx.moveTo(cx - 3.2, y + h - 2);
-        ctx.lineTo(cx + 3.2, y + h - 2);
-        ctx.lineTo(cx, y + h + 6 + Math.random() * 3);
-        ctx.closePath();
-        ctx.fill();
-        ctx.fillStyle = '#b8f4ff';
-        ctx.beginPath();
-        ctx.moveTo(cx - 1.4, y + h - 1);
-        ctx.lineTo(cx + 1.4, y + h - 1);
-        ctx.lineTo(cx, y + h + 3 + Math.random() * 2);
-        ctx.closePath();
-        ctx.fill();
-        ctx.restore();
+        const flick = 6 + Math.random() * 5;
+        for (const ox of [-6, 6]) {
+            ctx.fillStyle = `rgba(126, 231, 255, ${0.55 + Math.random() * 0.45})`;
+            ctx.beginPath();
+            ctx.moveTo(cx + ox - 3.2, by);
+            ctx.lineTo(cx + ox + 3.2, by);
+            ctx.lineTo(cx + ox, by + flick);
+            ctx.closePath();
+            ctx.fill();
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+            ctx.beginPath();
+            ctx.moveTo(cx + ox - 1.4, by);
+            ctx.lineTo(cx + ox + 1.4, by);
+            ctx.lineTo(cx + ox, by + flick * 0.55);
+            ctx.closePath();
+            ctx.fill();
+        }
     }
 
-    ctx.fillStyle = '#2b8fc4';
+    ctx.fillStyle = '#165a82';
     ctx.beginPath();
-    ctx.moveTo(cx - 3, y + h * 0.36);
-    ctx.lineTo(x - 3, y + h * 0.82);
-    ctx.lineTo(x + 3, y + h * 0.7);
-    ctx.lineTo(cx - 2, y + h * 0.5);
+    ctx.moveTo(cx - 4, y + 7);
+    ctx.lineTo(cx - 21, y + 15);
+    ctx.lineTo(cx - 19, y + 21);
+    ctx.lineTo(cx - 3, y + 14);
     ctx.closePath();
     ctx.fill();
     ctx.beginPath();
-    ctx.moveTo(cx + 3, y + h * 0.36);
-    ctx.lineTo(x + w + 3, y + h * 0.82);
-    ctx.lineTo(x + w - 3, y + h * 0.7);
-    ctx.lineTo(cx + 2, y + h * 0.5);
+    ctx.moveTo(cx + 4, y + 7);
+    ctx.lineTo(cx + 21, y + 15);
+    ctx.lineTo(cx + 19, y + 21);
+    ctx.lineTo(cx + 3, y + 14);
     ctx.closePath();
     ctx.fill();
+
+    ctx.fillStyle = '#3aa8e0';
+    ctx.beginPath();
+    ctx.moveTo(cx - 4, y + 7);
+    ctx.lineTo(cx - 21, y + 15);
+    ctx.lineTo(cx - 18, y + 15.5);
+    ctx.lineTo(cx - 4, y + 9);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(cx + 4, y + 7);
+    ctx.lineTo(cx + 21, y + 15);
+    ctx.lineTo(cx + 18, y + 15.5);
+    ctx.lineTo(cx + 4, y + 9);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = '#c8c8c8';
+    ctx.fillRect(cx - 22, y + 14, 6, 3);
+    ctx.fillRect(cx + 16, y + 14, 6, 3);
+    ctx.fillStyle = '#4fc1ff';
+    ctx.fillRect(cx - 21, y + 12, 3, 2);
+    ctx.fillRect(cx + 18, y + 12, 3, 2);
 
     ctx.fillStyle = '#4fc1ff';
     ctx.beginPath();
-    ctx.moveTo(cx, y);
-    ctx.lineTo(cx + 4.2, y + h * 0.28);
-    ctx.lineTo(cx + 5.2, y + h * 0.62);
-    ctx.lineTo(cx + 3.6, y + h - 1);
-    ctx.lineTo(cx - 3.6, y + h - 1);
-    ctx.lineTo(cx - 5.2, y + h * 0.62);
-    ctx.lineTo(cx - 4.2, y + h * 0.28);
+    ctx.moveTo(cx, y - 5);
+    ctx.lineTo(cx + 4.5, y + 3);
+    ctx.lineTo(cx + 6, y + 11);
+    ctx.lineTo(cx + 5, by - 1);
+    ctx.lineTo(cx - 5, by - 1);
+    ctx.lineTo(cx - 6, y + 11);
+    ctx.lineTo(cx - 4.5, y + 3);
     ctx.closePath();
     ctx.fill();
 
-    ctx.fillStyle = '#2378a8';
-    ctx.fillRect(cx - 4.2, y + h - 4, 8.4, 3);
+    ctx.fillStyle = '#9ee7ff';
+    ctx.fillRect(cx - 1.1, y + 1, 2.2, 13);
 
     ctx.fillStyle = '#0b3a52';
+    ctx.fillRect(cx - 8.5, by - 5, 6.5, 5);
+    ctx.fillRect(cx + 2, by - 5, 6.5, 5);
+    ctx.fillStyle = '#7ee7ff';
     ctx.beginPath();
-    ctx.ellipse(cx, y + h * 0.36, 2.5, 3.3, 0, 0, Math.PI * 2);
+    ctx.arc(cx - 5.2, by - 1.2, 2.1, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = '#9ee7ff';
     ctx.beginPath();
-    ctx.ellipse(cx, y + h * 0.32, 1.4, 1.7, 0, 0, Math.PI * 2);
+    ctx.arc(cx + 5.2, by - 1.2, 2.1, 0, Math.PI * 2);
     ctx.fill();
+
+    ctx.fillStyle = '#072433';
+    ctx.beginPath();
+    ctx.moveTo(cx - 3.6, y + 4);
+    ctx.lineTo(cx + 3.6, y + 4);
+    ctx.lineTo(cx + 2.6, y + 11);
+    ctx.lineTo(cx - 2.6, y + 11);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#d7f7ff';
+    ctx.beginPath();
+    ctx.moveTo(cx - 2.2, y + 5);
+    ctx.lineTo(cx + 2.2, y + 5);
+    ctx.lineTo(cx + 1.5, y + 9.5);
+    ctx.lineTo(cx - 1.5, y + 9.5);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.restore();
 }
 
 function drawEnemy(enemy: Enemy): void {
