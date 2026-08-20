@@ -68,7 +68,7 @@
                 <span class="difficulty-name">EASY</span>
               </div>
               <div class="difficulty-description">
-                Segfaults only • Slow spawn • 3 HP
+                Segfaults only • Slow start • 3 HP • Ramps up
               </div>
               <div class="difficulty-best">Best: <span data-difficulty-best="easy">0</span></div>
             </div>
@@ -78,7 +78,7 @@
                 <span class="difficulty-name">MEDIUM</span>
               </div>
               <div class="difficulty-description">
-                + zombie processes • Faster • 3 HP
+                + zombie processes • Faster start • 3 HP • Ramps up
               </div>
               <div class="difficulty-best">Best: <span data-difficulty-best="medium">0</span></div>
             </div>
@@ -88,7 +88,7 @@
                 <span class="difficulty-name">HARD</span>
               </div>
               <div class="difficulty-description">
-                Leaks + healthy processes • Panic waves • 2 HP
+                Leaks + healthy processes • Panic waves • 2 HP • Ramps up
               </div>
               <div class="difficulty-best">Best: <span data-difficulty-best="hard">0</span></div>
             </div>
@@ -102,20 +102,23 @@
               <p>
                 A vertical shmup. You fly a compact kernel craft. Threats fall
                 from the top — segfaults, zombie processes, and memory leaks.
-                Last 60 seconds or until HP is gone. One play per run.
+                Survive until HP is gone. The longer you last, the tougher it
+                gets. One play per run.
               </p>
               <h3>Difficulty</h3>
               <ul>
                 <li>
-                  <strong>Easy</strong> — segfaults only, slow spawn, 3 HP.
+                  <strong>Easy</strong> — segfaults only at first, slow start, 3 HP.
+                  Zombies, leaks, and panic waves unlock as threat rises.
                 </li>
                 <li>
-                  <strong>Medium</strong> — adds zombie processes, faster spawn,
-                  3 HP.
+                  <strong>Medium</strong> — zombies from the start, faster spawn,
+                  3 HP. Leaks and healthy processes appear later.
                 </li>
                 <li>
                   <strong>Hard</strong> — memory leaks that split on hit,
-                  avoidable healthy processes (green, dashed), 2 HP, panic waves.
+                  avoidable healthy processes (green, dashed), 2 HP, panic waves
+                  from the start. Spawn and speed keep climbing.
                 </li>
               </ul>
               <h3>How to play</h3>
@@ -130,6 +133,7 @@
                 <li><strong>P</strong> — Pause. <strong>Ctrl+M</strong> — Mute. <strong>Ctrl+F</strong> — Focus play.</li>
                 <li>Do not shoot green dashed processes. They are healthy.</li>
                 <li>Memory leaks split into smaller segfaults when hit.</li>
+                <li>Threat climbs over time: faster spawns, tougher kinds, more panic waves.</li>
               </ul>
               <h3>Power-ups</h3>
               <p>
@@ -165,8 +169,8 @@
               <div class="score-value" id="hp">3</div>
             </div>
             <div class="score-item">
-              <div class="score-label">Time</div>
-              <div class="score-value" id="timeLeft">60</div>
+              <div class="score-label">Threat</div>
+              <div class="score-value" id="threatLevel">1</div>
             </div>
           </div>
 
@@ -202,7 +206,7 @@
             <ul>
               <li>Shoot red segfaults, purple zombies, and orange leaks</li>
               <li>Do not shoot green dashed healthy processes (−25)</li>
-              <li>Leaks split when hit. Survive 60 seconds or until HP is gone</li>
+              <li>Leaks split when hit. Survive until HP is gone — threat ramps the longer you last</li>
             </ul>
             <h3>Power-ups</h3>
             <p>Collect falling capsules. About 1 in 3 threat kills drop one:</p>

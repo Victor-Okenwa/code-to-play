@@ -1,7 +1,7 @@
 /**
  * game.ts - Kernel Panic
  *
- * Vertical shmup. Fly the kernel craft, shoot falling threats, last 60s or until HP is gone.
+ * Vertical shmup. Fly the kernel craft, shoot falling threats, and last until HP is gone.
  */
 
 declare const vscode: {
@@ -37,6 +37,14 @@ interface PanicDifficulty {
     fireMs: number;
     panicWaves: boolean;
     pool: EnemyKind[];
+}
+
+interface PanicRamp {
+    zombieAt: number;
+    leakAt: number;
+    healthyAt: number;
+    wavesAt: number;
+    waveEvery: number;
 }
 
 interface Rect {
@@ -86,7 +94,6 @@ interface Star {
 
 const CANVAS_WIDTH = 360;
 const CANVAS_HEIGHT = 480;
-const RUN_SECONDS = 60;
 const HEALTHY_PENALTY = 25;
 const WAVE_BONUS = 50;
 const PAUSE_LABEL = 'Pause (P)';
@@ -143,7 +150,7 @@ const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
 const scoreElement = document.getElementById('score') as HTMLElement;
 const highScoreElement = document.getElementById('highScore') as HTMLElement;
 const hpElement = document.getElementById('hp') as HTMLElement;
-const timeElement = document.getElementById('timeLeft') as HTMLElement;
+const threatElement = document.getElementById('threatLevel') as HTMLElement;
 const gameOverElement = document.getElementById('gameOver') as HTMLElement;
 const gameOverTitle = gameOverElement.querySelector('h2') as HTMLElement;
 const finalScoreElement = document.getElementById('finalScore') as HTMLElement;
@@ -191,16 +198,21 @@ const difficulties: Record<string, PanicDifficulty> = {
     }
 };
 
+const RAMPS: Record<string, PanicRamp> = {
+    easy: { zombieAt: 20, leakAt: 42, healthyAt: 58, wavesAt: 50, waveEvery: 20 },
+    medium: { zombieAt: 0, leakAt: 24, healthyAt: 40, wavesAt: 30, waveEvery: 16 },
+    hard: { zombieAt: 0, leakAt: 0, healthyAt: 0, wavesAt: 16, waveEvery: 14 }
+};
+
 let selectedDifficulty = 'easy';
 let currentDifficulty = difficulties.easy;
 let score = 0;
 let highScore = 0;
 let hp = 3;
 let maxHp = 3;
-let timeLeft = RUN_SECONDS;
+let elapsed = 0;
 let isRunning = false;
 let isPaused = false;
-let survived = false;
 let lastTs = 0;
 let rafId = 0;
 let spawnAcc = 0;
@@ -378,17 +390,16 @@ function resetRun(playing: boolean): void {
     maxHp = currentDifficulty.hp;
     hp = maxHp;
     score = 0;
-    timeLeft = RUN_SECONDS;
     spawnAcc = 0;
     fireAcc = currentDifficulty.fireMs;
     invuln = 0;
     warningLatched = false;
     waveId = 0;
-    nextWaveAt = 18;
+    elapsed = 0;
+    nextWaveAt = currentRamp().wavesAt;
     killStreak = 0;
     killStreakAt = 0;
     killsSinceDrop = 0;
-    survived = false;
     enemies = [];
     bullets = [];
     pickups = [];
@@ -441,14 +452,48 @@ function loop(ts: number): void {
     rafId = requestAnimationFrame(loop);
 }
 
-function update(dt: number): void {
-    timeLeft -= dt;
-    if (timeLeft <= 0) {
-        timeLeft = 0;
-        survived = true;
-        endGame();
-        return;
+function currentRamp(): PanicRamp {
+    return RAMPS[selectedDifficulty] ?? RAMPS.easy;
+}
+
+function spawnInterval(): number {
+    const ms = currentDifficulty.spawnMs * (0.28 + 0.72 * Math.exp(-elapsed / 55));
+    return Math.max(180, ms);
+}
+
+function threatSpeed(): number {
+    return currentDifficulty.speed * (1 + Math.min(elapsed / 48, 1.7));
+}
+
+function threatLevel(): number {
+    return Math.min(9, 1 + Math.floor(elapsed / 12));
+}
+
+function unlockedPool(): EnemyKind[] {
+    const ramp = currentRamp();
+    const pool: EnemyKind[] = ['segfault'];
+    if (elapsed >= ramp.zombieAt) {
+        pool.push('zombie');
     }
+    if (elapsed >= ramp.leakAt) {
+        pool.push('leak');
+    }
+    if (elapsed >= ramp.healthyAt) {
+        pool.push('healthy');
+    }
+    return pool;
+}
+
+function wavesUnlocked(): boolean {
+    return currentDifficulty.panicWaves || elapsed >= currentRamp().wavesAt;
+}
+
+function waveGap(): number {
+    return Math.max(10, currentRamp().waveEvery - elapsed / 18);
+}
+
+function update(dt: number): void {
+    elapsed += dt;
 
     invuln = Math.max(0, invuln - dt);
     tickMods(dt);
@@ -463,15 +508,14 @@ function update(dt: number): void {
         fireAcc = 0;
     }
 
-    if (spawnAcc >= currentDifficulty.spawnMs) {
+    if (spawnAcc >= spawnInterval()) {
         spawnEnemy(pickKind(), 0);
         spawnAcc = 0;
     }
 
-    const elapsed = RUN_SECONDS - timeLeft;
-    if (currentDifficulty.panicWaves && elapsed >= nextWaveAt) {
+    if (wavesUnlocked() && elapsed >= nextWaveAt) {
         startPanicWave();
-        nextWaveAt += 18;
+        nextWaveAt += waveGap();
     }
 
     updateBullets(dt);
@@ -484,8 +528,9 @@ function update(dt: number): void {
 }
 
 function moveStars(dt: number): void {
+    const rush = 1 + Math.min(elapsed / 90, 0.85);
     for (const star of stars) {
-        star.y += star.speed * dt;
+        star.y += star.speed * dt * rush;
         if (star.y > CANVAS_HEIGHT) {
             star.y = 0;
             star.x = Math.random() * CANVAS_WIDTH;
@@ -540,26 +585,19 @@ function fire(): void {
 }
 
 function pickKind(): EnemyKind {
-    const pool = currentDifficulty.pool;
-    if (pool.length === 1) {
-        return pool[0] ?? 'segfault';
-    }
+    const pool = unlockedPool();
+    const heat = Math.min(elapsed / 80, 1);
 
-    if (currentDifficulty.panicWaves) {
-        const roll = Math.random();
-        if (roll < 0.18) {
-            return 'healthy';
-        }
-        if (roll < 0.36) {
-            return 'leak';
-        }
-        if (roll < 0.62) {
-            return 'zombie';
-        }
-        return 'segfault';
+    if (pool.includes('healthy') && Math.random() < 0.08 + heat * 0.12) {
+        return 'healthy';
     }
-
-    return pool[Math.floor(Math.random() * pool.length)] ?? 'segfault';
+    if (pool.includes('leak') && Math.random() < 0.12 + heat * 0.18) {
+        return 'leak';
+    }
+    if (pool.includes('zombie') && Math.random() < 0.28 + heat * 0.15) {
+        return 'zombie';
+    }
+    return 'segfault';
 }
 
 function spawnEnemy(kind: EnemyKind, assignedWave: number): Enemy {
@@ -570,8 +608,8 @@ function spawnEnemy(kind: EnemyKind, assignedWave: number): Enemy {
         y: -size - 4,
         w: size,
         h: size,
-        vy: currentDifficulty.speed * (0.85 + Math.random() * 0.4),
-        vx: (Math.random() - 0.5) * 30,
+        vy: threatSpeed() * (0.85 + Math.random() * 0.4),
+        vx: (Math.random() - 0.5) * (30 + Math.min(elapsed * 0.35, 40)),
         hp: 1,
         waveId: assignedWave,
         warned: false
@@ -583,13 +621,21 @@ function spawnEnemy(kind: EnemyKind, assignedWave: number): Enemy {
 function startPanicWave(): void {
     waveId += 1;
     const id = waveId;
-    const count = 7;
+    const pool = unlockedPool();
+    const count = Math.min(11, 7 + Math.floor(elapsed / 35));
     for (let i = 0; i < count; i++) {
-        const kind: EnemyKind = i % 5 === 0 ? 'healthy' : i % 3 === 0 ? 'leak' : i % 2 === 0 ? 'zombie' : 'segfault';
+        let kind: EnemyKind = 'segfault';
+        if (pool.includes('healthy') && i % 5 === 0) {
+            kind = 'healthy';
+        } else if (pool.includes('leak') && i % 3 === 0) {
+            kind = 'leak';
+        } else if (pool.includes('zombie') && i % 2 === 0) {
+            kind = 'zombie';
+        }
         const enemy = spawnEnemy(kind, id);
-        enemy.x = 12 + i * ((CANVAS_WIDTH - 40) / (count - 1));
+        enemy.x = 12 + i * ((CANVAS_WIDTH - 40) / Math.max(1, count - 1));
         enemy.y = -18 - (i % 3) * 22;
-        enemy.vy = currentDifficulty.speed * 1.25;
+        enemy.vy = threatSpeed() * 1.25;
     }
 }
 
@@ -824,13 +870,12 @@ function threatScore(kind: EnemyKind): number {
 }
 
 function noteKill(): void {
-    const now = RUN_SECONDS - timeLeft;
-    if (now - killStreakAt < 0.8) {
+    if (elapsed - killStreakAt < 0.8) {
         killStreak += 1;
     } else {
         killStreak = 1;
     }
-    killStreakAt = now;
+    killStreakAt = elapsed;
     if (killStreak === 3) {
         playSound('comboSound');
         score += 15;
@@ -858,7 +903,6 @@ function hitPlayer(): void {
     spawnBurst(player.x + player.w / 2, player.y + player.h / 2, '#4fc1ff');
     if (hp <= 0) {
         hp = 0;
-        survived = false;
         endGame();
     }
 }
@@ -926,9 +970,8 @@ function endGame(): void {
     showGameOverAlert();
     notifyGameStateChanged();
 
-    const title = survived ? 'UPTIME COMPLETE' : 'KERNEL PANIC!';
-    alertTitle.textContent = title;
-    gameOverTitle.textContent = survived ? 'Uptime Complete' : 'Kernel Panic';
+    alertTitle.textContent = 'KERNEL PANIC!';
+    gameOverTitle.textContent = 'Kernel Panic';
 
     setTimeout(() => {
         finalScoreElement.textContent = score.toString();
@@ -1007,7 +1050,7 @@ function updateHud(): void {
     scoreElement.textContent = score.toString();
     highScoreElement.textContent = highScore.toString();
     hpElement.textContent = hp.toString();
-    timeElement.textContent = Math.ceil(timeLeft).toString();
+    threatElement.textContent = threatLevel().toString();
 }
 
 function draw(_ts: number): void {
@@ -1067,7 +1110,7 @@ function drawPickup(pickup: Pickup): void {
     const color = POWERUP_COLORS[pickup.kind];
     const cx = pickup.x + pickup.w / 2;
     const cy = pickup.y + pickup.h / 2;
-    const pulse = 1 + Math.sin(timeLeft * 10) * 0.12;
+    const pulse = 1 + Math.sin(elapsed * 10) * 0.12;
     const radius = (pickup.w / 2) * pulse;
 
     ctx.save();

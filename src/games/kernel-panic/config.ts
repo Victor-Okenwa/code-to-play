@@ -9,7 +9,7 @@ import { IGame } from '../../core/types';
 export const KernelPanicGame: IGame = {
     id: 'kernel-panic',
     name: 'Kernel Panic',
-    description: 'Fly the kernel craft, shoot falling threats, grab colored power-ups, and keep uptime until the clock runs out — or HP hits zero.',
+    description: 'Fly the kernel craft, shoot falling threats, grab colored power-ups, and last as long as you can — the longer you survive, the tougher it gets.',
     iconPath: 'assets/icon.svg',
     isPremium: true,
     isOnline: false,
