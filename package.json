@@ -2,7 +2,7 @@
   "name": "code-to-play",
   "displayName": "Code to Play",
   "description": "Play games in VS Code - earn playtime by writing code!",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "publisher": "morse-code",
   "main": "./dist/extension.js",
   "author": {
