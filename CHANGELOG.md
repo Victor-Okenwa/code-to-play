@@ -1,5 +1,30 @@
 # Changelog
 
+## [1.1.0] - 2026-08-21
+
+### Added
+
+- **Pro games**:
+  - Call Stack, Merge Conflict, and Kernel Panic join Debug Snake and Whack-a-Bug
+  - New Pro checkouts include a 7-day free trial
+  - Extra play spaces and account actions in the activity bar (sign in, Go Pro, manage subscription)
+- **Kernel Panic**:
+  - Fly a compact kernel craft instead of a dart silhouette
+  - Threat kills can drop colored power-ups: grey shield, red rapid fire, magenta spread shot, blue weaker enemies, yellow score boost, and green health
+  - Survival run — no 60-second clock. The round ends when HP hits zero
+  - Threat climbs the longer you last (faster spawns, tougher kinds, denser panic waves)
+  - HUD shows Threat instead of Time; About this game and How to Play match the new rules
+- **About this game**:
+  - Always-visible about section on every game, covering rules, scoring, and controls
+- **Optional stats sync**:
+  - Signed-in players who opt in on the website can sync local high scores and play counts — still off by default
+
+### Changed
+
+- Locked Pro games and exhausted-play toasts point to subscription / extra play spaces instead of a dead end
+- Code tracking seeds a baseline when a file is opened so the first edit in a session counts more reliably
+- In-game copy and difficulty cards for Kernel Panic describe the ramp and power-up colors
+
 ## [1.0.0] - 2026-08-07
 
 ### Changed
