@@ -6,7 +6,7 @@
 
 - **Pro games**:
   - Call Stack, Merge Conflict, and Kernel Panic join Debug Snake and Whack-a-Bug
-  - New Pro checkouts include a 7-day free trial
+  - New Pro checkouts include a 5-day free trial
   - Extra play spaces and account actions in the activity bar (sign in, Go Pro, manage subscription)
 - **Kernel Panic**:
   - Fly a compact kernel craft instead of a dart silhouette
