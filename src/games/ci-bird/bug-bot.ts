@@ -1,6 +1,14 @@
-import { CANVAS_HEIGHT, CANVAS_WIDTH } from './constants';
+import { CANVAS_WIDTH } from './constants';
 
 export type BotPhase = 'follow' | 'lock' | 'shoot' | 'exit';
+
+export interface BotBullet {
+    x: number;
+    y: number;
+    vx: number;
+    r: number;
+    hit: boolean;
+}
 
 export interface BugBot {
     x: number;
@@ -9,23 +17,22 @@ export interface BugBot {
     phase: BotPhase;
     phaseT: number;
     vx: number;
-    laserActive: boolean;
-    laserT: number;
-    hit: boolean;
-}
-
-export interface LaserHit {
-    y: number;
-    x0: number;
-    x1: number;
+    shotsFired: number;
+    shotCooldown: number;
+    bullets: BotBullet[];
 }
 
 const FOLLOW = 1.15;
 const LOCK = 0.28;
-const SHOOT = 0.75;
+const SHOTS = 3;
+const SHOT_GAP = 0.34;
+const EXIT_AFTER_LAST = 0.2;
+const BULLET_VX = -360;
+const BULLET_R = 5.5;
+const SHOOT_END = (SHOTS - 1) * SHOT_GAP + EXIT_AFTER_LAST;
 
-/** Time from spawn to the end of the laser. */
-export const BOT_SHOT_WINDOW = FOLLOW + LOCK + SHOOT;
+/** Time from spawn through the third shot. */
+export const BOT_SHOT_WINDOW = FOLLOW + LOCK + SHOOT_END;
 
 export function createBugBot(birdY: number): BugBot {
     return {
@@ -35,14 +42,34 @@ export function createBugBot(birdY: number): BugBot {
         phase: 'follow',
         phaseT: 0,
         vx: -160,
-        laserActive: false,
-        laserT: 0,
-        hit: false
+        shotsFired: 0,
+        shotCooldown: 0,
+        bullets: []
     };
+}
+
+function fireBullet(bot: BugBot): void {
+    bot.bullets.push({
+        x: bot.x - 20,
+        y: bot.lockY,
+        vx: BULLET_VX,
+        r: BULLET_R,
+        hit: false
+    });
+    bot.shotsFired += 1;
+    bot.shotCooldown = SHOT_GAP;
+}
+
+function updateBullets(bot: BugBot, dt: number): void {
+    for (const bullet of bot.bullets) {
+        bullet.x += bullet.vx * dt;
+    }
+    bot.bullets = bot.bullets.filter(bullet => !bullet.hit && bullet.x > -28);
 }
 
 export function updateBugBot(bot: BugBot, dt: number, birdY: number): void {
     bot.phaseT += dt;
+    updateBullets(bot, dt);
 
     if (bot.phase === 'follow') {
         bot.y += (birdY - bot.y) * Math.min(1, dt * 6);
@@ -63,17 +90,18 @@ export function updateBugBot(bot: BugBot, dt: number, birdY: number): void {
         if (bot.phaseT >= LOCK) {
             bot.phase = 'shoot';
             bot.phaseT = 0;
-            bot.laserActive = true;
-            bot.laserT = SHOOT;
+            fireBullet(bot);
         }
         return;
     }
 
     if (bot.phase === 'shoot') {
         bot.y = bot.lockY;
-        bot.laserT -= dt;
-        if (bot.laserT <= 0) {
-            bot.laserActive = false;
+        bot.shotCooldown -= dt;
+        if (bot.shotsFired < SHOTS && bot.shotCooldown <= 0) {
+            fireBullet(bot);
+        }
+        if (bot.phaseT >= SHOOT_END) {
             bot.phase = 'exit';
             bot.phaseT = 0;
             bot.vx = 260;
@@ -85,39 +113,36 @@ export function updateBugBot(bot: BugBot, dt: number, birdY: number): void {
     bot.y = bot.lockY;
 }
 
-export function botLaser(bot: BugBot): LaserHit | null {
-    if (!bot.laserActive) {
-        return null;
+export function bulletHitsBird(
+    bullet: BotBullet,
+    hit: { x: number; y: number; w: number; h: number }
+): boolean {
+    if (bullet.hit) {
+        return false;
     }
-    return {
-        y: bot.lockY,
-        x0: 0,
-        x1: bot.x
-    };
+    const nx = Math.max(hit.x, Math.min(bullet.x, hit.x + hit.w));
+    const ny = Math.max(hit.y, Math.min(bullet.y, hit.y + hit.h));
+    const dx = bullet.x - nx;
+    const dy = bullet.y - ny;
+    return dx * dx + dy * dy <= bullet.r * bullet.r;
 }
 
 export function botOffscreen(bot: BugBot): boolean {
-    return bot.phase === 'exit' && bot.x > CANVAS_WIDTH + 40;
+    return bot.phase === 'exit'
+        && bot.x > CANVAS_WIDTH + 40
+        && bot.bullets.length === 0;
 }
 
 export function botIsAttacking(bot: BugBot): boolean {
-    return bot.phase === 'follow' || bot.phase === 'lock' || bot.phase === 'shoot';
+    return bot.phase === 'follow'
+        || bot.phase === 'lock'
+        || bot.phase === 'shoot'
+        || bot.bullets.length > 0;
 }
 
 export function drawBugBot(ctx: CanvasRenderingContext2D, bot: BugBot): void {
-    const laser = botLaser(bot);
-    if (laser) {
-        ctx.fillStyle = 'rgba(255, 120, 100, 0.28)';
-        ctx.fillRect(laser.x0, laser.y - 7, laser.x1 - laser.x0, 14);
-        ctx.strokeStyle = 'rgba(255, 210, 180, 0.9)';
-        ctx.lineWidth = 8;
-        ctx.beginPath();
-        ctx.moveTo(laser.x0, laser.y);
-        ctx.lineTo(laser.x1, laser.y);
-        ctx.stroke();
-        ctx.strokeStyle = '#ff6b6b';
-        ctx.lineWidth = 3;
-        ctx.stroke();
+    for (const bullet of bot.bullets) {
+        drawBullet(ctx, bullet);
     }
 
     ctx.save();
@@ -154,6 +179,24 @@ export function drawBugBot(ctx: CanvasRenderingContext2D, bot: BugBot): void {
     ctx.restore();
 }
 
+function drawBullet(ctx: CanvasRenderingContext2D, bullet: BotBullet): void {
+    ctx.save();
+    ctx.translate(bullet.x, bullet.y);
+    ctx.fillStyle = 'rgba(255, 180, 150, 0.45)';
+    ctx.beginPath();
+    ctx.ellipse(4, 0, bullet.r + 5, bullet.r + 1, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#ff6b6b';
+    ctx.beginPath();
+    ctx.ellipse(0, 0, bullet.r + 3, bullet.r - 1, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#f3f3f3';
+    ctx.beginPath();
+    ctx.ellipse(-2, 0, 2.2, 1.4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+}
+
 export function drawRushBanner(ctx: CanvasRenderingContext2D, remaining: number): void {
     ctx.fillStyle = 'rgba(78, 201, 176, 0.18)';
     ctx.fillRect(0, 0, CANVAS_WIDTH, 28);
@@ -163,4 +206,3 @@ export function drawRushBanner(ctx: CanvasRenderingContext2D, remaining: number)
     ctx.textBaseline = 'middle';
     ctx.fillText(`RUSH HOUR ${remaining.toFixed(1)}s`, CANVAS_WIDTH / 2, 14);
 }
-

@@ -6,9 +6,9 @@
 
 import {
     botIsAttacking,
-    botLaser,
     botOffscreen,
     BOT_SHOT_WINDOW,
+    bulletHitsBird,
     createBugBot,
     drawBugBot,
     drawRushBanner,
@@ -835,17 +835,17 @@ function maybeSpawnBots(dt: number): void {
 
 function updateBots(dt: number, hit: { x: number; y: number; w: number; h: number }): boolean {
     for (const bot of bots) {
-        const wasLaser = bot.laserActive;
+        const shotsBefore = bot.shotsFired;
         updateBugBot(bot, dt, birdY);
-        if (!wasLaser && bot.laserActive) {
+        if (bot.shotsFired > shotsBefore) {
             playSound('shotSound');
         }
-        const laser = botLaser(bot);
-        if (laser && invuln <= 0 && !bot.hit) {
-            const inY = hit.y < laser.y + 5 && hit.y + hit.h > laser.y - 5;
-            const inX = hit.x < laser.x1;
-            if (inY && inX) {
-                bot.hit = true;
+        if (invuln > 0) {
+            continue;
+        }
+        for (const bullet of bot.bullets) {
+            if (bulletHitsBird(bullet, hit)) {
+                bullet.hit = true;
                 playSound('explodeSound');
                 onHit();
                 return true;
