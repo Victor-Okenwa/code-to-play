@@ -8,5 +8,6 @@ export const PIPE_MARGIN = 36;
 export const PAUSE_LABEL = 'Pause (P)';
 export const GATE_LABELS = ['lint', 'test', 'typecheck', 'deploy'] as const;
 export const INVULN_TIME = 1.4;
+export const HOVER_TIME = 1.05;
 export const COIN_RADIUS = 7;
 export const DIAMOND_RADIUS = 8;

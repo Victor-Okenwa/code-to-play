@@ -25,6 +25,7 @@ import {
     COIN_RADIUS,
     DIAMOND_RADIUS,
     GATE_LABELS,
+    HOVER_TIME,
     INVULN_TIME,
     PAUSE_LABEL,
     PIPE_MARGIN,
@@ -180,6 +181,8 @@ let lastTs = 0;
 let rafId = 0;
 let birdY = CANVAS_HEIGHT / 2;
 let birdVy = 0;
+let hoverLeft = 0;
+let hoverY = CANVAS_HEIGHT / 2;
 let pipes: Pipe[] = [];
 let nextLabelIndex = 0;
 let lineMarks: LineMark[] = [];
@@ -527,6 +530,8 @@ function resetRun(playing: boolean): void {
     runDiamonds = 0;
     birdY = CANVAS_HEIGHT / 2;
     birdVy = 0;
+    hoverY = birdY;
+    hoverLeft = playing ? HOVER_TIME : 0;
     pipes = [];
     collectibles = [];
     bots = [];
@@ -643,11 +648,26 @@ function birdHitbox(): { x: number; y: number; w: number; h: number } {
     };
 }
 
+function applyFlight(dt: number): void {
+    if (hoverLeft > 0) {
+        hoverLeft = Math.max(0, hoverLeft - dt);
+        birdVy = 0;
+        birdY = hoverY + Math.sin(elapsed * 5.5) * 5;
+        return;
+    }
+
+    birdVy = Math.min(currentDifficulty.maxFall, birdVy + gravity() * dt);
+    birdY += birdVy * dt;
+}
+
+function takeControl(): void {
+    hoverLeft = 0;
+}
+
 function update(dt: number): void {
     elapsed += dt;
     invuln = Math.max(0, invuln - dt);
-    birdVy = Math.min(currentDifficulty.maxFall, birdVy + gravity() * dt);
-    birdY += birdVy * dt;
+    applyFlight(dt);
 
     const hit = birdHitbox();
     if (hit.y < 0 || hit.y + hit.h > CANVAS_HEIGHT) {
@@ -879,6 +899,7 @@ function flapFromInput(): void {
 }
 
 function flap(): void {
+    takeControl();
     birdVy = flapImpulse();
     playSound('popSound');
 }
@@ -887,6 +908,7 @@ function diveFromInput(): void {
     if (!isRunning || isPaused) {
         return;
     }
+    takeControl();
     birdVy = Math.min(currentDifficulty.maxFall, Math.abs(flapImpulse()) * 0.9);
     playSound('popSound');
 }
