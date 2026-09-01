@@ -1,5 +1,15 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- **CI Bird** (free):
+  - One-button flyer through scrolling CI gates labeled lint, test, typecheck, and deploy
+  - Each green gap is a passing check; hit a pipe, the ceiling, or the floor and the build fails
+  - Easy, Hard, and Very Hard change gravity, gap size, and scroll speed
+  - Shares the same play pool as Debug Snake and Whack-a-Bug
+
 ## [1.1.0] - 2026-08-21
 
 ### Added
