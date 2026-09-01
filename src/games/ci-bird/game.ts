@@ -5,8 +5,10 @@
  */
 
 import {
+    botIsAttacking,
     botLaser,
     botOffscreen,
+    BOT_SHOT_WINDOW,
     createBugBot,
     drawBugBot,
     drawRushBanner,
@@ -42,6 +44,9 @@ import { formatCost, formatMods, getCharacter, CHARACTERS, type CharacterId } fr
 import {
     bugBotCount,
     buildFormation,
+    FORMATION_ENTRY_X,
+    FORMATION_SPACING,
+    formationOriginY,
     pickFormation,
     rushDuration,
     rushInterval,
@@ -190,6 +195,7 @@ let nextRushAt = 20;
 let pendingBots = 0;
 let botCooldown = 0;
 let warningLatched = false;
+let formationCooldown = 0;
 let bots: BugBot[] = [];
 let runGold = 0;
 let runDiamonds = 0;
@@ -535,6 +541,7 @@ function resetRun(playing: boolean): void {
     pendingBots = 0;
     botCooldown = 0;
     warningLatched = false;
+    formationCooldown = 0;
     isPaused = false;
     isRunning = playing;
     updateHud();
@@ -729,13 +736,18 @@ function collectItem(kind: 'gold' | 'diamond'): void {
     }
 }
 
-function updateRush(dt: number, _scroll: number): void {
+function updateRush(dt: number, scroll: number): void {
     if (inRush) {
         rushLeft -= dt;
         rushT += dt;
+        maybeSpawnFormations(dt, scroll);
         maybeSpawnBots(dt);
         if (rushLeft <= 0) {
-            endRush();
+            pendingBots = 0;
+            warningLatched = false;
+            if (!bots.some(botIsAttacking)) {
+                endRush();
+            }
         }
         return;
     }
@@ -752,21 +764,53 @@ function startRush(): void {
     pipes = [];
     warningLatched = false;
     pendingBots = bugBotCount(elapsed);
-    botCooldown = 2;
+    botCooldown = 0;
+    formationCooldown = 0.9;
+    spawnRushFormation();
+}
+
+function spawnRushFormation(): void {
     const diamond = Math.random() < currentDifficulty.diamondChance * 2.2;
-    collectibles.push(...buildFormation(pickFormation(), diamond));
+    collectibles.push(
+        ...buildFormation(pickFormation(), diamond, FORMATION_ENTRY_X, formationOriginY())
+    );
+}
+
+function maybeSpawnFormations(dt: number, scroll: number): void {
+    if (rushLeft <= 0.9) {
+        return;
+    }
+
+    formationCooldown -= dt;
+    if (formationCooldown > 0) {
+        return;
+    }
+
+    const rightmost = collectibles.reduce((max, item) => {
+        return item.taken ? max : Math.max(max, item.x);
+    }, -Infinity);
+
+    if (Number.isFinite(rightmost) && rightmost > FORMATION_ENTRY_X - FORMATION_SPACING) {
+        return;
+    }
+
+    spawnRushFormation();
+    formationCooldown = FORMATION_SPACING / Math.max(90, scroll);
 }
 
 function endRush(): void {
     inRush = false;
-    bots = [];
     pendingBots = 0;
+    warningLatched = false;
     nextRushAt = elapsed + rushInterval(currentDifficulty.rushEvery, elapsed);
     spawnPipe(CANVAS_WIDTH + 40);
 }
 
 function maybeSpawnBots(dt: number): void {
-    if (pendingBots <= 0 || rushT < 2) {
+    if (pendingBots <= 0 || rushT < 1.4 || rushLeft <= 0) {
+        return;
+    }
+    if (rushLeft < BOT_SHOT_WINDOW + 0.4) {
         return;
     }
     botCooldown -= dt;
@@ -780,13 +824,13 @@ function maybeSpawnBots(dt: number): void {
     if (!warningLatched) {
         playSound('warningSound');
         warningLatched = true;
-        botCooldown = 0.45;
+        botCooldown = 0.4;
         return;
     }
     bots.push(createBugBot(birdY));
     pendingBots -= 1;
     warningLatched = false;
-    botCooldown = 0.8;
+    botCooldown = 0.55;
 }
 
 function updateBots(dt: number, hit: { x: number; y: number; w: number; h: number }): boolean {

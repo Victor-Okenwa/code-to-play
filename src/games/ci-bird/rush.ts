@@ -38,21 +38,30 @@ export function rushInterval(base: number, elapsed: number): number {
 
 export function rushDuration(elapsed: number): number {
     const t = Math.min(1, elapsed / 140);
-    const min = 5 + 3 * t;
-    const max = Math.min(10, 6.5 + 3.5 * t);
-    return min + Math.random() * Math.max(0.2, max - min);
+    const min = 8 + 1.5 * t;
+    const max = Math.min(12, 10 + 2 * t);
+    return min + Math.random() * Math.max(0.3, max - min);
 }
+
+export const FORMATION_ENTRY_X = CANVAS_WIDTH + 96;
+export const FORMATION_SPACING = 200;
 
 export function bugBotCount(elapsed: number): number {
     return Math.min(5, 1 + Math.floor(elapsed / 28));
 }
 
+export function formationOriginY(): number {
+    const min = 150;
+    const max = CANVAS_HEIGHT - 150;
+    return min + Math.random() * (max - min);
+}
+
 export function buildFormation(
     kind: FormationKind,
-    includeDiamond: boolean
+    includeDiamond: boolean,
+    cx = FORMATION_ENTRY_X,
+    cy = CANVAS_HEIGHT * 0.48
 ): Collectible[] {
-    const cx = CANVAS_WIDTH * 0.62;
-    const cy = CANVAS_HEIGHT * 0.48;
     const points = shapePoints(kind, cx, cy);
     const coins: Collectible[] = points.map(([x, y]) => ({
         x,

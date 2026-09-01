@@ -20,9 +20,12 @@ export interface LaserHit {
     x1: number;
 }
 
-const FOLLOW = 2;
-const LOCK = 0.35;
-const SHOOT = 0.28;
+const FOLLOW = 1.15;
+const LOCK = 0.28;
+const SHOOT = 0.75;
+
+/** Time from spawn to the end of the laser. */
+export const BOT_SHOT_WINDOW = FOLLOW + LOCK + SHOOT;
 
 export function createBugBot(birdY: number): BugBot {
     return {
@@ -31,7 +34,7 @@ export function createBugBot(birdY: number): BugBot {
         lockY: birdY,
         phase: 'follow',
         phaseT: 0,
-        vx: -90,
+        vx: -160,
         laserActive: false,
         laserT: 0,
         hit: false
@@ -97,17 +100,23 @@ export function botOffscreen(bot: BugBot): boolean {
     return bot.phase === 'exit' && bot.x > CANVAS_WIDTH + 40;
 }
 
+export function botIsAttacking(bot: BugBot): boolean {
+    return bot.phase === 'follow' || bot.phase === 'lock' || bot.phase === 'shoot';
+}
+
 export function drawBugBot(ctx: CanvasRenderingContext2D, bot: BugBot): void {
     const laser = botLaser(bot);
     if (laser) {
-        ctx.strokeStyle = '#ff6b6b';
-        ctx.lineWidth = 3;
+        ctx.fillStyle = 'rgba(255, 120, 100, 0.28)';
+        ctx.fillRect(laser.x0, laser.y - 7, laser.x1 - laser.x0, 14);
+        ctx.strokeStyle = 'rgba(255, 210, 180, 0.9)';
+        ctx.lineWidth = 8;
         ctx.beginPath();
         ctx.moveTo(laser.x0, laser.y);
         ctx.lineTo(laser.x1, laser.y);
         ctx.stroke();
-        ctx.strokeStyle = 'rgba(255, 200, 180, 0.7)';
-        ctx.lineWidth = 8;
+        ctx.strokeStyle = '#ff6b6b';
+        ctx.lineWidth = 3;
         ctx.stroke();
     }
 
