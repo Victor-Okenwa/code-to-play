@@ -218,6 +218,26 @@ body {
   font-weight: bold;
 }
 
+.difficulty-selection .start-game-btn {
+  margin-top: 20px;
+}
+
+.character-selection .start-game-btn,
+.character-selection .back-btn {
+  display: block;
+  width: 100%;
+  margin-left: 0;
+  margin-right: 0;
+}
+
+.character-selection .start-game-btn {
+  margin-top: 20px;
+}
+
+.character-selection .back-btn {
+  margin-top: 20px;
+}
+
 .back-btn {
   background: #3e3e42;
 }

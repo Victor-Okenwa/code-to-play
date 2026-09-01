@@ -658,41 +658,41 @@ function update(dt: number): void {
     const scroll = worldScroll();
     updateRush(dt, scroll);
 
+    for (const pipe of pipes) {
+        pipe.x -= scroll * dt;
+    }
+
+    while (pipes.length > 0 && pipes[0].x + PIPE_WIDTH < -20) {
+        pipes.shift();
+    }
+
     if (!inRush) {
-        for (const pipe of pipes) {
-            pipe.x -= scroll * dt;
-        }
-
-        while (pipes.length > 0 && pipes[0].x + PIPE_WIDTH < -20) {
-            pipes.shift();
-        }
-
         const last = pipes[pipes.length - 1];
         if (!last || last.x < CANVAS_WIDTH - currentDifficulty.spacing) {
             spawnPipe(CANVAS_WIDTH + PIPE_WIDTH);
         }
+    }
 
-        for (const pipe of pipes) {
-            if (!pipe.scored && pipe.x + PIPE_WIDTH < BIRD_X) {
-                pipe.scored = true;
-                score += 1;
-                updateHud();
-            }
+    for (const pipe of pipes) {
+        if (!pipe.scored && pipe.x + PIPE_WIDTH < BIRD_X) {
+            pipe.scored = true;
+            score += 1;
+            updateHud();
+        }
 
-            if (invuln > 0) {
-                continue;
-            }
+        if (invuln > 0) {
+            continue;
+        }
 
-            const inX = hit.x + hit.w > pipe.x && hit.x < pipe.x + PIPE_WIDTH;
-            if (!inX) {
-                continue;
-            }
+        const inX = hit.x + hit.w > pipe.x && hit.x < pipe.x + PIPE_WIDTH;
+        if (!inX) {
+            continue;
+        }
 
-            const inGap = hit.y >= pipe.gapY && hit.y + hit.h <= pipe.gapY + pipe.gapH;
-            if (!inGap) {
-                onHit();
-                return;
-            }
+        const inGap = hit.y >= pipe.gapY && hit.y + hit.h <= pipe.gapY + pipe.gapH;
+        if (!inGap) {
+            onHit();
+            return;
         }
     }
 
@@ -761,7 +761,6 @@ function startRush(): void {
     inRush = true;
     rushT = 0;
     rushLeft = rushDuration(elapsed);
-    pipes = [];
     warningLatched = false;
     pendingBots = bugBotCount(elapsed);
     botCooldown = 0;
@@ -884,6 +883,14 @@ function flap(): void {
     playSound('popSound');
 }
 
+function diveFromInput(): void {
+    if (!isRunning || isPaused) {
+        return;
+    }
+    birdVy = Math.min(currentDifficulty.maxFall, Math.abs(flapImpulse()) * 0.9);
+    playSound('popSound');
+}
+
 function togglePause(): void {
     if (!isRunning) {
         return;
@@ -950,6 +957,9 @@ function handleKeyDown(event: KeyboardEvent): void {
             event.preventDefault();
             cycleCharacter(1);
         }
+        if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+            event.preventDefault();
+        }
         if (event.key === 'Enter') {
             event.preventDefault();
             onCharacterAction();
@@ -957,9 +967,19 @@ function handleKeyDown(event: KeyboardEvent): void {
         return;
     }
 
-    if (event.key === ' ') {
+    if (event.key === ' ' || event.key === 'ArrowUp') {
         event.preventDefault();
-        flapFromInput();
+        if (!event.repeat) {
+            flapFromInput();
+        }
+        return;
+    }
+
+    if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        if (!event.repeat) {
+            diveFromInput();
+        }
         return;
     }
 
@@ -983,10 +1003,8 @@ function draw(ts: number): void {
     ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
     drawBackdrop();
-    if (!inRush) {
-        for (const pipe of pipes) {
-            drawPipe(pipe);
-        }
+    for (const pipe of pipes) {
+        drawPipe(pipe);
     }
 
     for (const item of collectibles) {
