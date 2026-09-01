@@ -501,12 +501,20 @@ function exitFocusPlay(): void {
     }
 }
 
+function isOnMenuScreen(): boolean {
+    const difficulty = document.getElementById('difficultySelection');
+    const characters = document.getElementById('characterSelection');
+    const difficultyOpen = difficulty
+        ? window.getComputedStyle(difficulty).display !== 'none'
+        : false;
+    const charactersOpen = characters
+        ? window.getComputedStyle(characters).display !== 'none'
+        : false;
+    return difficultyOpen || charactersOpen;
+}
+
 function isOnDifficultyScreen(): boolean {
-    const el = document.getElementById('difficultySelection');
-    if (!el) {
-        return false;
-    }
-    return window.getComputedStyle(el).display !== 'none';
+    return isOnMenuScreen();
 }
 
 function canUseFocus(): boolean {
@@ -522,8 +530,11 @@ function updateFullscreenButtonVisibility(): void {
     }
 
     if (toolbarHint) {
-        toolbarHint.textContent = isOnDifficultyScreen()
-            ? 'Choose difficulty'
+        toolbarHint.textContent = isOnMenuScreen()
+            ? (document.getElementById('characterSelection')
+                && window.getComputedStyle(document.getElementById('characterSelection') as HTMLElement).display !== 'none'
+                    ? 'Choose character'
+                    : 'Choose difficulty')
             : 'Ctrl+M mute · Ctrl+F focus';
     }
 }

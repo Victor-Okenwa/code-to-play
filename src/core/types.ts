@@ -248,7 +248,68 @@ export enum StorageKey {
     CONFIG = 'codeToPlay.config',
 
     /** User preferences */
-    PREFERENCES = 'codeToPlay.preferences'
+    PREFERENCES = 'codeToPlay.preferences',
+
+    /** CI Bird gold, diamonds, and unlocked characters */
+    CI_BIRD_ECONOMY = 'codeToPlay.ciBirdEconomy'
+}
+
+export const CI_BIRD_CHARACTER_IDS = [
+    'green',
+    'blue',
+    'yellow',
+    'red',
+    'magenta',
+    'white',
+    'pelican',
+    'swan',
+    'eagle',
+    'robo',
+    'wooden'
+] as const;
+
+export type CiBirdCharacterId = (typeof CI_BIRD_CHARACTER_IDS)[number];
+
+export interface CiBirdEconomy {
+    gold: number;
+    diamonds: number;
+    unlocked: string[];
+    selected: string;
+}
+
+export const DEFAULT_CI_BIRD_ECONOMY: CiBirdEconomy = {
+    gold: 0,
+    diamonds: 0,
+    unlocked: ['green'],
+    selected: 'green'
+};
+
+export function normalizeCiBirdEconomy(raw: unknown): CiBirdEconomy {
+    const valid = new Set<string>(CI_BIRD_CHARACTER_IDS);
+    if (!raw || typeof raw !== 'object') {
+        return { ...DEFAULT_CI_BIRD_ECONOMY, unlocked: [...DEFAULT_CI_BIRD_ECONOMY.unlocked] };
+    }
+
+    const data = raw as Partial<CiBirdEconomy>;
+    const gold = typeof data.gold === 'number' && Number.isFinite(data.gold)
+        ? Math.max(0, Math.floor(data.gold))
+        : 0;
+    const diamonds = typeof data.diamonds === 'number' && Number.isFinite(data.diamonds)
+        ? Math.max(0, Math.floor(data.diamonds))
+        : 0;
+
+    const unlocked = Array.isArray(data.unlocked)
+        ? [...new Set(data.unlocked.filter(id => typeof id === 'string' && valid.has(id)))]
+        : [];
+    if (!unlocked.includes('green')) {
+        unlocked.unshift('green');
+    }
+
+    const selected = typeof data.selected === 'string' && unlocked.includes(data.selected)
+        ? data.selected
+        : 'green';
+
+    return { gold, diamonds, unlocked, selected };
 }
 
 /**

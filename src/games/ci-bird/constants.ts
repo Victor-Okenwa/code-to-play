@@ -1,0 +1,12 @@
+export const CANVAS_WIDTH = 360;
+export const CANVAS_HEIGHT = 480;
+export const BIRD_X = 78;
+export const BIRD_W = 22;
+export const BIRD_H = 16;
+export const PIPE_WIDTH = 52;
+export const PIPE_MARGIN = 36;
+export const PAUSE_LABEL = 'Pause (P)';
+export const GATE_LABELS = ['lint', 'test', 'typecheck', 'deploy'] as const;
+export const INVULN_TIME = 1.4;
+export const COIN_RADIUS = 7;
+export const DIAMOND_RADIUS = 8;

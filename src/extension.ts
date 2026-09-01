@@ -13,7 +13,7 @@ import { createActivityBarView } from './ui/ActivityBarProvider';
 import { createStatusBar } from './ui/StatusBarManager';
 import { createWebviewManager } from './ui/WebViewManager';
 import { AllGames } from './games/registry';
-import { GameEvent, formatHighScores, DEFAULT_DIFFICULTY_KEY } from './core/types';
+import { GameEvent, formatHighScores, DEFAULT_DIFFICULTY_KEY, CI_BIRD_CHARACTER_IDS } from './core/types';
 import { AuthManager } from './auth/AuthManager';
 import { StatsSync } from './stats/StatsSync';
 import { EntitlementsSync } from './billing/EntitlementsSync';
@@ -230,6 +230,69 @@ export function activate(context: vscode.ExtensionContext) {
 		);
 	});
 
+	const ciBirdGrantGold = vscode.commands.registerCommand('codeToPlay.ciBirdGrantGold', async () => {
+		if (!isLocalDev) {
+			return;
+		}
+
+		const amountText = await vscode.window.showInputBox({
+			title: 'CI Bird: Grant Gold',
+			prompt: 'How many gold coins to add?',
+			value: '500',
+			validateInput: value => Number.isInteger(Number(value)) && Number(value) >= 0
+				? undefined
+				: 'Enter a non-negative integer'
+		});
+		if (amountText === undefined) {
+			return;
+		}
+
+		const economy = storageManager.getCiBirdEconomy();
+		economy.gold += Number(amountText);
+		await storageManager.saveCiBirdEconomy(economy);
+		webviewManager.sendCiBirdEconomy();
+		vscode.window.showInformationMessage(`CI Bird wallet: ${economy.gold} gold, ${economy.diamonds} diamonds.`);
+	});
+
+	const ciBirdGrantDiamonds = vscode.commands.registerCommand('codeToPlay.ciBirdGrantDiamonds', async () => {
+		if (!isLocalDev) {
+			return;
+		}
+
+		const amountText = await vscode.window.showInputBox({
+			title: 'CI Bird: Grant Diamonds',
+			prompt: 'How many diamonds to add?',
+			value: '100',
+			validateInput: value => Number.isInteger(Number(value)) && Number(value) >= 0
+				? undefined
+				: 'Enter a non-negative integer'
+		});
+		if (amountText === undefined) {
+			return;
+		}
+
+		const economy = storageManager.getCiBirdEconomy();
+		economy.diamonds += Number(amountText);
+		await storageManager.saveCiBirdEconomy(economy);
+		webviewManager.sendCiBirdEconomy();
+		vscode.window.showInformationMessage(`CI Bird wallet: ${economy.gold} gold, ${economy.diamonds} diamonds.`);
+	});
+
+	const ciBirdUnlockCharacters = vscode.commands.registerCommand('codeToPlay.ciBirdUnlockCharacters', async () => {
+		if (!isLocalDev) {
+			return;
+		}
+
+		const economy = storageManager.getCiBirdEconomy();
+		economy.unlocked = [...CI_BIRD_CHARACTER_IDS];
+		if (!economy.unlocked.includes(economy.selected)) {
+			economy.selected = 'green';
+		}
+		await storageManager.saveCiBirdEconomy(economy);
+		webviewManager.sendCiBirdEconomy();
+		vscode.window.showInformationMessage('All CI Bird characters unlocked.');
+	});
+
 	// Command to import data
 	const importDataCommand = vscode.commands.registerCommand('codeToPlay.importData', async () => {
 		if (!isLocalDev) {
@@ -379,6 +442,9 @@ export function activate(context: vscode.ExtensionContext) {
 		lockAllGames,
 		unlockPro,
 		lockPro,
+		ciBirdGrantGold,
+		ciBirdGrantDiamonds,
+		ciBirdUnlockCharacters,
 		importDataCommand,
 		resetGameStateCommand
 	);

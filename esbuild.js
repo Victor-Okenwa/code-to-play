@@ -206,12 +206,12 @@ async function build() {
       logLevel: "info",
     };
 
-    // Build games separately (don't bundle, just compile)
+    // Build games separately as browser IIFEs (bundle so games can import modules)
     const gameOptions = gameEntryPoints.map((entry) => ({
       entryPoints: [entry.in],
-      bundle: false, // Don't bundle game files
+      bundle: true,
       outfile: `dist/${entry.out}.js`,
-      format: "iife", // Immediately Invoked Function Expression
+      format: "iife",
       platform: "browser",
       target: "es2020",
       sourcemap: !isProduction,

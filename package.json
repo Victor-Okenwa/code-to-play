@@ -179,6 +179,24 @@
         "when": "codeToPlay:isDev"
       },
       {
+        "command": "codeToPlay.ciBirdGrantGold",
+        "title": "CI Bird: Grant Gold",
+        "category": "Code to Play",
+        "when": "codeToPlay:isDev"
+      },
+      {
+        "command": "codeToPlay.ciBirdGrantDiamonds",
+        "title": "CI Bird: Grant Diamonds",
+        "category": "Code to Play",
+        "when": "codeToPlay:isDev"
+      },
+      {
+        "command": "codeToPlay.ciBirdUnlockCharacters",
+        "title": "CI Bird: Unlock All Characters",
+        "category": "Code to Play",
+        "when": "codeToPlay:isDev"
+      },
+      {
         "command": "codeToPlay.signIn",
         "title": "Sign in with GitHub",
         "category": "Code to Play"

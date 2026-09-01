@@ -14,7 +14,9 @@ import {
     DEFAULT_CONFIG,
     DEFAULT_GLOBAL_PLAY_STATE,
     GlobalPlayState,
-    normalizeGameState
+    normalizeGameState,
+    CiBirdEconomy,
+    normalizeCiBirdEconomy
 } from './types';
 
 /**
@@ -129,6 +131,19 @@ export class StorageManager implements vscode.Disposable {
         }
 
         return states;
+    }
+
+    getCiBirdEconomy(): CiBirdEconomy {
+        return normalizeCiBirdEconomy(
+            this.globalState.get<unknown>(StorageKey.CI_BIRD_ECONOMY)
+        );
+    }
+
+    async saveCiBirdEconomy(state: CiBirdEconomy): Promise<void> {
+        await this.globalState.update(
+            StorageKey.CI_BIRD_ECONOMY,
+            normalizeCiBirdEconomy(state)
+        );
     }
 
     // ========================================

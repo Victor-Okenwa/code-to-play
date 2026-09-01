@@ -6,8 +6,11 @@
 
 - **CI Bird** (free):
   - One-button flyer through scrolling CI gates labeled lint, test, typecheck, and deploy
-  - Each green gap is a passing check; hit a pipe, the ceiling, or the floor and the build fails
-  - Easy, Hard, and Very Hard change gravity, gap size, and scroll speed
+  - Gold coins and rare diamonds unlock a roster of birds (Green is free; exotic birds cost diamonds)
+  - Character select after difficulty, with last selected bird remembered
+  - Rush hour every 20/15/10s (Easy/Medium/Hard): pipes clear, coin formations, then bug bots lock and shoot
+  - Easy and Medium ramp scroll speed and gap tightness over time; gravity stays constant
+  - Resurrection lives do not spend an extra play; the final crash does
   - Shares the same play pool as Debug Snake and Whack-a-Bug
 
 ## [1.1.0] - 2026-08-21

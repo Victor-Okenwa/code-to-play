@@ -10,7 +10,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { IGame, getHighScoreFor, DEFAULT_DIFFICULTY_KEY, resolveDifficultyKey } from '../core/types';
+import { IGame, getHighScoreFor, DEFAULT_DIFFICULTY_KEY, resolveDifficultyKey, CiBirdEconomy } from '../core/types';
 import { GameManager } from '../core/GameManager';
 
 export class WebviewManager {
@@ -122,6 +122,9 @@ export class WebviewManager {
             if (e.webviewPanel.visible) {
                 this.sendSoundConfig(gameId);
                 this.sendDisplayConfig(gameId);
+                if (gameId === 'ci-bird') {
+                    this.sendCiBirdEconomy();
+                }
             }
         });
     }
@@ -182,6 +185,9 @@ export class WebviewManager {
             setTimeout(() => {
                 this.sendSoundConfig(game.id);
                 this.sendDisplayConfig(game.id);
+                if (game.id === 'ci-bird') {
+                    this.sendCiBirdEconomy();
+                }
             }, 500);
         } catch (error) {
             console.error(`[WebviewManager] Error:`, error);
@@ -512,6 +518,15 @@ export class WebviewManager {
                 console.log(`[${gameId}] Ready`);
                 this.sendSoundConfig(gameId);
                 this.sendDisplayConfig(gameId);
+                if (gameId === 'ci-bird') {
+                    this.sendCiBirdEconomy();
+                }
+                break;
+
+            case 'ciBirdSaveEconomy':
+                if (gameId === 'ci-bird') {
+                    await this.saveCiBirdEconomy(message);
+                }
                 break;
 
             default:
@@ -562,6 +577,47 @@ export class WebviewManager {
         if (panel) {
             panel.webview.postMessage(message);
         }
+    }
+
+    sendCiBirdEconomy(): void {
+        const panel = this.activePanels.get('ci-bird');
+        if (!panel) {
+            return;
+        }
+
+        const economy = this.storage().getCiBirdEconomy();
+        panel.webview.postMessage({
+            command: 'ciBirdEconomy',
+            gold: economy.gold,
+            diamonds: economy.diamonds,
+            unlocked: economy.unlocked,
+            selected: economy.selected
+        });
+    }
+
+    private storage(): { getCiBirdEconomy(): CiBirdEconomy; saveCiBirdEconomy(state: CiBirdEconomy): Promise<void> } {
+        return (this.gameManager as unknown as {
+            storageManager: {
+                getCiBirdEconomy(): CiBirdEconomy;
+                saveCiBirdEconomy(state: CiBirdEconomy): Promise<void>;
+            };
+        }).storageManager;
+    }
+
+    private async saveCiBirdEconomy(message: {
+        gold?: unknown;
+        diamonds?: unknown;
+        unlocked?: unknown;
+        selected?: unknown;
+    }): Promise<void> {
+        await this.storage().saveCiBirdEconomy({
+            gold: typeof message.gold === 'number' ? message.gold : 0,
+            diamonds: typeof message.diamonds === 'number' ? message.diamonds : 0,
+            unlocked: Array.isArray(message.unlocked)
+                ? message.unlocked.filter((id): id is string => typeof id === 'string')
+                : ['green'],
+            selected: typeof message.selected === 'string' ? message.selected : 'green'
+        });
     }
 
     // ========================================
