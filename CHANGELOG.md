@@ -1,7 +1,5 @@
 # Changelog
 
-## [Unreleased]
-
 ## [1.2.0] - 2026-09-02
 
 ### Added
@@ -196,3 +194,4 @@
 - Lazy loading of game assets
 - Efficient event listener management
 - Debounced code change detection
+

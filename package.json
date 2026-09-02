@@ -283,11 +283,6 @@
           "type": "boolean",
           "default": false,
           "description": "Automatically open focus play mode when a game is opened"
-        },
-        "codeToPlay.apiBaseUrl": {
-          "type": "string",
-          "default": "",
-          "description": "Code to Play website URL used for editor sign-in. Leave empty to use http://localhost:4555 in development."
         }
       }
     }
