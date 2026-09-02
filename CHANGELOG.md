@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-09-02
+
 ### Added
 
 - **Debug Snake** (free):
