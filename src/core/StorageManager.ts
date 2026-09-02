@@ -16,7 +16,9 @@ import {
     GlobalPlayState,
     normalizeGameState,
     CiBirdEconomy,
-    normalizeCiBirdEconomy
+    normalizeCiBirdEconomy,
+    DebugSnakeEconomy,
+    normalizeDebugSnakeEconomy
 } from './types';
 
 /**
@@ -143,6 +145,19 @@ export class StorageManager implements vscode.Disposable {
         await this.globalState.update(
             StorageKey.CI_BIRD_ECONOMY,
             normalizeCiBirdEconomy(state)
+        );
+    }
+
+    getDebugSnakeEconomy(): DebugSnakeEconomy {
+        return normalizeDebugSnakeEconomy(
+            this.globalState.get<unknown>(StorageKey.DEBUG_SNAKE_ECONOMY)
+        );
+    }
+
+    async saveDebugSnakeEconomy(state: DebugSnakeEconomy): Promise<void> {
+        await this.globalState.update(
+            StorageKey.DEBUG_SNAKE_ECONOMY,
+            normalizeDebugSnakeEconomy(state)
         );
     }
 

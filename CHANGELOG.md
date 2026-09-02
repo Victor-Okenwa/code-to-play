@@ -4,6 +4,11 @@
 
 ### Added
 
+- **Debug Snake** (free):
+  - Character select after difficulty with six snakes (Green free; Blue/Yellow/Purple cost bugs; Red/Robot cost pink balls)
+  - Wallet bugs from ladybugs and pink balls from timed pickups (every 10/8/6 bugs on Easy/Medium/Hard; 5s timeout)
+  - Red Snake +0.15 speed; Robot Snake +0.15 speed and +1 resurrection (final crash spends a play)
+  - Easy / Medium / Hard difficulty remap with score migration
 - **CI Bird** (free):
   - One-button flyer through scrolling CI gates labeled lint, test, typecheck, and deploy
   - Gold coins and rare diamonds unlock a roster of birds (Green is free; exotic birds cost diamonds)

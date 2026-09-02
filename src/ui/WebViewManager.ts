@@ -10,7 +10,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { IGame, getHighScoreFor, DEFAULT_DIFFICULTY_KEY, resolveDifficultyKey, CiBirdEconomy } from '../core/types';
+import { IGame, getHighScoreFor, DEFAULT_DIFFICULTY_KEY, resolveDifficultyKey, CiBirdEconomy, DebugSnakeEconomy } from '../core/types';
 import { GameManager } from '../core/GameManager';
 
 export class WebviewManager {
@@ -125,6 +125,9 @@ export class WebviewManager {
                 if (gameId === 'ci-bird') {
                     this.sendCiBirdEconomy();
                 }
+                if (gameId === 'debug-snake') {
+                    this.sendDebugSnakeEconomy();
+                }
             }
         });
     }
@@ -187,6 +190,9 @@ export class WebviewManager {
                 this.sendDisplayConfig(game.id);
                 if (game.id === 'ci-bird') {
                     this.sendCiBirdEconomy();
+                }
+                if (game.id === 'debug-snake') {
+                    this.sendDebugSnakeEconomy();
                 }
             }, 500);
         } catch (error) {
@@ -521,11 +527,20 @@ export class WebviewManager {
                 if (gameId === 'ci-bird') {
                     this.sendCiBirdEconomy();
                 }
+                if (gameId === 'debug-snake') {
+                    this.sendDebugSnakeEconomy();
+                }
                 break;
 
             case 'ciBirdSaveEconomy':
                 if (gameId === 'ci-bird') {
                     await this.saveCiBirdEconomy(message);
+                }
+                break;
+
+            case 'debugSnakeSaveEconomy':
+                if (gameId === 'debug-snake') {
+                    await this.saveDebugSnakeEconomy(message);
                 }
                 break;
 
@@ -592,6 +607,50 @@ export class WebviewManager {
             diamonds: economy.diamonds,
             unlocked: economy.unlocked,
             selected: economy.selected
+        });
+    }
+
+    sendDebugSnakeEconomy(): void {
+        const panel = this.activePanels.get('debug-snake');
+        if (!panel) {
+            return;
+        }
+
+        const economy = this.debugSnakeStorage().getDebugSnakeEconomy();
+        panel.webview.postMessage({
+            command: 'debugSnakeEconomy',
+            bugs: economy.bugs,
+            pink: economy.pink,
+            unlocked: economy.unlocked,
+            selected: economy.selected
+        });
+    }
+
+    private debugSnakeStorage(): {
+        getDebugSnakeEconomy(): DebugSnakeEconomy;
+        saveDebugSnakeEconomy(state: DebugSnakeEconomy): Promise<void>;
+    } {
+        return (this.gameManager as unknown as {
+            storageManager: {
+                getDebugSnakeEconomy(): DebugSnakeEconomy;
+                saveDebugSnakeEconomy(state: DebugSnakeEconomy): Promise<void>;
+            };
+        }).storageManager;
+    }
+
+    private async saveDebugSnakeEconomy(message: {
+        bugs?: unknown;
+        pink?: unknown;
+        unlocked?: unknown;
+        selected?: unknown;
+    }): Promise<void> {
+        await this.debugSnakeStorage().saveDebugSnakeEconomy({
+            bugs: typeof message.bugs === 'number' ? message.bugs : 0,
+            pink: typeof message.pink === 'number' ? message.pink : 0,
+            unlocked: Array.isArray(message.unlocked)
+                ? message.unlocked.filter((id): id is string => typeof id === 'string')
+                : ['green'],
+            selected: typeof message.selected === 'string' ? message.selected : 'green'
         });
     }
 

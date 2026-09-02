@@ -49,29 +49,29 @@
                 <span class="difficulty-name">EASY</span>
               </div>
               <div class="difficulty-description">
-                Slower pace • More time between speed increases • Great for breaks
+                Slower pace • Pink ball every 10 bugs • Great for breaks
               </div>
               <div class="difficulty-best">Best: <span data-difficulty-best="easy">0</span></div>
             </div>
-            <div class="difficulty-card" id="hardCard" data-difficulty="hard">
+            <div class="difficulty-card" id="mediumCard" data-difficulty="medium">
               <div class="difficulty-header">
                 <span class="difficulty-indicator">🟡</span>
+                <span class="difficulty-name">MEDIUM</span>
+              </div>
+              <div class="difficulty-description">
+                Faster movement • Pink ball every 8 bugs
+              </div>
+              <div class="difficulty-best">Best: <span data-difficulty-best="medium">0</span></div>
+            </div>
+            <div class="difficulty-card" id="hardCard" data-difficulty="hard">
+              <div class="difficulty-header">
+                <span class="difficulty-indicator">🔴</span>
                 <span class="difficulty-name">HARD</span>
               </div>
               <div class="difficulty-description">
-                Faster movement • Speed ramps up quicker • For experienced debuggers
+                Blazing speed • Pink ball every 6 bugs
               </div>
               <div class="difficulty-best">Best: <span data-difficulty-best="hard">0</span></div>
-            </div>
-            <div class="difficulty-card" id="veryHardCard" data-difficulty="veryHard">
-              <div class="difficulty-header">
-                <span class="difficulty-indicator">🔴</span>
-                <span class="difficulty-name">VERY HARD</span>
-              </div>
-              <div class="difficulty-description">
-                Blazing speed • Rapid acceleration • Maximum challenge
-              </div>
-              <div class="difficulty-best">Best: <span data-difficulty-best="veryHard">0</span></div>
             </div>
           </div>
           <button class="btn start-game-btn" id="enterGameBtn">Choose Difficulty</button>
@@ -81,40 +81,61 @@
             <div class="about-game-body">
               <h3>What it is</h3>
               <p>
-                Classic snake with a debugging twist. Steer a green snake, eat
-                red ladybugs, and grow without hitting a wall or yourself.
-                Each bug you catch is a “bug fixed” on the scoreboard.
+                Classic snake with a debugging twist. Steer your snake, eat red
+                ladybugs to grow, and bank bugs in your wallet. Pink balls spawn
+                on a timer — grab them for premium snakes. Unlock six snakes
+                from the character shop.
               </p>
               <h3>Difficulty</h3>
               <ul>
                 <li>
-                  <strong>Easy</strong> — Slow movement. Speed steps up every
-                  6 bugs. Best for a short break.
+                  <strong>Easy</strong> — Slow movement. Pink ball every 10 bugs.
+                  Speed steps up every 6 bugs.
                 </li>
                 <li>
-                  <strong>Hard</strong> — Faster start. Speed ramps every 5
-                  bugs.
+                  <strong>Medium</strong> — Faster start. Pink ball every 8 bugs.
+                  Speed ramps every 5 bugs.
                 </li>
                 <li>
-                  <strong>Very Hard</strong> — Fastest start and the quickest
-                  acceleration. Speed steps up every 4 bugs.
+                  <strong>Hard</strong> — Fastest start. Pink ball every 6 bugs.
+                  Speed ramps every 4 bugs.
                 </li>
               </ul>
               <h3>How to play</h3>
               <p>
-                Pick a difficulty, then Choose Difficulty. On the play screen,
-                press Start Debugging. One play is spent when the snake dies.
-                High scores are stored per difficulty on this machine.
+                Pick a difficulty, choose a snake, then Start Debugging. One play
+                is spent only on the final crash. Extra lives from some snakes
+                resurrect you once without spending another play.
               </p>
               <ul>
                 <li><strong>Arrow keys</strong> — Steer. You cannot reverse into yourself.</li>
                 <li><strong>Space</strong> — Pause or resume.</li>
                 <li><strong>Ctrl+M</strong> — Mute. <strong>Ctrl+F</strong> — Focus play.</li>
-                <li>Eat ladybugs to grow and score. Speed increases as you clear more bugs.</li>
-                <li>Hit a wall or your own tail and the debug session is over.</li>
+                <li>Ladybugs add bugs to your wallet. Pink balls vanish after 5 seconds.</li>
               </ul>
             </div>
           </section>
+        </div>
+
+        <div class="character-selection" id="characterSelection" style="display: none">
+          <h2 class="difficulty-title">Choose Character</h2>
+          <p class="wallet-line">
+            Bugs <span id="walletBugs">0</span>
+            · Pink <span id="walletPink">0</span>
+          </p>
+          <canvas id="characterPreview" width="220" height="160"></canvas>
+          <div class="char-nav">
+            <button type="button" class="btn char-arrow" id="charPrevBtn" aria-label="Previous character">◀</button>
+            <div class="char-meta">
+              <h3 id="charName">Green Snake</h3>
+              <p id="charCost">Free</p>
+              <p id="charMods">No special ability</p>
+              <p id="charLocked"></p>
+            </div>
+            <button type="button" class="btn char-arrow" id="charNextBtn" aria-label="Next character">▶</button>
+          </div>
+          <button class="btn start-game-btn" id="charActionBtn">Select</button>
+          <button class="btn back-btn" id="charBackBtn">Change Difficulty</button>
         </div>
 
         <div class="game-play" id="gamePlay" style="display: none" data-focus-pause-key="Space">
@@ -131,6 +152,18 @@
               <div class="score-label">Speed Level</div>
               <div class="score-value" id="speed">1</div>
             </div>
+            <div class="score-item">
+              <div class="score-label">Bugs</div>
+              <div class="score-value" id="bugsHud">0 / 0</div>
+            </div>
+            <div class="score-item">
+              <div class="score-label">Pink</div>
+              <div class="score-value" id="pinkHud">0 / 0</div>
+            </div>
+            <div class="score-item">
+              <div class="score-label">Lives</div>
+              <div class="score-value" id="livesHud">1</div>
+            </div>
           </div>
 
           <div class="game-area focus-play-target">
@@ -146,7 +179,7 @@
           <div class="controls">
             <button class="btn" id="startBtn">Start Debugging</button>
             <button class="btn" id="pauseBtn" style="display: none">Pause (SPC)</button>
-            <button class="btn back-btn" id="backToMenuBtn">Change Difficulty</button>
+            <button class="btn back-btn" id="backToMenuBtn">Change Character</button>
           </div>
         </div>
 
@@ -156,15 +189,17 @@
             <h3>Controls</h3>
             <ul>
               <li><strong>Arrow Keys</strong> — Move snake</li>
+              <li><strong>Left / Right</strong> — Cycle characters</li>
               <li><strong>Space</strong> — Pause/Resume</li>
               <li><strong>Ctrl+M</strong> — Toggle sound</li>
               <li><strong>Ctrl+F</strong> — Toggle focus play mode</li>
             </ul>
             <h3>Rules</h3>
             <ul>
-              <li>Catch red ladybugs to grow your green snake</li>
-              <li>Avoid hitting walls or yourself</li>
-              <li>Speed increases as you catch more bugs</li>
+              <li>Catch red ladybugs to grow and earn wallet bugs</li>
+              <li>Pink balls appear every N bugs (10/8/6) and expire after 5 seconds</li>
+              <li>Buy snakes with bugs or pink balls; Red and Robot add speed or lives</li>
+              <li>Hit a wall or your tail and you lose a life — final crash spends a play</li>
             </ul>
           </details>
         </div>

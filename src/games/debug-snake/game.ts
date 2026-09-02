@@ -1,52 +1,52 @@
 /**
- * game.ts - Debug Snake Game Logic
- * 
+ * game.ts - Debug Snake
+ *
+ * Snake with character shop, bug/pink wallet, and timed pink pickups.
  */
 
-// ========================================
-// TYPE DEFINITIONS
-// ========================================
-
-interface SnakeSegment {
-    x: number;
-    y: number;
-}
-
-interface Position {
-    x: number;
-    y: number;
-}
-// ========================================
-// DECLARE GLOBAL VSCODE API
-// This is injected by WebviewManager, not imported
-// ========================================
+import { drawSnakePreview, drawSnakeSegment } from './characters';
+import {
+    CANVAS_SIZE,
+    GRID_SIZE,
+    INITIAL_SNAKE_LENGTH,
+    INITIAL_SNAKE_X,
+    INITIAL_SNAKE_Y,
+    INVULN_TICKS,
+    PINK_TIMEOUT,
+    TILE_COUNT
+} from './constants';
+import {
+    addCurrency,
+    applyEconomy,
+    getWallet,
+    isUnlocked,
+    persistNow,
+    requestReady,
+    selectOwned,
+    spend
+} from './economy';
+import { formatCost, formatMods, getSnake, SNAKES, type SnakeId } from './roster';
 
 declare const vscode: {
-    postMessage(message: any): void;
+    postMessage(message: Record<string, unknown>): void;
 };
 
-// Declare SoundManager as global (injected by WebviewManager)
 declare const soundManager: {
     playById(id: string): void;
-    setMuted(muted: boolean): void;
-    isSoundMuted(): boolean;
-    setVolume(volume: number): void;
-    getVolume(): number;
     preloadAll(): void;
 };
 
 declare const initGameChrome: () => void;
 
 declare const gameChrome: {
-    refreshMuteUI(): void;
-    applyZoom(zoom: number): void;
     setDifficultyBadge(label: string): void;
     refreshToolbarPhase(): void;
 };
 
-// ========================================
-// TYPE DEFINITIONS
-// ========================================
+interface SnakeSegment {
+    x: number;
+    y: number;
+}
 
 interface SnakeDifficulty {
     name: string;
@@ -55,13 +55,25 @@ interface SnakeDifficulty {
     minSpeed: number;
     speedMultiplier: number;
     bugsPerSpeedIncrease: number;
+    pinkEvery: number;
+}
+
+interface PinkBall {
+    x: number;
+    y: number;
+    remainingMs: number;
 }
 
 const canvas = document.getElementById('gameCanvas') as HTMLCanvasElement;
+const previewCanvas = document.getElementById('characterPreview') as HTMLCanvasElement;
 const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
+const previewCtx = previewCanvas?.getContext('2d') as CanvasRenderingContext2D | null;
 const scoreElement = document.getElementById('score') as HTMLElement;
 const highScoreElement = document.getElementById('highScore') as HTMLElement;
 const speedElement = document.getElementById('speed') as HTMLElement;
+const bugsHud = document.getElementById('bugsHud') as HTMLElement;
+const pinkHud = document.getElementById('pinkHud') as HTMLElement;
+const livesHud = document.getElementById('livesHud') as HTMLElement;
 const gameOverElement = document.getElementById('gameOver') as HTMLElement;
 const finalScoreElement = document.getElementById('finalScore') as HTMLElement;
 const startBtn = document.getElementById('startBtn') as HTMLButtonElement;
@@ -70,19 +82,20 @@ const restartBtn = document.getElementById('restartBtn') as HTMLButtonElement;
 const gameOverAlert = document.getElementById('gameOverAlert') as HTMLElement;
 const alertScore = document.getElementById('alertScore') as HTMLElement;
 const difficultySelection = document.getElementById('difficultySelection') as HTMLElement;
+const characterSelection = document.getElementById('characterSelection') as HTMLElement;
 const gamePlay = document.getElementById('gamePlay') as HTMLElement;
 const enterGameBtn = document.getElementById('enterGameBtn') as HTMLButtonElement;
 const backToMenuBtn = document.getElementById('backToMenuBtn') as HTMLButtonElement;
-
-// ========================================
-// GAME CONFIGURATION CONSTANTS
-// ========================================
-
-const GRID_SIZE: number = 20;
-const TILE_COUNT: number = canvas.width / GRID_SIZE;
-const INITIAL_SNAKE_LENGTH: number = 3;
-const INITIAL_SNAKE_X: number = 10;
-const INITIAL_SNAKE_Y: number = 10;
+const charBackBtn = document.getElementById('charBackBtn') as HTMLButtonElement;
+const charPrevBtn = document.getElementById('charPrevBtn') as HTMLButtonElement;
+const charNextBtn = document.getElementById('charNextBtn') as HTMLButtonElement;
+const charActionBtn = document.getElementById('charActionBtn') as HTMLButtonElement;
+const charNameEl = document.getElementById('charName') as HTMLElement;
+const charCostEl = document.getElementById('charCost') as HTMLElement;
+const charModsEl = document.getElementById('charMods') as HTMLElement;
+const walletBugsEl = document.getElementById('walletBugs') as HTMLElement;
+const walletPinkEl = document.getElementById('walletPink') as HTMLElement;
+const charLockedEl = document.getElementById('charLocked') as HTMLElement;
 
 const difficulties: Record<string, SnakeDifficulty> = {
     easy: {
@@ -91,71 +104,112 @@ const difficulties: Record<string, SnakeDifficulty> = {
         initialSpeed: 220,
         minSpeed: 80,
         speedMultiplier: 0.88,
-        bugsPerSpeedIncrease: 6
+        bugsPerSpeedIncrease: 6,
+        pinkEvery: 10
+    },
+    medium: {
+        name: 'Medium',
+        label: 'Medium',
+        initialSpeed: 160,
+        minSpeed: 60,
+        speedMultiplier: 0.85,
+        bugsPerSpeedIncrease: 5,
+        pinkEvery: 8
     },
     hard: {
         name: 'Hard',
         label: 'Hard',
-        initialSpeed: 160,
-        minSpeed: 60,
-        speedMultiplier: 0.85,
-        bugsPerSpeedIncrease: 5
-    },
-    veryHard: {
-        name: 'Very Hard',
-        label: 'Very Hard',
         initialSpeed: 110,
         minSpeed: 45,
         speedMultiplier: 0.82,
-        bugsPerSpeedIncrease: 4
+        bugsPerSpeedIncrease: 4,
+        pinkEvery: 6
     }
 };
 
-// ========================================
-// GAME STATE VARIABLES
-// ========================================
-
-let selectedDifficulty: string = 'easy';
-let currentDifficulty: SnakeDifficulty = difficulties.easy;
-let bugsPerSpeedIncrease: number = currentDifficulty.bugsPerSpeedIncrease;
-let minSpeed: number = currentDifficulty.minSpeed;
-let speedMultiplier: number = currentDifficulty.speedMultiplier;
+let selectedDifficulty = 'easy';
+let currentDifficulty = difficulties.easy;
+let bugsPerSpeedIncrease = currentDifficulty.bugsPerSpeedIncrease;
+let minSpeed = currentDifficulty.minSpeed;
+let speedMultiplier = currentDifficulty.speedMultiplier;
+let pinkEvery = currentDifficulty.pinkEvery;
 
 let snake: SnakeSegment[] = [];
-let snakeLength: number = INITIAL_SNAKE_LENGTH;
-let snakeX: number = INITIAL_SNAKE_X;
-let snakeY: number = INITIAL_SNAKE_Y;
-let velocityX: number = 0;
-let velocityY: number = 0;
-let bugX: number = 15;
-let bugY: number = 15;
-let score: number = 0;
-let highScore: number = 0;
+let snakeLength = INITIAL_SNAKE_LENGTH;
+let snakeX = INITIAL_SNAKE_X;
+let snakeY = INITIAL_SNAKE_Y;
+let velocityX = 0;
+let velocityY = 0;
+let bugX = 15;
+let bugY = 15;
+let pinkBall: PinkBall | null = null;
+let score = 0;
+let runBugs = 0;
+let runPink = 0;
+let highScore = 0;
 let gameLoop: number | null = null;
-let gameSpeed: number = currentDifficulty.initialSpeed;
-let isRunning: boolean = false;
-let isPaused: boolean = false;
+let baseGameSpeed = currentDifficulty.initialSpeed;
+let gameSpeed = baseGameSpeed;
+let isRunning = false;
+let isPaused = false;
+let lives = 1;
+let invulnTicks = 0;
+let browsingIndex = 0;
 
-// ========================================
-// INITIALIZATION
-// ========================================
+function playSound(id: string): void {
+    if (typeof soundManager !== 'undefined') {
+        soundManager.playById(id);
+    }
+}
+
+function selectedSnake() {
+    return getSnake(getWallet().selected);
+}
+
+function speedMod(): number {
+    return selectedSnake().mods.speed;
+}
 
 function init(): void {
     if (typeof initGameChrome === 'function') {
         initGameChrome();
     }
-
     if (typeof soundManager !== 'undefined' && soundManager.preloadAll) {
         soundManager.preloadAll();
     }
 
+    canvas.width = CANVAS_SIZE;
+    canvas.height = CANVAS_SIZE;
+    if (previewCanvas) {
+        previewCanvas.width = 220;
+        previewCanvas.height = 160;
+    }
+
+    migrateHighScores();
     setupDifficultySelection();
+    setupCharacterSelect();
     loadHighScore();
-    updateScoreDisplay();
-    updateSpeedDisplay();
-    placeBug();
+    updateHud();
     setupEventListeners();
+    placeBug();
+    requestReady();
+    refreshCharacterUi();
     drawInitialState();
+}
+
+function migrateHighScores(): void {
+    if (localStorage.getItem('snakeScoreMigratedV2')) {
+        return;
+    }
+    const oldHard = localStorage.getItem('snakeHighScore_hard');
+    const oldVeryHard = localStorage.getItem('snakeHighScore_veryHard');
+    if (oldHard && !localStorage.getItem('snakeHighScore_medium')) {
+        localStorage.setItem('snakeHighScore_medium', oldHard);
+    }
+    if (oldVeryHard) {
+        localStorage.setItem('snakeHighScore_hard', oldVeryHard);
+    }
+    localStorage.setItem('snakeScoreMigratedV2', '1');
 }
 
 function setupDifficultySelection(): void {
@@ -168,13 +222,15 @@ function setupDifficultySelection(): void {
         });
     });
 
-    if (enterGameBtn) {
-        enterGameBtn.addEventListener('click', enterGame);
-    }
+    enterGameBtn?.addEventListener('click', openCharacterSelect);
+    backToMenuBtn?.addEventListener('click', backToCharacters);
+    charBackBtn?.addEventListener('click', backToDifficulty);
+}
 
-    if (backToMenuBtn) {
-        backToMenuBtn.addEventListener('click', backToMenu);
-    }
+function setupCharacterSelect(): void {
+    charPrevBtn?.addEventListener('click', () => cycleCharacter(-1));
+    charNextBtn?.addEventListener('click', () => cycleCharacter(1));
+    charActionBtn?.addEventListener('click', onCharacterAction);
 }
 
 function selectDifficulty(difficulty: string): void {
@@ -188,38 +244,67 @@ function selectDifficulty(difficulty: string): void {
     document.querySelectorAll('.difficulty-card').forEach(card => {
         card.classList.remove('active');
     });
-
-    const selectedCard = document.getElementById(`${difficulty}Card`);
-    if (selectedCard) {
-        selectedCard.classList.add('active');
-    }
+    document.getElementById(`${difficulty}Card`)?.classList.add('active');
 
     loadHighScore();
-    updateScoreDisplay();
+    updateHud();
 }
 
-function enterGame(): void {
+function openCharacterSelect(): void {
     currentDifficulty = difficulties[selectedDifficulty];
-    bugsPerSpeedIncrease = currentDifficulty.bugsPerSpeedIncrease;
-    minSpeed = currentDifficulty.minSpeed;
-    speedMultiplier = currentDifficulty.speedMultiplier;
-    gameSpeed = currentDifficulty.initialSpeed;
-
     loadHighScore();
-    updateScoreDisplay();
+    const selectedId = getWallet().selected;
+    const index = SNAKES.findIndex(snake => snake.id === selectedId);
+    browsingIndex = index >= 0 ? index : 0;
 
     difficultySelection.style.display = 'none';
-    gamePlay.style.display = 'block';
+    characterSelection.style.display = 'block';
+    gamePlay.style.display = 'none';
 
     if (typeof gameChrome !== 'undefined') {
         gameChrome.setDifficultyBadge(currentDifficulty.label);
         gameChrome.refreshToolbarPhase();
     }
 
+    refreshCharacterUi();
     notifyGameStateChanged();
 }
 
-function backToMenu(): void {
+function backToDifficulty(): void {
+    characterSelection.style.display = 'none';
+    difficultySelection.style.display = 'block';
+    if (typeof gameChrome !== 'undefined') {
+        gameChrome.setDifficultyBadge('');
+        gameChrome.refreshToolbarPhase();
+    }
+    notifyGameStateChanged();
+}
+
+function enterPlay(): void {
+    currentDifficulty = difficulties[selectedDifficulty];
+    bugsPerSpeedIncrease = currentDifficulty.bugsPerSpeedIncrease;
+    minSpeed = currentDifficulty.minSpeed;
+    speedMultiplier = currentDifficulty.speedMultiplier;
+    pinkEvery = currentDifficulty.pinkEvery;
+    baseGameSpeed = currentDifficulty.initialSpeed;
+    gameSpeed = baseGameSpeed;
+
+    loadHighScore();
+    updateHud();
+
+    characterSelection.style.display = 'none';
+    gamePlay.style.display = 'block';
+
+    if (typeof gameChrome !== 'undefined') {
+        gameChrome.setDifficultyBadge(`${currentDifficulty.label} · ${selectedSnake().name}`);
+        gameChrome.refreshToolbarPhase();
+    }
+
+    drawInitialState();
+    notifyGameStateChanged();
+}
+
+function backToCharacters(): void {
     if (isRunning) {
         isRunning = false;
         isPaused = false;
@@ -235,24 +320,77 @@ function backToMenu(): void {
     pauseBtn.style.display = 'none';
 
     gamePlay.style.display = 'none';
-    difficultySelection.style.display = 'block';
+    characterSelection.style.display = 'block';
+    refreshCharacterUi();
 
     if (typeof gameChrome !== 'undefined') {
-        gameChrome.setDifficultyBadge('');
+        gameChrome.setDifficultyBadge(currentDifficulty.label);
         gameChrome.refreshToolbarPhase();
     }
 
-    drawInitialState();
     notifyGameStateChanged();
+}
+
+function browsingCharacter() {
+    return SNAKES[browsingIndex] ?? SNAKES[0];
+}
+
+function cycleCharacter(delta: number): void {
+    browsingIndex = (browsingIndex + delta + SNAKES.length) % SNAKES.length;
+    refreshCharacterUi();
+}
+
+function onCharacterAction(): void {
+    const character = browsingCharacter();
+    if (isUnlocked(character.id)) {
+        selectOwned(character.id);
+        refreshCharacterUi();
+        enterPlay();
+        return;
+    }
+
+    const paid = spend(character.currency, character.cost, character.id);
+    if (!paid) {
+        charLockedEl.textContent = `Need ${formatCost(character)}.`;
+        return;
+    }
+    playSound('popSound');
+    refreshCharacterUi();
+}
+
+function refreshCharacterUi(): void {
+    const character = browsingCharacter();
+    const wallet = getWallet();
+    const owned = isUnlocked(character.id);
+    charNameEl.textContent = character.name;
+    charCostEl.textContent = owned ? 'Owned' : formatCost(character);
+    charModsEl.textContent = formatMods(character);
+    walletBugsEl.textContent = String(wallet.bugs);
+    walletPinkEl.textContent = String(wallet.pink);
+    charActionBtn.textContent = owned ? 'Select' : `Buy · ${formatCost(character)}`;
+    charActionBtn.disabled = !owned && (
+        character.currency === 'bugs'
+            ? wallet.bugs < character.cost
+            : wallet.pink < character.cost
+    );
+    charLockedEl.textContent = owned
+        ? (wallet.selected === character.id ? 'Selected' : '')
+        : character.currency === 'pink' ? 'Premium' : 'Locked';
+
+    drawPreview();
+    updateHud();
+}
+
+function drawPreview(): void {
+    if (!previewCtx || !previewCanvas) {
+        return;
+    }
+    drawSnakePreview(previewCtx, browsingCharacter().id, previewCanvas.width, previewCanvas.height);
 }
 
 function loadHighScore(): void {
     const saved = localStorage.getItem(`snakeHighScore_${selectedDifficulty}`);
-    if (saved) {
-        highScore = parseInt(saved, 10);
-    } else {
-        highScore = 0;
-    }
+    highScore = saved ? parseInt(saved, 10) : 0;
     refreshDifficultyBestScores();
 }
 
@@ -282,6 +420,19 @@ function notifyGameStateChanged(): void {
 function setupEventListeners(): void {
     document.addEventListener('keydown', handleKeyPress);
 
+    window.addEventListener('message', event => {
+        const message = event.data;
+        if (message?.command === 'debugSnakeEconomy') {
+            applyEconomy(message);
+            const selectedId = getWallet().selected;
+            const index = SNAKES.findIndex(snake => snake.id === selectedId);
+            if (index >= 0) {
+                browsingIndex = index;
+            }
+            refreshCharacterUi();
+        }
+    });
+
     window.addEventListener('gameChrome:togglePause', () => {
         if (isRunning) {
             togglePause();
@@ -301,73 +452,36 @@ function setupEventListeners(): void {
     });
 }
 
-// ========================================
-// INITIAL STATE DRAWING
-// ========================================
-
 function drawInitialState(): void {
-    // Clear canvas
     ctx.fillStyle = '#1e1e1e';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+    drawGrid();
+    drawSnakeSegment(ctx, getWallet().selected, INITIAL_SNAKE_X, INITIAL_SNAKE_Y, true);
+    drawBug();
+}
 
-    // Draw grid lines
+function drawGrid(): void {
     ctx.strokeStyle = '#2d2d2d';
     ctx.lineWidth = 1;
-
     for (let i = 0; i <= TILE_COUNT; i++) {
         ctx.beginPath();
         ctx.moveTo(i * GRID_SIZE, 0);
         ctx.lineTo(i * GRID_SIZE, canvas.height);
         ctx.stroke();
-
         ctx.beginPath();
         ctx.moveTo(0, i * GRID_SIZE);
         ctx.lineTo(canvas.width, i * GRID_SIZE);
         ctx.stroke();
     }
-
-    // Draw initial snake (just the head)
-    const centerX = INITIAL_SNAKE_X * GRID_SIZE + GRID_SIZE / 2;
-    const centerY = INITIAL_SNAKE_Y * GRID_SIZE + GRID_SIZE / 2;
-    const radius = GRID_SIZE * 0.95 / 2;
-
-    const gradient = ctx.createRadialGradient(
-        centerX - radius / 3,
-        centerY - radius / 3,
-        0,
-        centerX,
-        centerY,
-        radius
-    );
-    gradient.addColorStop(0, '#5dd9b8');
-    gradient.addColorStop(1, '#4ec9b0');
-
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-    ctx.fillStyle = gradient;
-    ctx.fill();
-
-    ctx.beginPath();
-    ctx.arc(centerX - radius / 3, centerY - radius / 3, radius / 4, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-    ctx.fill();
-
-    drawBug();
 }
 
-// ========================================
-// GAME LIFECYCLE CONTROL
-// ========================================
-
 function startGame(): void {
-    // ✅ Play start sound using global soundManager
-    if (typeof soundManager !== 'undefined') {
-        soundManager.playById('popSound');
-    } else {
-        console.warn('[Debug Snake] SoundManager not available');
+    playSound('popSound');
+    if (gameLoop) {
+        clearTimeout(gameLoop);
+        gameLoop = null;
     }
 
-    // Reset game state
     snake = [];
     snakeLength = INITIAL_SNAKE_LENGTH;
     snakeX = INITIAL_SNAKE_X;
@@ -375,22 +489,30 @@ function startGame(): void {
     velocityX = 1;
     velocityY = 0;
     score = 0;
-    gameSpeed = currentDifficulty.initialSpeed;
+    runBugs = 0;
+    runPink = 0;
+    pinkBall = null;
+    baseGameSpeed = currentDifficulty.initialSpeed;
+    gameSpeed = baseGameSpeed;
+    lives = 1 + selectedSnake().mods.resurrection;
+    invulnTicks = 0;
     isPaused = false;
 
     gameOverElement.classList.remove('show');
     gameOverAlert.classList.remove('show');
-
-    updateScoreDisplay();
-    updateSpeedDisplay();
+    updateHud();
     startBtn.style.display = 'none';
     pauseBtn.style.display = 'inline-block';
+    pauseBtn.textContent = 'Pause (SPC)';
 
     placeBug();
-
     isRunning = true;
     runGameLoop();
     notifyGameStateChanged();
+}
+
+function tickDelay(): number {
+    return Math.max(20, gameSpeed / speedMod());
 }
 
 function runGameLoop(): void {
@@ -405,7 +527,7 @@ function runGameLoop(): void {
     update();
     draw();
 
-    gameLoop = window.setTimeout(() => runGameLoop(), gameSpeed);
+    gameLoop = window.setTimeout(() => runGameLoop(), tickDelay());
 }
 
 function togglePause(): void {
@@ -414,7 +536,7 @@ function togglePause(): void {
     }
 
     isPaused = !isPaused;
-    pauseBtn.textContent = isPaused ? 'Resume' : 'Pause';
+    pauseBtn.textContent = isPaused ? 'Resume' : 'Pause (SPC)';
 
     if (!isPaused) {
         runGameLoop();
@@ -430,7 +552,6 @@ function restartGame(): void {
 }
 
 function endGame(): void {
-
     isRunning = false;
     isPaused = false;
 
@@ -442,11 +563,10 @@ function endGame(): void {
     if (score > highScore) {
         highScore = score;
         saveHighScore();
-        updateScoreDisplay();
     }
 
+    persistNow();
     sendGameOver(score);
-
     showGameOverAlert();
     notifyGameStateChanged();
 
@@ -460,119 +580,155 @@ function endGame(): void {
 }
 
 function showGameOverAlert(): void {
-    alertScore.textContent = `Bugs Fixed: ${score}`;
+    alertScore.textContent = `Bugs Fixed: ${score} · +${runBugs} bugs · ♦ +${runPink} pink`;
     gameOverAlert.classList.add('show');
-
     setTimeout(() => {
         gameOverAlert.classList.remove('show');
     }, 2000);
 }
 
-// ========================================
-// GAME LOGIC
-// ========================================
+function resurrect(prevX: number, prevY: number, poppedSegment: boolean): void {
+    snakeX = prevX;
+    snakeY = prevY;
+    if (poppedSegment && snake.length > 0) {
+        snake.pop();
+    }
+    lives -= 1;
+    invulnTicks = INVULN_TICKS;
+    playSound('popSound');
+    updateHud();
+}
 
 function update(): void {
+    if (invulnTicks > 0) {
+        invulnTicks -= 1;
+    }
+
+    if (pinkBall) {
+        pinkBall.remainingMs -= tickDelay();
+        if (pinkBall.remainingMs <= 0) {
+            pinkBall = null;
+        }
+    }
+
+    const prevX = snakeX;
+    const prevY = snakeY;
+
     snakeX += velocityX;
     snakeY += velocityY;
 
-    if (snakeX < 0 || snakeX >= TILE_COUNT || snakeY < 0 || snakeY >= TILE_COUNT) {
+    const outOfBounds = snakeX < 0 || snakeX >= TILE_COUNT || snakeY < 0 || snakeY >= TILE_COUNT;
+    if (outOfBounds) {
+        if (invulnTicks > 0) {
+            snakeX = prevX;
+            snakeY = prevY;
+            return;
+        }
+        if (lives > 1) {
+            resurrect(prevX, prevY, false);
+            return;
+        }
         endGame();
         return;
     }
 
     snake.push({ x: snakeX, y: snakeY });
-
     while (snake.length > snakeLength) {
         snake.shift();
     }
 
-    for (let i = 0; i < snake.length - 1; i++) {
-        if (snake[i].x === snakeX && snake[i].y === snakeY) {
-            endGame();
-            return;
+    if (invulnTicks <= 0) {
+        for (let i = 0; i < snake.length - 1; i++) {
+            const segment = snake[i];
+            if (segment.x === snakeX && segment.y === snakeY) {
+                if (lives > 1) {
+                    resurrect(prevX, prevY, true);
+                    return;
+                }
+                endGame();
+                return;
+            }
         }
     }
 
     if (snakeX === bugX && snakeY === bugY) {
-        score++;
-        snakeLength++;
-        updateScoreDisplay();
-        // Play slurp sound as snakes eats
-        soundManager.playById('slurpSound');
+        score += 1;
+        runBugs += 1;
+        snakeLength += 1;
+        addCurrency('bugs', 1);
+        playSound('slurpSound');
+        updateHud();
         placeBug();
 
         if (score % bugsPerSpeedIncrease === 0) {
             gameSpeed = Math.max(minSpeed, gameSpeed * speedMultiplier);
             updateSpeedDisplay();
         }
+
+        if (score > 0 && score % pinkEvery === 0) {
+            spawnPinkBall();
+        }
+    }
+
+    if (pinkBall && snakeX === pinkBall.x && snakeY === pinkBall.y) {
+        runPink += 1;
+        addCurrency('pink', 1);
+        playSound('popSound');
+        pinkBall = null;
+        updateHud();
     }
 }
 
-// ========================================
-// RENDERING
-// ========================================
+function spawnPinkBall(): void {
+    if (pinkBall) {
+        return;
+    }
+
+    let attempts = 0;
+    while (attempts < 80) {
+        attempts += 1;
+        const x = Math.floor(Math.random() * TILE_COUNT);
+        const y = Math.floor(Math.random() * TILE_COUNT);
+        if (isOccupied(x, y)) {
+            continue;
+        }
+        pinkBall = { x, y, remainingMs: PINK_TIMEOUT * 1000 };
+        return;
+    }
+}
+
+function isOccupied(x: number, y: number): boolean {
+    if (x === snakeX && y === snakeY) {
+        return true;
+    }
+    if (x === bugX && y === bugY) {
+        return true;
+    }
+    for (const segment of snake) {
+        if (segment.x === x && segment.y === y) {
+            return true;
+        }
+    }
+    return false;
+}
 
 function draw(): void {
     ctx.fillStyle = '#1e1e1e';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+    drawGrid();
 
-    ctx.strokeStyle = '#2d2d2d';
-    ctx.lineWidth = 1;
-
-    for (let i = 0; i <= TILE_COUNT; i++) {
-        ctx.beginPath();
-        ctx.moveTo(i * GRID_SIZE, 0);
-        ctx.lineTo(i * GRID_SIZE, canvas.height);
-        ctx.stroke();
-
-        ctx.beginPath();
-        ctx.moveTo(0, i * GRID_SIZE);
-        ctx.lineTo(canvas.width, i * GRID_SIZE);
-        ctx.stroke();
+    const snakeId = getWallet().selected;
+    const blink = invulnTicks > 0 && invulnTicks % 2 === 0;
+    if (!blink) {
+        for (let i = 0; i < snake.length; i++) {
+            const segment = snake[i];
+            drawSnakeSegment(ctx, snakeId, segment.x, segment.y, i === snake.length - 1);
+        }
     }
 
-    drawSnake();
     drawBug();
-}
-
-function drawSnake(): void {
-    for (let i = 0; i < snake.length; i++) {
-        const segment = snake[i];
-        const isHead = i === snake.length - 1;
-
-        const size = isHead ? GRID_SIZE * 0.95 : GRID_SIZE * 0.9;
-        const centerX = segment.x * GRID_SIZE + GRID_SIZE / 2;
-        const centerY = segment.y * GRID_SIZE + GRID_SIZE / 2;
-        const radius = size / 2;
-
-        const gradient = ctx.createRadialGradient(
-            centerX - radius / 3,
-            centerY - radius / 3,
-            0,
-            centerX,
-            centerY,
-            radius
-        );
-        gradient.addColorStop(0, '#5dd9b8');
-        gradient.addColorStop(1, '#4ec9b0');
-
-        ctx.beginPath();
-        ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-        ctx.fillStyle = gradient;
-        ctx.fill();
-
-        if (!isHead) {
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, radius * 0.4, 0, Math.PI * 2);
-            ctx.fillStyle = 'rgba(46, 125, 108, 0.5)';
-            ctx.fill();
-        }
-
-        ctx.beginPath();
-        ctx.arc(centerX - radius / 3, centerY - radius / 3, radius / 4, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-        ctx.fill();
+    if (pinkBall) {
+        drawPinkBall(pinkBall);
     }
 }
 
@@ -594,71 +750,42 @@ function drawBug(): void {
     ctx.stroke();
 
     const spotRadius = radius * 0.25;
-
-    ctx.beginPath();
-    ctx.arc(centerX - radius * 0.4, centerY - radius * 0.3, spotRadius, 0, Math.PI * 2);
     ctx.fillStyle = '#000000';
-    ctx.fill();
-
-    ctx.beginPath();
-    ctx.arc(centerX - radius * 0.4, centerY + radius * 0.3, spotRadius, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.beginPath();
-    ctx.arc(centerX + radius * 0.4, centerY - radius * 0.3, spotRadius, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.beginPath();
-    ctx.arc(centerX + radius * 0.4, centerY + radius * 0.3, spotRadius, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.beginPath();
-    ctx.moveTo(centerX - radius * 0.3, centerY - radius);
-    ctx.lineTo(centerX - radius * 0.5, centerY - radius * 1.5);
-    ctx.strokeStyle = '#000000';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.moveTo(centerX + radius * 0.3, centerY - radius);
-    ctx.lineTo(centerX + radius * 0.5, centerY - radius * 1.5);
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.arc(centerX - radius * 0.5, centerY - radius * 1.5, 2, 0, Math.PI * 2);
-    ctx.fillStyle = '#000000';
-    ctx.fill();
-
-    ctx.beginPath();
-    ctx.arc(centerX + radius * 0.5, centerY - radius * 1.5, 2, 0, Math.PI * 2);
-    ctx.fill();
-}
-
-function placeBug(): void {
-    let validPosition = false;
-
-    while (!validPosition) {
-        bugX = Math.floor(Math.random() * TILE_COUNT);
-        bugY = Math.floor(Math.random() * TILE_COUNT);
-
-        validPosition = true;
-
-        for (const segment of snake) {
-            if (segment.x === bugX && segment.y === bugY) {
-                validPosition = false;
-                break;
-            }
-        }
-
-        if (bugX === snakeX && bugY === snakeY) {
-            validPosition = false;
-        }
+    for (const [ox, oy] of [[-0.4, -0.3], [-0.4, 0.3], [0.4, -0.3], [0.4, 0.3]] as const) {
+        ctx.beginPath();
+        ctx.arc(centerX + radius * ox, centerY + radius * oy, spotRadius, 0, Math.PI * 2);
+        ctx.fill();
     }
 }
 
-// ========================================
-// INPUT HANDLING
-// ========================================
+function drawPinkBall(ball: PinkBall): void {
+    const centerX = ball.x * GRID_SIZE + GRID_SIZE / 2;
+    const centerY = ball.y * GRID_SIZE + GRID_SIZE / 2;
+    const radius = GRID_SIZE * 0.32;
+    const pulse = 0.85 + 0.15 * Math.sin(performance.now() / 180);
+
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, radius * pulse, 0, Math.PI * 2);
+    ctx.fillStyle = '#ff79c6';
+    ctx.fill();
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+}
+
+function placeBug(): void {
+    let attempts = 0;
+    while (attempts < 80) {
+        attempts += 1;
+        const x = Math.floor(Math.random() * TILE_COUNT);
+        const y = Math.floor(Math.random() * TILE_COUNT);
+        if (!isOccupied(x, y) && !(pinkBall && pinkBall.x === x && pinkBall.y === y)) {
+            bugX = x;
+            bugY = y;
+            return;
+        }
+    }
+}
 
 function handleDirection(dir: string): void {
     if (!isRunning || isPaused) {
@@ -681,7 +808,27 @@ function handleDirection(dir: string): void {
     }
 }
 
+function onCharacterScreen(): boolean {
+    return characterSelection.style.display === 'block';
+}
+
 function handleKeyPress(event: KeyboardEvent): void {
+    if (onCharacterScreen()) {
+        if (event.key === 'ArrowLeft') {
+            event.preventDefault();
+            cycleCharacter(-1);
+        }
+        if (event.key === 'ArrowRight') {
+            event.preventDefault();
+            cycleCharacter(1);
+        }
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            onCharacterAction();
+        }
+        return;
+    }
+
     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(event.key)) {
         event.preventDefault();
     }
@@ -711,23 +858,20 @@ function handleKeyPress(event: KeyboardEvent): void {
     }
 }
 
-// ========================================
-// UI UPDATES
-// ========================================
-
-function updateScoreDisplay(): void {
+function updateHud(): void {
+    const wallet = getWallet();
     scoreElement.textContent = score.toString();
     highScoreElement.textContent = highScore.toString();
+    bugsHud.textContent = `${runBugs} / ${wallet.bugs}`;
+    pinkHud.textContent = `${runPink} / ${wallet.pink}`;
+    livesHud.textContent = String(Math.max(0, lives));
+    updateSpeedDisplay();
 }
 
 function updateSpeedDisplay(): void {
     const level = Math.floor(score / bugsPerSpeedIncrease) + 1;
     speedElement.textContent = level.toString();
 }
-
-// ========================================
-// VS CODE COMMUNICATION
-// ========================================
 
 function sendGameOver(finalScore: number): void {
     try {
@@ -737,28 +881,15 @@ function sendGameOver(finalScore: number): void {
             difficulty: selectedDifficulty
         });
     } catch (error) {
-        console.warn('Debug Snake Could not send message:', error);
+        console.warn('Debug Snake could not send message:', error);
     }
 }
 
-// ========================================
-// EVENT LISTENERS
-// ========================================
-
 function setupButtons(): void {
     init();
-
-    if (startBtn) {
-        startBtn.addEventListener('click', startGame);
-    }
-
-    if (pauseBtn) {
-        pauseBtn.addEventListener('click', togglePause);
-    }
-
-    if (restartBtn) {
-        restartBtn.addEventListener('click', restartGame);
-    }
+    startBtn?.addEventListener('click', startGame);
+    pauseBtn?.addEventListener('click', togglePause);
+    restartBtn?.addEventListener('click', restartGame);
 }
 
 if (document.readyState === 'loading') {

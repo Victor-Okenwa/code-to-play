@@ -197,6 +197,24 @@
         "when": "codeToPlay:isDev"
       },
       {
+        "command": "codeToPlay.debugSnakeGrantBugs",
+        "title": "Debug Snake: Grant Bugs",
+        "category": "Code to Play",
+        "when": "codeToPlay:isDev"
+      },
+      {
+        "command": "codeToPlay.debugSnakeGrantPink",
+        "title": "Debug Snake: Grant Pink Balls",
+        "category": "Code to Play",
+        "when": "codeToPlay:isDev"
+      },
+      {
+        "command": "codeToPlay.debugSnakeUnlockCharacters",
+        "title": "Debug Snake: Unlock All Characters",
+        "category": "Code to Play",
+        "when": "codeToPlay:isDev"
+      },
+      {
         "command": "codeToPlay.signIn",
         "title": "Sign in with GitHub",
         "category": "Code to Play"

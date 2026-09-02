@@ -251,7 +251,10 @@ export enum StorageKey {
     PREFERENCES = 'codeToPlay.preferences',
 
     /** CI Bird gold, diamonds, and unlocked characters */
-    CI_BIRD_ECONOMY = 'codeToPlay.ciBirdEconomy'
+    CI_BIRD_ECONOMY = 'codeToPlay.ciBirdEconomy',
+
+    /** Debug Snake bugs, pink balls, and unlocked snakes */
+    DEBUG_SNAKE_ECONOMY = 'codeToPlay.debugSnakeEconomy'
 }
 
 export const CI_BIRD_CHARACTER_IDS = [
@@ -310,6 +313,59 @@ export function normalizeCiBirdEconomy(raw: unknown): CiBirdEconomy {
         : 'green';
 
     return { gold, diamonds, unlocked, selected };
+}
+
+export const DEBUG_SNAKE_CHARACTER_IDS = [
+    'green',
+    'blue',
+    'yellow',
+    'purple',
+    'red',
+    'robot'
+] as const;
+
+export type DebugSnakeCharacterId = (typeof DEBUG_SNAKE_CHARACTER_IDS)[number];
+
+export interface DebugSnakeEconomy {
+    bugs: number;
+    pink: number;
+    unlocked: string[];
+    selected: string;
+}
+
+export const DEFAULT_DEBUG_SNAKE_ECONOMY: DebugSnakeEconomy = {
+    bugs: 0,
+    pink: 0,
+    unlocked: ['green'],
+    selected: 'green'
+};
+
+export function normalizeDebugSnakeEconomy(raw: unknown): DebugSnakeEconomy {
+    const valid = new Set<string>(DEBUG_SNAKE_CHARACTER_IDS);
+    if (!raw || typeof raw !== 'object') {
+        return { ...DEFAULT_DEBUG_SNAKE_ECONOMY, unlocked: [...DEFAULT_DEBUG_SNAKE_ECONOMY.unlocked] };
+    }
+
+    const data = raw as Partial<DebugSnakeEconomy>;
+    const bugs = typeof data.bugs === 'number' && Number.isFinite(data.bugs)
+        ? Math.max(0, Math.floor(data.bugs))
+        : 0;
+    const pink = typeof data.pink === 'number' && Number.isFinite(data.pink)
+        ? Math.max(0, Math.floor(data.pink))
+        : 0;
+
+    const unlocked = Array.isArray(data.unlocked)
+        ? [...new Set(data.unlocked.filter(id => typeof id === 'string' && valid.has(id)))]
+        : [];
+    if (!unlocked.includes('green')) {
+        unlocked.unshift('green');
+    }
+
+    const selected = typeof data.selected === 'string' && unlocked.includes(data.selected)
+        ? data.selected
+        : 'green';
+
+    return { bugs, pink, unlocked, selected };
 }
 
 /**

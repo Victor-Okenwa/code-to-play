@@ -13,7 +13,7 @@ import { createActivityBarView } from './ui/ActivityBarProvider';
 import { createStatusBar } from './ui/StatusBarManager';
 import { createWebviewManager } from './ui/WebViewManager';
 import { AllGames } from './games/registry';
-import { GameEvent, formatHighScores, DEFAULT_DIFFICULTY_KEY, CI_BIRD_CHARACTER_IDS } from './core/types';
+import { GameEvent, formatHighScores, DEFAULT_DIFFICULTY_KEY, CI_BIRD_CHARACTER_IDS, DEBUG_SNAKE_CHARACTER_IDS } from './core/types';
 import { AuthManager } from './auth/AuthManager';
 import { StatsSync } from './stats/StatsSync';
 import { EntitlementsSync } from './billing/EntitlementsSync';
@@ -293,6 +293,69 @@ export function activate(context: vscode.ExtensionContext) {
 		vscode.window.showInformationMessage('All CI Bird characters unlocked.');
 	});
 
+	const debugSnakeGrantBugs = vscode.commands.registerCommand('codeToPlay.debugSnakeGrantBugs', async () => {
+		if (!isLocalDev) {
+			return;
+		}
+
+		const amountText = await vscode.window.showInputBox({
+			title: 'Debug Snake: Grant Bugs',
+			prompt: 'How many bugs to add?',
+			value: '500',
+			validateInput: value => Number.isInteger(Number(value)) && Number(value) >= 0
+				? undefined
+				: 'Enter a non-negative integer'
+		});
+		if (amountText === undefined) {
+			return;
+		}
+
+		const economy = storageManager.getDebugSnakeEconomy();
+		economy.bugs += Number(amountText);
+		await storageManager.saveDebugSnakeEconomy(economy);
+		webviewManager.sendDebugSnakeEconomy();
+		vscode.window.showInformationMessage(`Debug Snake wallet: ${economy.bugs} bugs, ${economy.pink} pink balls.`);
+	});
+
+	const debugSnakeGrantPink = vscode.commands.registerCommand('codeToPlay.debugSnakeGrantPink', async () => {
+		if (!isLocalDev) {
+			return;
+		}
+
+		const amountText = await vscode.window.showInputBox({
+			title: 'Debug Snake: Grant Pink Balls',
+			prompt: 'How many pink balls to add?',
+			value: '100',
+			validateInput: value => Number.isInteger(Number(value)) && Number(value) >= 0
+				? undefined
+				: 'Enter a non-negative integer'
+		});
+		if (amountText === undefined) {
+			return;
+		}
+
+		const economy = storageManager.getDebugSnakeEconomy();
+		economy.pink += Number(amountText);
+		await storageManager.saveDebugSnakeEconomy(economy);
+		webviewManager.sendDebugSnakeEconomy();
+		vscode.window.showInformationMessage(`Debug Snake wallet: ${economy.bugs} bugs, ${economy.pink} pink balls.`);
+	});
+
+	const debugSnakeUnlockCharacters = vscode.commands.registerCommand('codeToPlay.debugSnakeUnlockCharacters', async () => {
+		if (!isLocalDev) {
+			return;
+		}
+
+		const economy = storageManager.getDebugSnakeEconomy();
+		economy.unlocked = [...DEBUG_SNAKE_CHARACTER_IDS];
+		if (!economy.unlocked.includes(economy.selected)) {
+			economy.selected = 'green';
+		}
+		await storageManager.saveDebugSnakeEconomy(economy);
+		webviewManager.sendDebugSnakeEconomy();
+		vscode.window.showInformationMessage('All Debug Snake characters unlocked.');
+	});
+
 	// Command to import data
 	const importDataCommand = vscode.commands.registerCommand('codeToPlay.importData', async () => {
 		if (!isLocalDev) {
@@ -445,6 +508,9 @@ export function activate(context: vscode.ExtensionContext) {
 		ciBirdGrantGold,
 		ciBirdGrantDiamonds,
 		ciBirdUnlockCharacters,
+		debugSnakeGrantBugs,
+		debugSnakeGrantPink,
+		debugSnakeUnlockCharacters,
 		importDataCommand,
 		resetGameStateCommand
 	);
