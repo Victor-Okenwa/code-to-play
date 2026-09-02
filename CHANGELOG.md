@@ -1,5 +1,17 @@
 # Changelog
 
+## [Unreleased]
+
+## [1.2.1] - 2026-09-02
+
+### Added
+
+- **`codeToPlay.unlock.linesToUnlock` setting** — choose how many meaningful lines of code unlock more plays (default and minimum: 1000)
+
+### Changed
+
+- Removed `codeToPlay.apiBaseUrl` setting; auth now uses the built-in dev/production API URLs automatically
+
 ## [1.2.0] - 2026-09-02
 
 ### Added

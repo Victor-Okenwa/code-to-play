@@ -20,6 +20,7 @@ import {
 } from './types';
 import { StorageManager } from './StorageManager';
 import { CodeTracker } from './CodeTracker';
+import { getLinesToUnlock } from '../config/settings';
 
 /**
  * Manages all game-related logic and state
@@ -151,7 +152,7 @@ export class GameManager {
         if (globalState.playsRemaining <= 0) {
             return {
                 success: false,
-                reason: `No plays remaining. Write ${this.config.unlock.linesToUnlock} lines to unlock.`
+                reason: `No plays remaining. Write ${getLinesToUnlock()} lines to unlock.`
             };
         }
 
@@ -264,7 +265,7 @@ export class GameManager {
         const newLinesWritten = globalState.linesWritten + linesWritten;
 
         // Check if enough lines to unlock
-        if (newLinesWritten >= this.config.unlock.linesToUnlock) {
+        if (newLinesWritten >= getLinesToUnlock()) {
             // Unlock all games!
             const newState: GlobalPlayState = {
                 ...globalState,
@@ -300,8 +301,8 @@ export class GameManager {
                 gameId: '__global__',
                 data: {
                     linesWritten: newLinesWritten,
-                    linesRequired: this.config.unlock.linesToUnlock,
-                    progress: newLinesWritten / this.config.unlock.linesToUnlock
+                    linesRequired: getLinesToUnlock(),
+                    progress: newLinesWritten / getLinesToUnlock()
                 }
             });
         }
@@ -398,7 +399,7 @@ export class GameManager {
 
         return Math.max(
             0,
-            this.config.unlock.linesToUnlock - globalState.linesWritten
+            getLinesToUnlock() - globalState.linesWritten
         );
     }
 
@@ -417,7 +418,7 @@ export class GameManager {
 
         return Math.min(
             100,
-            (globalState.linesWritten / this.config.unlock.linesToUnlock) * 100
+            (globalState.linesWritten / getLinesToUnlock()) * 100
         );
     }
 
@@ -436,7 +437,7 @@ export class GameManager {
             ...current,
             isUnlocked: true,
             playsRemaining: this.playsGrantedOnUnlock(),
-            linesWritten: this.config.unlock.linesToUnlock
+            linesWritten: getLinesToUnlock()
         };
 
         await this.storageManager.saveGlobalPlayState(globalState);
@@ -624,6 +625,53 @@ export class GameManager {
         for (const game of this.games.values()) {
             await this.resetGame(game.id);
         }
+    }
+
+    /**
+     * Re-checks unlock progress after the lines-to-unlock setting changes.
+     */
+    async reevaluateUnlockThreshold(): Promise<void> {
+        const globalState = this.storageManager.getGlobalPlayState();
+
+        if (globalState.isUnlocked) {
+            return;
+        }
+
+        const linesRequired = getLinesToUnlock();
+
+        if (globalState.linesWritten >= linesRequired) {
+            const newState: GlobalPlayState = {
+                ...globalState,
+                isUnlocked: true,
+                playsRemaining: this.playsGrantedOnUnlock(),
+                linesWritten: 0,
+            };
+
+            await this.storageManager.saveGlobalPlayState(newState);
+
+            this.eventEmitter.fire({
+                event: GameEvent.UNLOCKED,
+                gameId: '__global__',
+                data: newState,
+            });
+
+            if (this.config.showUnlockNotifications) {
+                vscode.window.showInformationMessage(
+                    `Games unlocked! You have ${newState.playsRemaining} plays.`
+                );
+            }
+            return;
+        }
+
+        this.eventEmitter.fire({
+            event: GameEvent.PROGRESS_UPDATED,
+            gameId: '__global__',
+            data: {
+                linesWritten: globalState.linesWritten,
+                linesRequired,
+                progress: globalState.linesWritten / linesRequired,
+            },
+        });
     }
 
     /**

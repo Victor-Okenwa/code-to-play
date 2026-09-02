@@ -68,6 +68,13 @@ export function activate(context: vscode.ExtensionContext) {
 	// Webview manager for game UIs
 	const webviewManager = createWebviewManager(context, gameManager);
 
+	const unlockConfigDisposable = vscode.workspace.onDidChangeConfiguration(e => {
+		if (e.affectsConfiguration('codeToPlay.unlock.linesToUnlock')) {
+			void gameManager.reevaluateUnlockThreshold();
+		}
+	});
+	context.subscriptions.push(unlockConfigDisposable);
+
 	// showDbState(context);
 
 	// ========================================

@@ -100,15 +100,6 @@ export class AuthManager implements vscode.Disposable {
     constructor(private readonly context: vscode.ExtensionContext) {}
 
     getApiBaseUrl(): string {
-        const configured = vscode.workspace
-            .getConfiguration('codeToPlay')
-            .get<string>('apiBaseUrl')
-            ?.trim();
-
-        if (configured) {
-            return configured.replace(/\/$/, '');
-        }
-
         return this.context.extensionMode === vscode.ExtensionMode.Development
             ? DEV_API_BASE_URL
             : PROD_API_BASE_URL;
@@ -227,7 +218,7 @@ export class AuthManager implements vscode.Disposable {
             this.pending = undefined;
             this.fireChange();
             void vscode.window.showErrorMessage(
-                'Could not reach Code to Play. Check codeToPlay.apiBaseUrl and try again.'
+                'Could not reach Code to Play. Check your connection and try again.'
             );
         }
     }

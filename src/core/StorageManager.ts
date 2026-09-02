@@ -6,6 +6,7 @@
  */
 
 import * as vscode from 'vscode';
+import { getLinesToUnlock } from '../config/settings';
 import {
     GameState,
     StorageKey,
@@ -229,7 +230,14 @@ export class StorageManager implements vscode.Disposable {
         const savedConfig = this.globalState.get<ExtensionConfig>(
             StorageKey.CONFIG
         );
-        return savedConfig || { ...DEFAULT_CONFIG };
+        const config = savedConfig || { ...DEFAULT_CONFIG };
+        return {
+            ...config,
+            unlock: {
+                ...config.unlock,
+                linesToUnlock: getLinesToUnlock(),
+            },
+        };
     }
 
     /**

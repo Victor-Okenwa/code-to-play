@@ -2,7 +2,7 @@
   "name": "code-to-play",
   "displayName": "Code to Play",
   "description": "Play games in VS Code - earn playtime by writing code!",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "publisher": "morse-code",
   "main": "./dist/extension.js",
   "author": {
@@ -283,6 +283,12 @@
           "type": "boolean",
           "default": false,
           "description": "Automatically open focus play mode when a game is opened"
+        },
+        "codeToPlay.unlock.linesToUnlock": {
+          "type": "number",
+          "default": 1000,
+          "minimum": 1000,
+          "description": "Number of meaningful lines of code to write before unlocking more plays. (Minimum 1000)"
         }
       }
     }
