@@ -68,7 +68,7 @@
                 <span class="difficulty-name">EASY</span>
               </div>
               <div class="difficulty-description">
-                Segfaults only • Slow start • 3 HP • Ramps up
+                Segfaults only • Slow start • Rush every 20s
               </div>
               <div class="difficulty-best">Best: <span data-difficulty-best="easy">0</span></div>
             </div>
@@ -78,7 +78,7 @@
                 <span class="difficulty-name">MEDIUM</span>
               </div>
               <div class="difficulty-description">
-                + zombie processes • Faster start • 3 HP • Ramps up
+                + zombies • Faster start • Rush every 15s
               </div>
               <div class="difficulty-best">Best: <span data-difficulty-best="medium">0</span></div>
             </div>
@@ -88,7 +88,7 @@
                 <span class="difficulty-name">HARD</span>
               </div>
               <div class="difficulty-description">
-                Leaks + healthy processes • Panic waves • 2 HP • Ramps up
+                Leaks + healthy • Panic waves • Rush every 15s
               </div>
               <div class="difficulty-best">Best: <span data-difficulty-best="hard">0</span></div>
             </div>
@@ -100,40 +100,38 @@
             <div class="about-game-body">
               <h3>What it is</h3>
               <p>
-                A vertical shmup. You fly a compact kernel craft. Threats fall
-                from the top — segfaults, zombie processes, and memory leaks.
-                Survive until HP is gone. The longer you last, the tougher it
-                gets. One play per run.
+                A vertical shmup. Fly a craft, shoot falling threats, and unlock
+                spaceships with gold and diamonds. Survive until HP is gone.
+                Rush-hour alien craft and bosses interrupt the fight. One play per run.
               </p>
               <h3>Difficulty</h3>
               <ul>
                 <li>
                   <strong>Easy</strong> — segfaults only at first, slow start, 3 HP.
-                  Zombies, leaks, and panic waves unlock as threat rises.
+                  Rush every 20s. Bosses every 8–15s.
                 </li>
                 <li>
                   <strong>Medium</strong> — zombies from the start, faster spawn,
-                  3 HP. Leaks and healthy processes appear later.
+                  3 HP. Rush every 15s.
                 </li>
                 <li>
                   <strong>Hard</strong> — memory leaks that split on hit,
-                  avoidable healthy processes (green, dashed), 2 HP, panic waves
-                  from the start. Spawn and speed keep climbing.
+                  avoidable healthy processes, 2 HP, panic waves from the start.
+                  Rush every 15s.
                 </li>
               </ul>
               <h3>How to play</h3>
               <p>
-                Pick a difficulty, then Choose Difficulty. Press Boot Kernel.
-                Score 10 / 15 / 20 for segfault, zombie, and leak kills. Panic
-                waves add a bonus. Shooting a healthy process is −25 (floor 0).
+                Pick a difficulty, choose a craft, then Boot Kernel.
+                Score 10 / 15 / 20 for segfault, zombie, and leak kills.
+                Kills drop gold (and sometimes diamonds). Do not shoot healthy processes (−25).
               </p>
               <ul>
                 <li><strong>Arrows / WASD</strong> — Move.</li>
                 <li><strong>Space</strong> — Fire.</li>
                 <li><strong>P</strong> — Pause. <strong>Ctrl+M</strong> — Mute. <strong>Ctrl+F</strong> — Focus play.</li>
-                <li>Do not shoot green dashed processes. They are healthy.</li>
-                <li>Memory leaks split into smaller segfaults when hit.</li>
-                <li>Threat climbs over time: faster spawns, tougher kinds, more panic waves.</li>
+                <li>Counter rush lasers with your shots; a fourth hit destroys the alien craft.</li>
+                <li>Bosses take 20 hits and drop 3 diamonds + 6 gold.</li>
               </ul>
               <h3>Power-ups</h3>
               <p>
@@ -154,6 +152,27 @@
           </section>
         </div>
 
+        <div class="character-selection" id="characterSelection" style="display: none">
+          <h2 class="difficulty-title">Choose Craft</h2>
+          <p class="wallet-line">
+            Gold <span id="walletGold">0</span>
+            · Diamonds <span id="walletDiamonds">0</span>
+          </p>
+          <canvas id="characterPreview" width="220" height="160"></canvas>
+          <div class="char-nav">
+            <button type="button" class="btn char-arrow" id="charPrevBtn" aria-label="Previous character">◀</button>
+            <div class="char-meta">
+              <h3 id="charName">Blue Spaceship</h3>
+              <p id="charCost">Free</p>
+              <p id="charMods">No special ability</p>
+              <p id="charLocked"></p>
+            </div>
+            <button type="button" class="btn char-arrow" id="charNextBtn" aria-label="Next character">▶</button>
+          </div>
+          <button class="btn start-game-btn" id="charActionBtn">Select</button>
+          <button class="btn back-btn" id="charBackBtn">Change Difficulty</button>
+        </div>
+
         <div class="game-play" id="gamePlay" style="display: none" data-focus-pause-key="P">
           <div class="score-panel focus-play-scores">
             <div class="score-item">
@@ -163,6 +182,14 @@
             <div class="score-item">
               <div class="score-label">High Score</div>
               <div class="score-value" id="highScore">0</div>
+            </div>
+            <div class="score-item">
+              <div class="score-label">Gold</div>
+              <div class="score-value" id="goldHud">0</div>
+            </div>
+            <div class="score-item">
+              <div class="score-label">Diamonds</div>
+              <div class="score-value" id="diamondHud">0</div>
             </div>
             <div class="score-item">
               <div class="score-label">HP</div>
@@ -187,7 +214,7 @@
           <div class="controls">
             <button class="btn" id="startBtn">Boot Kernel</button>
             <button class="btn" id="pauseBtn" style="display: none">Pause (P)</button>
-            <button class="btn back-btn" id="backToMenuBtn">Change Difficulty</button>
+            <button class="btn back-btn" id="backToMenuBtn">Change Craft</button>
           </div>
         </div>
 

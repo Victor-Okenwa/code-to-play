@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+### Added
+
+- **Kernel Panic** (Pro):
+  - Character select after difficulty with eight crafts (Blue free; Green/Yellow/White/Pink cost gold; Red/Rocket/Alien cost diamonds)
+  - Gold from every threat kill; diamonds at 10%/15%/20% (Easy/Medium/Hard), independent of power-up drops
+  - Rush hour every 20s (Easy) / 15s (Medium & Hard): alien craft fires 3 lasers; player shots cancel lasers; 4th hit destroys the craft (50/50 → 1 diamond or 3 gold)
+  - Boss every 8–15s (one at a time): warning flash + SFX ×3, 20 HP, slower than normal threats, drops 3 diamonds + 6 gold
+  - Craft mods: fire rate, speed/mobility, HP, and Alien Craft permanent spread shot
+
 ## [1.2.1] - 2026-09-02
 
 ### Added

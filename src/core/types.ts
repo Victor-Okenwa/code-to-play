@@ -254,7 +254,10 @@ export enum StorageKey {
     CI_BIRD_ECONOMY = 'codeToPlay.ciBirdEconomy',
 
     /** Debug Snake bugs, pink balls, and unlocked snakes */
-    DEBUG_SNAKE_ECONOMY = 'codeToPlay.debugSnakeEconomy'
+    DEBUG_SNAKE_ECONOMY = 'codeToPlay.debugSnakeEconomy',
+
+    /** Kernel Panic gold, diamonds, and unlocked crafts */
+    KERNEL_PANIC_ECONOMY = 'codeToPlay.kernelPanicEconomy'
 }
 
 export const CI_BIRD_CHARACTER_IDS = [
@@ -366,6 +369,61 @@ export function normalizeDebugSnakeEconomy(raw: unknown): DebugSnakeEconomy {
         : 'green';
 
     return { bugs, pink, unlocked, selected };
+}
+
+export const KERNEL_PANIC_CHARACTER_IDS = [
+    'blue',
+    'green',
+    'yellow',
+    'white',
+    'red',
+    'pink',
+    'rocket',
+    'alien'
+] as const;
+
+export type KernelPanicCharacterId = (typeof KERNEL_PANIC_CHARACTER_IDS)[number];
+
+export interface KernelPanicEconomy {
+    gold: number;
+    diamonds: number;
+    unlocked: string[];
+    selected: string;
+}
+
+export const DEFAULT_KERNEL_PANIC_ECONOMY: KernelPanicEconomy = {
+    gold: 0,
+    diamonds: 0,
+    unlocked: ['blue'],
+    selected: 'blue'
+};
+
+export function normalizeKernelPanicEconomy(raw: unknown): KernelPanicEconomy {
+    const valid = new Set<string>(KERNEL_PANIC_CHARACTER_IDS);
+    if (!raw || typeof raw !== 'object') {
+        return { ...DEFAULT_KERNEL_PANIC_ECONOMY, unlocked: [...DEFAULT_KERNEL_PANIC_ECONOMY.unlocked] };
+    }
+
+    const data = raw as Partial<KernelPanicEconomy>;
+    const gold = typeof data.gold === 'number' && Number.isFinite(data.gold)
+        ? Math.max(0, Math.floor(data.gold))
+        : 0;
+    const diamonds = typeof data.diamonds === 'number' && Number.isFinite(data.diamonds)
+        ? Math.max(0, Math.floor(data.diamonds))
+        : 0;
+
+    const unlocked = Array.isArray(data.unlocked)
+        ? [...new Set(data.unlocked.filter(id => typeof id === 'string' && valid.has(id)))]
+        : [];
+    if (!unlocked.includes('blue')) {
+        unlocked.unshift('blue');
+    }
+
+    const selected = typeof data.selected === 'string' && unlocked.includes(data.selected)
+        ? data.selected
+        : 'blue';
+
+    return { gold, diamonds, unlocked, selected };
 }
 
 /**

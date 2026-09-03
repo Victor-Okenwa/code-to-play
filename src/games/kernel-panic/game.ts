@@ -1,8 +1,45 @@
 /**
  * game.ts - Kernel Panic
  *
- * Vertical shmup. Fly the kernel craft, shoot falling threats, and last until HP is gone.
+ * Vertical shmup with craft shop, gold/diamonds, rush alien, and bosses.
  */
+
+import {
+    CANVAS_HEIGHT,
+    CANVAS_WIDTH,
+    DIAMOND_CHANCE,
+    FIRE_RATE_BONUS_MULT,
+    LOOT_DIAMOND_R,
+    LOOT_GOLD_R,
+    PLAYER_BASE_SPEED
+} from './constants';
+import { drawCraft } from './characters';
+import {
+    addCurrency,
+    applyEconomy,
+    getWallet,
+    isUnlocked,
+    requestReady,
+    selectOwned,
+    spend
+} from './economy';
+import { CHARACTERS, formatCost, formatMods, getCharacter } from './roster';
+import {
+    createBoss,
+    drawBoss,
+    nextBossDelay,
+    type BossEnemy
+} from './boss';
+import {
+    createRushAlien,
+    drawAlienLaser,
+    drawRushAlien,
+    hitRushAlien,
+    rushAlienDone,
+    rushEveryFor,
+    updateRushAlien,
+    type RushAlien
+} from './rush';
 
 declare const vscode: {
     postMessage(message: any): void;
@@ -26,7 +63,7 @@ declare const gameChrome: {
     refreshToolbarPhase(): void;
 };
 
-type EnemyKind = 'segfault' | 'zombie' | 'leak' | 'healthy';
+type EnemyKind = 'segfault' | 'zombie' | 'leak' | 'healthy' | 'boss';
 
 interface PanicDifficulty {
     name: string;
@@ -59,6 +96,7 @@ interface Enemy extends Rect {
     vy: number;
     vx: number;
     hp: number;
+    maxHp: number;
     waveId: number;
     warned: boolean;
 }
@@ -74,6 +112,12 @@ interface Bullet extends Rect {
 interface Pickup extends Rect {
     vy: number;
     kind: PowerKind;
+}
+
+interface Loot extends Rect {
+    vy: number;
+    kind: 'gold' | 'diamond';
+    amount: number;
 }
 
 interface Particle {
@@ -92,8 +136,6 @@ interface Star {
     size: number;
 }
 
-const CANVAS_WIDTH = 360;
-const CANVAS_HEIGHT = 480;
 const HEALTHY_PENALTY = 25;
 const WAVE_BONUS = 50;
 const PAUSE_LABEL = 'Pause (P)';
@@ -102,21 +144,24 @@ const KIND_SCORE: Record<EnemyKind, number> = {
     segfault: 10,
     zombie: 15,
     leak: 20,
-    healthy: 0
+    healthy: 0,
+    boss: 100
 };
 
 const KIND_COLOR: Record<EnemyKind, string> = {
     segfault: '#f48771',
     zombie: '#c586c0',
     leak: '#ce9178',
-    healthy: '#4ec9b0'
+    healthy: '#4ec9b0',
+    boss: '#be5046'
 };
 
 const KIND_LABEL: Record<EnemyKind, string> = {
     segfault: 'segv',
     zombie: 'zombie',
     leak: 'leak',
-    healthy: 'ok'
+    healthy: 'ok',
+    boss: 'BOSS'
 };
 
 const DROP_CHANCE = 0.3;
@@ -147,10 +192,24 @@ const POWERUP_LABELS: Record<PowerKind, string> = {
 
 const canvas = document.getElementById('gameCanvas') as HTMLCanvasElement;
 const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
+const previewCanvas = document.getElementById('characterPreview') as HTMLCanvasElement;
+const previewCtx = previewCanvas?.getContext('2d') as CanvasRenderingContext2D | null;
 const scoreElement = document.getElementById('score') as HTMLElement;
 const highScoreElement = document.getElementById('highScore') as HTMLElement;
+const goldHud = document.getElementById('goldHud') as HTMLElement;
+const diamondHud = document.getElementById('diamondHud') as HTMLElement;
 const hpElement = document.getElementById('hp') as HTMLElement;
 const threatElement = document.getElementById('threatLevel') as HTMLElement;
+const walletGold = document.getElementById('walletGold') as HTMLElement;
+const walletDiamonds = document.getElementById('walletDiamonds') as HTMLElement;
+const charName = document.getElementById('charName') as HTMLElement;
+const charCost = document.getElementById('charCost') as HTMLElement;
+const charMods = document.getElementById('charMods') as HTMLElement;
+const charLocked = document.getElementById('charLocked') as HTMLElement;
+const charActionBtn = document.getElementById('charActionBtn') as HTMLButtonElement;
+const charPrevBtn = document.getElementById('charPrevBtn') as HTMLButtonElement;
+const charNextBtn = document.getElementById('charNextBtn') as HTMLButtonElement;
+const charBackBtn = document.getElementById('charBackBtn') as HTMLButtonElement;
 const gameOverElement = document.getElementById('gameOver') as HTMLElement;
 const gameOverTitle = gameOverElement.querySelector('h2') as HTMLElement;
 const finalScoreElement = document.getElementById('finalScore') as HTMLElement;
@@ -161,6 +220,7 @@ const gameOverAlert = document.getElementById('gameOverAlert') as HTMLElement;
 const alertTitle = gameOverAlert.querySelector('h2') as HTMLElement;
 const alertScore = document.getElementById('alertScore') as HTMLElement;
 const difficultySelection = document.getElementById('difficultySelection') as HTMLElement;
+const characterSelection = document.getElementById('characterSelection') as HTMLElement;
 const gamePlay = document.getElementById('gamePlay') as HTMLElement;
 const enterGameBtn = document.getElementById('enterGameBtn') as HTMLButtonElement;
 const backToMenuBtn = document.getElementById('backToMenuBtn') as HTMLButtonElement;
@@ -205,7 +265,8 @@ const RAMPS: Record<string, PanicRamp> = {
 };
 
 let selectedDifficulty = 'easy';
-let currentDifficulty = difficulties.easy;
+let currentDifficulty = difficulties.easy!;
+let browsingIndex = 0;
 let score = 0;
 let highScore = 0;
 let hp = 3;
@@ -229,8 +290,17 @@ const keys = { left: false, right: false, up: false, down: false, fire: false };
 let enemies: Enemy[] = [];
 let bullets: Bullet[] = [];
 let pickups: Pickup[] = [];
+let loot: Loot[] = [];
 let particles: Particle[] = [];
 let activeMods: Partial<Record<TimedPowerKind, number>> = {};
+let inRush = false;
+let nextRushAt = 20;
+let rushAlien: RushAlien | null = null;
+let nextBossAt = 10;
+let bossWarningT = 0;
+let bossWarningFlashesLeft = 0;
+let bossPending = false;
+let activeBoss: BossEnemy | null = null;
 const stars: Star[] = Array.from({ length: 48 }, () => ({
     x: Math.random() * CANVAS_WIDTH,
     y: Math.random() * CANVAS_HEIGHT,
@@ -244,6 +314,14 @@ function playSound(id: string): void {
     }
 }
 
+function selectedCraft() {
+    return getCharacter(getWallet().selected);
+}
+
+function craftMods() {
+    return selectedCraft().mods;
+}
+
 function init(): void {
     if (typeof initGameChrome === 'function') {
         initGameChrome();
@@ -255,9 +333,11 @@ function init(): void {
     canvas.width = CANVAS_WIDTH;
     canvas.height = CANVAS_HEIGHT;
     setupDifficultySelection();
+    setupCharacterSelect();
     loadHighScore();
     updateHud();
     setupEventListeners();
+    requestReady();
     draw(0);
 }
 
@@ -271,8 +351,15 @@ function setupDifficultySelection(): void {
         });
     });
 
-    enterGameBtn?.addEventListener('click', enterGame);
-    backToMenuBtn?.addEventListener('click', backToMenu);
+    enterGameBtn?.addEventListener('click', openCharacterSelect);
+    backToMenuBtn?.addEventListener('click', backToCharacters);
+}
+
+function setupCharacterSelect(): void {
+    charPrevBtn?.addEventListener('click', () => cycleCharacter(-1));
+    charNextBtn?.addEventListener('click', () => cycleCharacter(1));
+    charActionBtn?.addEventListener('click', onCharacterAction);
+    charBackBtn?.addEventListener('click', backToDifficulty);
 }
 
 function selectDifficulty(difficulty: string): void {
@@ -281,7 +368,7 @@ function selectDifficulty(difficulty: string): void {
     }
 
     selectedDifficulty = difficulty;
-    currentDifficulty = difficulties[difficulty];
+    currentDifficulty = difficulties[difficulty]!;
 
     document.querySelectorAll('.difficulty-card').forEach(card => {
         card.classList.remove('active');
@@ -289,21 +376,46 @@ function selectDifficulty(difficulty: string): void {
     document.getElementById(`${difficulty}Card`)?.classList.add('active');
 
     loadHighScore();
-    hp = currentDifficulty.hp;
-    maxHp = currentDifficulty.hp;
     updateHud();
 }
 
-function enterGame(): void {
-    currentDifficulty = difficulties[selectedDifficulty];
+function openCharacterSelect(): void {
+    currentDifficulty = difficulties[selectedDifficulty]!;
     loadHighScore();
-    resetRun(false);
+    const selectedId = getWallet().selected;
+    const index = CHARACTERS.findIndex(character => character.id === selectedId);
+    browsingIndex = index >= 0 ? index : 0;
 
     difficultySelection.style.display = 'none';
-    gamePlay.style.display = 'block';
+    characterSelection.style.display = 'block';
+    gamePlay.style.display = 'none';
 
     if (typeof gameChrome !== 'undefined') {
         gameChrome.setDifficultyBadge(currentDifficulty.label);
+        gameChrome.refreshToolbarPhase();
+    }
+
+    refreshCharacterUi();
+    notifyGameStateChanged();
+}
+
+function backToDifficulty(): void {
+    characterSelection.style.display = 'none';
+    difficultySelection.style.display = 'block';
+    if (typeof gameChrome !== 'undefined') {
+        gameChrome.setDifficultyBadge('');
+        gameChrome.refreshToolbarPhase();
+    }
+    notifyGameStateChanged();
+}
+
+function enterPlay(): void {
+    resetRun(false);
+    characterSelection.style.display = 'none';
+    gamePlay.style.display = 'block';
+
+    if (typeof gameChrome !== 'undefined') {
+        gameChrome.setDifficultyBadge(`${currentDifficulty.label} · ${selectedCraft().name}`);
         gameChrome.refreshToolbarPhase();
     }
 
@@ -311,7 +423,7 @@ function enterGame(): void {
     notifyGameStateChanged();
 }
 
-function backToMenu(): void {
+function backToCharacters(): void {
     stopLoop();
     isRunning = false;
     isPaused = false;
@@ -323,19 +435,60 @@ function backToMenu(): void {
     pauseBtn.style.display = 'none';
 
     gamePlay.style.display = 'none';
-    difficultySelection.style.display = 'block';
+    characterSelection.style.display = 'block';
+    refreshCharacterUi();
 
     if (typeof gameChrome !== 'undefined') {
-        gameChrome.setDifficultyBadge('');
+        gameChrome.setDifficultyBadge(currentDifficulty.label);
         gameChrome.refreshToolbarPhase();
     }
-
     notifyGameStateChanged();
 }
 
+function cycleCharacter(delta: number): void {
+    browsingIndex = (browsingIndex + delta + CHARACTERS.length) % CHARACTERS.length;
+    refreshCharacterUi();
+}
+
+function onCharacterAction(): void {
+    const character = CHARACTERS[browsingIndex]!;
+    if (isUnlocked(character.id)) {
+        selectOwned(character.id);
+        enterPlay();
+        return;
+    }
+    if (spend(character.currency, character.cost, character.id)) {
+        refreshCharacterUi();
+    }
+}
+
+function refreshCharacterUi(): void {
+    const character = CHARACTERS[browsingIndex]!;
+    const owned = isUnlocked(character.id);
+    const wallet = getWallet();
+
+    walletGold.textContent = String(wallet.gold);
+    walletDiamonds.textContent = String(wallet.diamonds);
+    charName.textContent = character.name;
+    charCost.textContent = formatCost(character);
+    charMods.textContent = formatMods(character);
+    charLocked.textContent = owned ? (wallet.selected === character.id ? 'Selected' : 'Owned') : 'Locked';
+    charActionBtn.textContent = owned ? 'Select' : `Buy · ${formatCost(character)}`;
+    charActionBtn.disabled = !owned && (
+        character.currency === 'gold' ? wallet.gold < character.cost : wallet.diamonds < character.cost
+    );
+
+    if (previewCtx && previewCanvas) {
+        previewCtx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+        previewCtx.fillStyle = '#1e1e1e';
+        previewCtx.fillRect(0, 0, previewCanvas.width, previewCanvas.height);
+        drawCraft(previewCtx, character.id, previewCanvas.width / 2 - 12, previewCanvas.height / 2 - 9, 24, 18, true, false);
+    }
+}
+
 function loadHighScore(): void {
-    const saved = localStorage.getItem(`kernelPanicHighScore_${selectedDifficulty}`);
-    highScore = saved ? parseInt(saved, 10) : 0;
+    highScore = getStoredHighScore(selectedDifficulty);
+    highScoreElement.textContent = highScore.toString();
     refreshDifficultyBestScores();
 }
 
@@ -366,63 +519,78 @@ function setupEventListeners(): void {
     document.addEventListener('keydown', handleKeyDown);
     document.addEventListener('keyup', handleKeyUp);
 
-    window.addEventListener('gameChrome:togglePause', () => {
-        if (isRunning) {
+    window.addEventListener('message', event => {
+        const message = event.data;
+        if (message?.command === 'kernelPanicEconomy') {
+            applyEconomy(message);
+            refreshCharacterUi();
+            updateHud();
+        }
+    });
+
+    window.addEventListener('gameChrome:requestPause', () => {
+        if (isRunning && !isPaused) {
             togglePause();
         }
     });
 
-    window.addEventListener('gameChrome:start', () => {
-        if (!isRunning && startBtn.style.display !== 'none') {
-            startGame();
+    window.addEventListener('gameChrome:requestResume', () => {
+        if (isRunning && isPaused) {
+            togglePause();
         }
     });
 
-    window.addEventListener('gameChrome:restart', () => {
-        gameOverElement.classList.remove('show');
-        gameOverAlert.classList.remove('show');
-        startGame();
+    window.addEventListener('gameChrome:requestRestart', () => {
+        if (gamePlay.style.display === 'block') {
+            startGame();
+        }
     });
 }
 
 function resetRun(playing: boolean): void {
-    currentDifficulty = difficulties[selectedDifficulty];
-    maxHp = currentDifficulty.hp;
-    hp = maxHp;
     score = 0;
+    const mods = craftMods();
+    maxHp = currentDifficulty.hp + mods.hpBonus;
+    hp = maxHp;
+    elapsed = 0;
     spawnAcc = 0;
     fireAcc = currentDifficulty.fireMs;
     invuln = 0;
     warningLatched = false;
     waveId = 0;
-    elapsed = 0;
-    nextWaveAt = currentRamp().wavesAt;
+    nextWaveAt = wavesUnlocked() ? 8 : currentRamp().wavesAt;
     killStreak = 0;
     killStreakAt = 0;
     killsSinceDrop = 0;
     enemies = [];
     bullets = [];
     pickups = [];
+    loot = [];
     particles = [];
     activeMods = {};
-    player = { x: CANVAS_WIDTH / 2 - 12, y: CANVAS_HEIGHT - 50, w: 24, h: 18 };
+    inRush = false;
+    rushAlien = null;
+    nextRushAt = rushEveryFor(selectedDifficulty);
+    nextBossAt = nextBossDelay();
+    bossWarningT = 0;
+    bossWarningFlashesLeft = 0;
+    bossPending = false;
+    activeBoss = null;
+    player = { x: 168, y: 430, w: 24, h: 18 };
     isPaused = false;
     isRunning = playing;
+    lastTs = 0;
+    pauseBtn.textContent = PAUSE_LABEL;
+    gameOverElement.classList.remove('show');
+    gameOverAlert.classList.remove('show');
     updateHud();
 }
 
 function startGame(): void {
-    playSound('popSound');
-    stopLoop();
     resetRun(true);
-
-    gameOverElement.classList.remove('show');
-    gameOverAlert.classList.remove('show');
     startBtn.style.display = 'none';
     pauseBtn.style.display = 'inline-block';
-    pauseBtn.textContent = PAUSE_LABEL;
-
-    lastTs = 0;
+    stopLoop();
     rafId = requestAnimationFrame(loop);
     notifyGameStateChanged();
 }
@@ -438,8 +606,7 @@ function loop(ts: number): void {
     if (!isRunning) {
         return;
     }
-
-    if (lastTs === 0) {
+    if (!lastTs) {
         lastTs = ts;
     }
     const dt = Math.min(0.05, (ts - lastTs) / 1000);
@@ -453,12 +620,11 @@ function loop(ts: number): void {
 }
 
 function currentRamp(): PanicRamp {
-    return RAMPS[selectedDifficulty] ?? RAMPS.easy;
+    return RAMPS[selectedDifficulty] ?? RAMPS.easy!;
 }
 
 function spawnInterval(): number {
-    const ms = currentDifficulty.spawnMs * (0.28 + 0.72 * Math.exp(-elapsed / 55));
-    return Math.max(180, ms);
+    return Math.max(180, currentDifficulty.spawnMs * (0.28 + 0.72 * Math.exp(-elapsed / 55)));
 }
 
 function threatSpeed(): number {
@@ -494,43 +660,131 @@ function waveGap(): number {
 
 function update(dt: number): void {
     elapsed += dt;
+    if (invuln > 0) {
+        invuln -= dt;
+    }
 
-    invuln = Math.max(0, invuln - dt);
-    tickMods(dt);
     spawnAcc += dt * 1000;
     fireAcc += dt * 1000;
-
     moveStars(dt);
     movePlayer(dt);
+    tickMods(dt);
+    updateRush(dt);
+    updateBossSchedule(dt);
 
     if (keys.fire && fireAcc >= fireInterval()) {
         fire();
         fireAcc = 0;
     }
 
-    if (spawnAcc >= spawnInterval()) {
-        spawnEnemy(pickKind(), 0);
+    if (!inRush && spawnAcc >= spawnInterval()) {
         spawnAcc = 0;
+        spawnEnemy(pickKind(), 0);
     }
 
     if (wavesUnlocked() && elapsed >= nextWaveAt) {
         startPanicWave();
-        nextWaveAt += waveGap();
+        nextWaveAt = elapsed + waveGap();
     }
 
     updateBullets(dt);
     updateEnemies(dt);
     updatePickups(dt);
+    updateLoot(dt);
     updateParticles(dt);
     collide();
     checkWarning();
     updateHud();
 }
 
+function updateRush(dt: number): void {
+    if (!inRush && elapsed >= nextRushAt) {
+        startRush();
+    }
+
+    if (!rushAlien) {
+        return;
+    }
+
+    updateRushAlien(rushAlien, dt, player.x + player.w / 2);
+
+    if (rushAlienDone(rushAlien)) {
+        endRush();
+    }
+}
+
+function startRush(): void {
+    inRush = true;
+    rushAlien = createRushAlien(player.x + player.w / 2);
+    playSound('warningSound');
+}
+
+function endRush(): void {
+    inRush = false;
+    rushAlien = null;
+    nextRushAt = elapsed + rushEveryFor(selectedDifficulty);
+    spawnAcc = 0;
+}
+
+function updateBossSchedule(dt: number): void {
+    if (bossWarningFlashesLeft > 0) {
+        bossWarningT += dt;
+        const period = 0.35;
+        if (bossWarningT >= period) {
+            bossWarningT = 0;
+            bossWarningFlashesLeft -= 1;
+            if (bossWarningFlashesLeft > 0) {
+                playSound('warningSound');
+            } else if (bossPending) {
+                spawnBossNow();
+            }
+        }
+        return;
+    }
+
+    if (activeBoss || bossPending) {
+        return;
+    }
+
+    if (elapsed >= nextBossAt) {
+        beginBossWarning();
+    }
+}
+
+function beginBossWarning(): void {
+    bossPending = true;
+    bossWarningFlashesLeft = 3;
+    bossWarningT = 0;
+    playSound('warningSound');
+}
+
+function spawnBossNow(): void {
+    bossPending = false;
+    const boss = createBoss(threatSpeed());
+    activeBoss = boss;
+    enemies.push({
+        kind: 'boss',
+        x: boss.x,
+        y: boss.y,
+        w: boss.w,
+        h: boss.h,
+        vy: boss.vy,
+        vx: boss.vx,
+        hp: boss.hp,
+        maxHp: boss.maxHp,
+        waveId: 0,
+        warned: false
+    });
+}
+
+function hasActiveBoss(): boolean {
+    return enemies.some(enemy => enemy.kind === 'boss');
+}
+
 function moveStars(dt: number): void {
-    const rush = 1 + Math.min(elapsed / 90, 0.85);
+    const starRush = 1 + Math.min(elapsed / 90, 1.2);
     for (const star of stars) {
-        star.y += star.speed * dt * rush;
+        star.y += star.speed * starRush * dt;
         if (star.y > CANVAS_HEIGHT) {
             star.y = 0;
             star.x = Math.random() * CANVAS_WIDTH;
@@ -539,7 +793,7 @@ function moveStars(dt: number): void {
 }
 
 function movePlayer(dt: number): void {
-    const speed = 240;
+    const speed = PLAYER_BASE_SPEED * craftMods().speed;
     if (keys.left) {
         player.x -= speed * dt;
     }
@@ -557,13 +811,21 @@ function movePlayer(dt: number): void {
 }
 
 function fireInterval(): number {
-    return currentDifficulty.fireMs * (hasMod('rapid') ? RAPID_FIRE : 1);
+    let interval = currentDifficulty.fireMs;
+    if (craftMods().fireRateBonus > 0) {
+        interval *= FIRE_RATE_BONUS_MULT;
+    }
+    if (hasMod('rapid')) {
+        interval *= RAPID_FIRE;
+    }
+    return interval;
 }
 
 function fire(): void {
     const cx = player.x + player.w / 2;
     const y = player.y - 8;
-    const shots = hasMod('spread')
+    const useSpread = hasMod('spread') || craftMods().spreadShot;
+    const shots = useSpread
         ? [
             { x: cx - 1.5, vx: 0 },
             { x: cx - 7, vx: -95 },
@@ -611,6 +873,7 @@ function spawnEnemy(kind: EnemyKind, assignedWave: number): Enemy {
         vy: threatSpeed() * (0.85 + Math.random() * 0.4),
         vx: (Math.random() - 0.5) * (30 + Math.min(elapsed * 0.35, 40)),
         hp: 1,
+        maxHp: 1,
         waveId: assignedWave,
         warned: false
     };
@@ -650,53 +913,67 @@ function updateBullets(dt: number): void {
 }
 
 function updateEnemies(dt: number): void {
-    const speedMul = hasMod('weaker') ? WEAKER_SPEED : 1;
-    for (const enemy of enemies) {
-        enemy.y += enemy.vy * dt * speedMul;
-        enemy.x += enemy.vx * dt * speedMul;
+    const slow = hasMod('weaker') ? WEAKER_SPEED : 1;
+    for (let i = enemies.length - 1; i >= 0; i--) {
+        const enemy = enemies[i]!;
+        enemy.y += enemy.vy * slow * dt;
+        enemy.x += enemy.vx * slow * dt;
         if (enemy.x < 4 || enemy.x + enemy.w > CANVAS_WIDTH - 4) {
             enemy.vx *= -1;
             enemy.x = Math.max(4, Math.min(CANVAS_WIDTH - enemy.w - 4, enemy.x));
         }
 
-        if (enemy.kind === 'leak' && !enemy.warned && enemy.y > CANVAS_HEIGHT * 0.72) {
+        if (enemy.kind === 'leak' && !enemy.warned && enemy.y > CANVAS_HEIGHT - 90) {
             playSound('warningSound');
             enemy.warned = true;
         }
+
+        if (enemy.y > CANVAS_HEIGHT + 8) {
+            if (enemy.kind !== 'healthy') {
+                hitPlayer();
+            }
+            if (enemy.kind === 'boss') {
+                activeBoss = null;
+                nextBossAt = elapsed + nextBossDelay();
+            }
+            enemies.splice(i, 1);
+            maybeClearWave(enemy.waveId);
+        }
     }
 
-    const remaining: Enemy[] = [];
-    for (const enemy of enemies) {
-        if (enemy.y <= CANVAS_HEIGHT) {
-            remaining.push(enemy);
-            continue;
-        }
-        if (enemy.kind !== 'healthy') {
-            hitPlayer();
-        }
-        maybeClearWave(enemy.waveId);
+    if (activeBoss && !hasActiveBoss()) {
+        activeBoss = null;
     }
-    enemies = remaining;
 }
 
 function updatePickups(dt: number): void {
-    const magnetR = 110;
-    const scx = player.x + player.w / 2;
-    const scy = player.y + player.h / 2;
     for (const pickup of pickups) {
-        pickup.y += pickup.vy * dt;
-        const pcx = pickup.x + pickup.w / 2;
-        const pcy = pickup.y + pickup.h / 2;
-        const dx = scx - pcx;
-        const dy = scy - pcy;
+        const dx = player.x + player.w / 2 - (pickup.x + pickup.w / 2);
+        const dy = player.y + player.h / 2 - (pickup.y + pickup.h / 2);
         const dist = Math.hypot(dx, dy);
-        if (dist < magnetR && dist > 1) {
-            const pull = (1 - dist / magnetR) * 160;
-            pickup.x += (dx / dist) * pull * dt;
-            pickup.y += (dy / dist) * pull * dt;
+        if (dist < 110 && dist > 0.1) {
+            pickup.x += (dx / dist) * 140 * dt;
+            pickup.y += (dy / dist) * 140 * dt;
+        } else {
+            pickup.y += pickup.vy * dt;
         }
     }
-    pickups = pickups.filter(pickup => pickup.y < CANVAS_HEIGHT + pickup.h);
+    pickups = pickups.filter(pickup => pickup.y < CANVAS_HEIGHT + 20);
+}
+
+function updateLoot(dt: number): void {
+    for (const item of loot) {
+        const dx = player.x + player.w / 2 - (item.x + item.w / 2);
+        const dy = player.y + player.h / 2 - (item.y + item.h / 2);
+        const dist = Math.hypot(dx, dy);
+        if (dist < 110 && dist > 0.1) {
+            item.x += (dx / dist) * 150 * dt;
+            item.y += (dy / dist) * 150 * dt;
+        } else {
+            item.y += item.vy * dt;
+        }
+    }
+    loot = loot.filter(item => item.y < CANVAS_HEIGHT + 20);
 }
 
 function updateParticles(dt: number): void {
@@ -709,43 +986,88 @@ function updateParticles(dt: number): void {
 }
 
 function collide(): void {
-    for (let i = bullets.length - 1; i >= 0; i--) {
-        const bullet = bullets[i];
+    for (let bi = bullets.length - 1; bi >= 0; bi--) {
+        const bullet = bullets[bi]!;
         let hit = false;
-        for (let j = enemies.length - 1; j >= 0; j--) {
-            const enemy = enemies[j];
-            if (!aabb(bullet, enemy)) {
+
+        if (rushAlien && !rushAlien.destroyed) {
+            for (const laser of rushAlien.lasers) {
+                if (!laser.hit && aabb(bullet, laser)) {
+                    laser.hit = true;
+                    bullets.splice(bi, 1);
+                    hit = true;
+                    playSound('popSound');
+                    break;
+                }
+            }
+            if (hit) {
                 continue;
             }
-            hit = true;
-            bullets.splice(i, 1);
-            damageEnemy(enemy, j);
-            break;
+            if (aabb(bullet, rushAlien)) {
+                bullets.splice(bi, 1);
+                const destroyed = hitRushAlien(rushAlien);
+                playSound('explodeSound');
+                spawnBurst(rushAlien.x + rushAlien.w / 2, rushAlien.y + rushAlien.h / 2, '#4ec9b0');
+                if (destroyed) {
+                    dropRushReward(rushAlien.x + rushAlien.w / 2, rushAlien.y + rushAlien.h / 2);
+                }
+                continue;
+            }
+        }
+
+        for (let ei = enemies.length - 1; ei >= 0; ei--) {
+            const enemy = enemies[ei]!;
+            if (aabb(bullet, enemy)) {
+                bullets.splice(bi, 1);
+                damageEnemy(enemy, ei);
+                hit = true;
+                break;
+            }
         }
         if (hit) {
             continue;
         }
     }
 
+    if (rushAlien) {
+        for (const laser of rushAlien.lasers) {
+            if (!laser.hit && aabb(player, laser)) {
+                laser.hit = true;
+                if (!hasMod('shield')) {
+                    hitPlayer();
+                }
+            }
+        }
+    }
+
     if (invuln <= 0 && !hasMod('shield')) {
         for (const enemy of enemies) {
+            if (enemy.kind === 'healthy') {
+                continue;
+            }
             if (aabb(player, enemy)) {
-                if (enemy.kind === 'healthy') {
-                    continue;
-                }
                 hitPlayer();
-                destroyEnemy(enemy, false);
                 break;
             }
         }
     }
 
     for (let i = pickups.length - 1; i >= 0; i--) {
-        const pickup = pickups[i];
+        const pickup = pickups[i]!;
         if (aabb(player, pickup)) {
-            pickups.splice(i, 1);
             applyPickup(pickup.kind);
             playSound('slurpSound');
+            pickups.splice(i, 1);
+        }
+    }
+
+    for (let i = loot.length - 1; i >= 0; i--) {
+        const item = loot[i]!;
+        if (aabb(player, item)) {
+            addCurrency(item.kind === 'gold' ? 'gold' : 'diamonds', item.amount);
+            playSound('popSound');
+            loot.splice(i, 1);
+            updateHud();
         }
     }
 }
@@ -760,6 +1082,23 @@ function damageEnemy(enemy: Enemy, index: number): void {
         return;
     }
 
+    if (enemy.kind === 'boss') {
+        enemy.hp -= 1;
+        playSound('explodeSound');
+        spawnBurst(enemy.x + enemy.w / 2, enemy.y + enemy.h / 2, KIND_COLOR.boss);
+        if (enemy.hp > 0) {
+            return;
+        }
+        score += threatScore('boss');
+        noteKill();
+        dropCurrencyLoot(enemy.x + enemy.w / 2, enemy.y + enemy.h / 2, 6, 3);
+        maybeDropPickup(enemy);
+        enemies.splice(index, 1);
+        activeBoss = null;
+        nextBossAt = elapsed + nextBossDelay();
+        return;
+    }
+
     if (enemy.kind === 'leak') {
         splitLeak(enemy);
         score += threatScore('leak');
@@ -768,6 +1107,7 @@ function damageEnemy(enemy: Enemy, index: number): void {
         enemies.splice(index, 1);
         noteKill();
         maybeClearWave(enemy.waveId);
+        dropKillLoot(enemy);
         maybeDropPickup(enemy);
         return;
     }
@@ -778,6 +1118,7 @@ function damageEnemy(enemy: Enemy, index: number): void {
     enemies.splice(index, 1);
     noteKill();
     maybeClearWave(enemy.waveId);
+    dropKillLoot(enemy);
     maybeDropPickup(enemy);
 }
 
@@ -793,26 +1134,45 @@ function splitLeak(enemy: Enemy): void {
             vy: enemy.vy * 1.15,
             vx: dir * 55,
             hp: 1,
+            maxHp: 1,
             waveId: enemy.waveId,
             warned: false
         });
     }
 }
 
-function destroyEnemy(enemy: Enemy, award: boolean): void {
-    const index = enemies.indexOf(enemy);
-    if (index < 0) {
-        return;
+function dropKillLoot(enemy: Enemy): void {
+    spawnLoot(enemy.x + enemy.w / 2, enemy.y + enemy.h / 2, 'gold', 1);
+    const chance = DIAMOND_CHANCE[selectedDifficulty] ?? 0.1;
+    if (Math.random() < chance) {
+        spawnLoot(enemy.x + enemy.w / 2 + 10, enemy.y + enemy.h / 2 - 6, 'diamond', 1);
     }
-    if (award && enemy.kind !== 'healthy') {
-        score += threatScore(enemy.kind);
-        noteKill();
-        maybeDropPickup(enemy);
+}
+
+function dropRushReward(x: number, y: number): void {
+    if (Math.random() < 0.5) {
+        spawnLoot(x, y, 'diamond', 1);
+    } else {
+        spawnLoot(x - 10, y, 'gold', 3);
     }
-    playSound('explodeSound');
-    spawnBurst(enemy.x + enemy.w / 2, enemy.y + enemy.h / 2, KIND_COLOR[enemy.kind]);
-    enemies.splice(index, 1);
-    maybeClearWave(enemy.waveId);
+}
+
+function dropCurrencyLoot(x: number, y: number, goldAmount: number, diamondAmount: number): void {
+    spawnLoot(x - 12, y, 'gold', goldAmount);
+    spawnLoot(x + 12, y - 8, 'diamond', diamondAmount);
+}
+
+function spawnLoot(x: number, y: number, kind: 'gold' | 'diamond', amount: number): void {
+    const r = kind === 'gold' ? LOOT_GOLD_R : LOOT_DIAMOND_R;
+    loot.push({
+        x: x - r,
+        y: y - r,
+        w: r * 2,
+        h: r * 2,
+        vy: 55,
+        kind,
+        amount
+    });
 }
 
 function maybeDropPickup(enemy: Enemy): void {
@@ -851,11 +1211,11 @@ function hasMod(kind: TimedPowerKind): boolean {
 
 function tickMods(dt: number): void {
     for (const kind of TIMED_POWER_KINDS) {
-        const remaining = activeMods[kind];
-        if (remaining === undefined) {
+        const left = activeMods[kind];
+        if (left === undefined) {
             continue;
         }
-        const next = remaining - dt;
+        const next = left - dt;
         if (next <= 0) {
             delete activeMods[kind];
         } else {
@@ -870,13 +1230,15 @@ function threatScore(kind: EnemyKind): number {
 }
 
 function noteKill(): void {
-    if (elapsed - killStreakAt < 0.8) {
+    const now = elapsed;
+    if (now - killStreakAt < 0.8) {
         killStreak += 1;
     } else {
         killStreak = 1;
     }
-    killStreakAt = elapsed;
-    if (killStreak === 3) {
+    killStreakAt = now;
+    if (killStreak >= 3) {
+        killStreak = 0;
         playSound('comboSound');
         score += 15;
     }
@@ -978,8 +1340,6 @@ function endGame(): void {
         gameOverElement.classList.add('show');
         startBtn.style.display = 'inline-block';
         pauseBtn.style.display = 'none';
-        notifyGameStateChanged();
-        draw(0);
     }, 2500);
 }
 
@@ -992,298 +1352,204 @@ function showGameOverAlert(): void {
 }
 
 function handleKeyDown(event: KeyboardEvent): void {
-    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(event.key)) {
-        event.preventDefault();
+    if (characterSelection.style.display === 'block') {
+        return;
     }
-
-    const key = event.key.toLowerCase();
-
-    if (key === 'p') {
+    if (event.code === 'KeyP') {
         event.preventDefault();
         togglePause();
         return;
     }
-
-    if (event.key === ' ') {
-        keys.fire = true;
-        return;
-    }
-
-    if (!isRunning || isPaused) {
-        return;
-    }
-
-    if (event.key === 'ArrowLeft' || key === 'a') {
+    if (event.code === 'ArrowLeft' || event.code === 'KeyA') {
         keys.left = true;
     }
-    if (event.key === 'ArrowRight' || key === 'd') {
+    if (event.code === 'ArrowRight' || event.code === 'KeyD') {
         keys.right = true;
     }
-    if (event.key === 'ArrowUp' || key === 'w') {
+    if (event.code === 'ArrowUp' || event.code === 'KeyW') {
         keys.up = true;
     }
-    if (event.key === 'ArrowDown' || key === 's') {
+    if (event.code === 'ArrowDown' || event.code === 'KeyS') {
         keys.down = true;
+    }
+    if (event.code === 'Space') {
+        event.preventDefault();
+        keys.fire = true;
     }
 }
 
 function handleKeyUp(event: KeyboardEvent): void {
-    const key = event.key.toLowerCase();
-    if (event.key === ' ') {
-        keys.fire = false;
-    }
-    if (event.key === 'ArrowLeft' || key === 'a') {
+    if (event.code === 'ArrowLeft' || event.code === 'KeyA') {
         keys.left = false;
     }
-    if (event.key === 'ArrowRight' || key === 'd') {
+    if (event.code === 'ArrowRight' || event.code === 'KeyD') {
         keys.right = false;
     }
-    if (event.key === 'ArrowUp' || key === 'w') {
+    if (event.code === 'ArrowUp' || event.code === 'KeyW') {
         keys.up = false;
     }
-    if (event.key === 'ArrowDown' || key === 's') {
+    if (event.code === 'ArrowDown' || event.code === 'KeyS') {
         keys.down = false;
+    }
+    if (event.code === 'Space') {
+        keys.fire = false;
     }
 }
 
 function updateHud(): void {
+    const wallet = getWallet();
     scoreElement.textContent = score.toString();
     highScoreElement.textContent = highScore.toString();
+    if (goldHud) {
+        goldHud.textContent = String(wallet.gold);
+    }
+    if (diamondHud) {
+        diamondHud.textContent = String(wallet.diamonds);
+    }
     hpElement.textContent = hp.toString();
     threatElement.textContent = threatLevel().toString();
-}
-
-function draw(_ts: number): void {
-    ctx.fillStyle = '#111218';
-    ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-
-    ctx.fillStyle = '#d4d4d4';
-    for (const star of stars) {
-        ctx.globalAlpha = 0.25 + star.size * 0.2;
-        ctx.fillRect(star.x, star.y, star.size, star.size);
-    }
-    ctx.globalAlpha = 1;
-
-    for (const enemy of enemies) {
-        drawEnemy(enemy);
-    }
-
-    ctx.fillStyle = '#4fc1ff';
-    for (const bullet of bullets) {
-        ctx.fillRect(bullet.x, bullet.y, bullet.w, bullet.h);
-    }
-
-    for (const pickup of pickups) {
-        drawPickup(pickup);
-    }
-
-    const blink = invuln > 0 && Math.floor(invuln * 10) % 2 === 0;
-    if (!blink) {
-        drawShip(player.x, player.y, player.w, player.h);
-    }
-
-    for (const particle of particles) {
-        ctx.globalAlpha = Math.max(0, particle.life * 3);
-        ctx.fillStyle = particle.color;
-        ctx.fillRect(particle.x, particle.y, 2, 2);
-    }
-    ctx.globalAlpha = 1;
-
-    drawModHud();
-
-    if (isPaused && isRunning) {
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
-        ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-        ctx.fillStyle = '#4fc1ff';
-        ctx.font = '16px "Press Start 2P", cursive';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('PAUSED', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2);
-    }
 }
 
 function isThrusting(): boolean {
     return isRunning && !isPaused && (keys.left || keys.right || keys.up || keys.down || keys.fire);
 }
 
+function draw(_ts: number): void {
+    ctx.fillStyle = '#0b1220';
+    ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+    for (const star of stars) {
+        ctx.fillStyle = star.size > 1 ? '#9cdcfe' : '#569cd6';
+        ctx.fillRect(star.x, star.y, star.size, star.size);
+    }
+
+    const flashAlpha = bossWarningFlashesLeft > 0
+        ? 0.22 + 0.18 * Math.sin((bossWarningT / 0.35) * Math.PI)
+        : 0;
+    if (flashAlpha > 0) {
+        ctx.fillStyle = `rgba(244, 135, 113, ${flashAlpha})`;
+        ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    }
+
+    for (const pickup of pickups) {
+        drawPickup(pickup);
+    }
+    for (const item of loot) {
+        drawLoot(item);
+    }
+    for (const enemy of enemies) {
+        if (enemy.kind === 'boss') {
+            drawBoss(ctx, enemy as BossEnemy);
+        } else {
+            drawEnemy(enemy);
+        }
+    }
+
+    if (rushAlien) {
+        drawRushAlien(ctx, rushAlien);
+        for (const laser of rushAlien.lasers) {
+            if (!laser.hit) {
+                drawAlienLaser(ctx, laser);
+            }
+        }
+    }
+
+    for (const bullet of bullets) {
+        ctx.fillStyle = '#7ee7ff';
+        ctx.fillRect(bullet.x, bullet.y, bullet.w, bullet.h);
+    }
+
+    for (const particle of particles) {
+        ctx.globalAlpha = Math.max(0, particle.life * 3);
+        ctx.fillStyle = particle.color;
+        ctx.fillRect(particle.x, particle.y, 2, 2);
+        ctx.globalAlpha = 1;
+    }
+
+    if (invuln <= 0 || Math.floor(invuln * 12) % 2 === 0) {
+        drawCraft(ctx, getWallet().selected, player.x, player.y, player.w, player.h, isThrusting(), hasMod('shield'));
+    }
+
+    drawModHud();
+
+    if (inRush) {
+        ctx.fillStyle = 'rgba(244, 135, 113, 0.85)';
+        ctx.font = 'bold 12px Orbitron, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('RUSH HOUR', CANVAS_WIDTH / 2, 18);
+    }
+
+    if (isPaused) {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+        ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+        ctx.fillStyle = '#d4d4d4';
+        ctx.font = 'bold 20px Orbitron, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('PAUSED', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2);
+    }
+}
+
+function drawLoot(item: Loot): void {
+    const cx = item.x + item.w / 2;
+    const cy = item.y + item.h / 2;
+    if (item.kind === 'gold') {
+        ctx.fillStyle = '#dcdcaa';
+        ctx.beginPath();
+        ctx.arc(cx, cy, item.w / 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#1e1e1e';
+        ctx.font = 'bold 8px Orbitron, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(item.amount > 1 ? String(item.amount) : 'G', cx, cy);
+    } else {
+        ctx.fillStyle = '#e06c75';
+        ctx.beginPath();
+        ctx.moveTo(cx, cy - item.h / 2);
+        ctx.lineTo(cx + item.w / 2, cy);
+        ctx.lineTo(cx, cy + item.h / 2);
+        ctx.lineTo(cx - item.w / 2, cy);
+        ctx.closePath();
+        ctx.fill();
+        if (item.amount > 1) {
+            ctx.fillStyle = '#1e1e1e';
+            ctx.font = 'bold 8px Orbitron, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(String(item.amount), cx, cy);
+        }
+    }
+}
+
 function drawPickup(pickup: Pickup): void {
-    const color = POWERUP_COLORS[pickup.kind];
-    const cx = pickup.x + pickup.w / 2;
-    const cy = pickup.y + pickup.h / 2;
-    const pulse = 1 + Math.sin(elapsed * 10) * 0.12;
-    const radius = (pickup.w / 2) * pulse;
-
-    ctx.save();
-    ctx.fillStyle = color;
-    ctx.globalAlpha = 0.28;
-    ctx.beginPath();
-    ctx.arc(cx, cy, radius + 5, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.globalAlpha = 1;
-    ctx.beginPath();
-    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = '#1e1e1e';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-    ctx.restore();
-
+    ctx.fillStyle = POWERUP_COLORS[pickup.kind];
+    ctx.fillRect(pickup.x, pickup.y, pickup.w, pickup.h);
     ctx.fillStyle = '#1e1e1e';
     ctx.font = 'bold 9px Orbitron, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(POWERUP_LABELS[pickup.kind], cx, cy + 0.5);
+    ctx.fillText(POWERUP_LABELS[pickup.kind], pickup.x + pickup.w / 2, pickup.y + pickup.h / 2);
 }
 
 function drawModHud(): void {
-    const chips: { kind: TimedPowerKind; remaining: number }[] = [];
-    for (const kind of TIMED_POWER_KINDS) {
-        const remaining = activeMods[kind];
-        if (remaining && remaining > 0) {
-            chips.push({ kind, remaining });
-        }
-    }
-    if (chips.length === 0) {
-        return;
-    }
-
     let x = 8;
     const y = 14;
-    ctx.font = 'bold 9px Orbitron, sans-serif';
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-
-    for (const chip of chips) {
-        const label = `${POWERUP_LABELS[chip.kind]} ${Math.ceil(chip.remaining)}s`;
-        const width = ctx.measureText(label).width + 10;
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+    for (const kind of TIMED_POWER_KINDS) {
+        const left = activeMods[kind];
+        if (!left) {
+            continue;
+        }
+        const label = `${POWERUP_LABELS[kind]} ${Math.ceil(left)}`;
+        const width = 36;
+        ctx.fillStyle = 'rgba(30, 30, 30, 0.75)';
         ctx.fillRect(x, y - 8, width, 16);
-        ctx.fillStyle = POWERUP_COLORS[chip.kind];
+        ctx.fillStyle = POWERUP_COLORS[kind];
+        ctx.font = 'bold 9px Orbitron, sans-serif';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
         ctx.fillText(label, x + 5, y);
         x += width + 6;
     }
-}
-
-function drawShip(x: number, y: number, w: number, h: number): void {
-    const cx = x + w / 2;
-    const by = y + h;
-    const thrusting = isThrusting();
-
-    ctx.save();
-
-    if (hasMod('shield')) {
-        ctx.strokeStyle = POWERUP_COLORS.shield;
-        ctx.globalAlpha = 0.75;
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.arc(cx, y + h / 2, 19, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.globalAlpha = 1;
-    }
-
-    if (thrusting) {
-        const flick = 6 + Math.random() * 5;
-        for (const ox of [-6, 6]) {
-            ctx.fillStyle = `rgba(126, 231, 255, ${0.55 + Math.random() * 0.45})`;
-            ctx.beginPath();
-            ctx.moveTo(cx + ox - 3.2, by);
-            ctx.lineTo(cx + ox + 3.2, by);
-            ctx.lineTo(cx + ox, by + flick);
-            ctx.closePath();
-            ctx.fill();
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
-            ctx.beginPath();
-            ctx.moveTo(cx + ox - 1.4, by);
-            ctx.lineTo(cx + ox + 1.4, by);
-            ctx.lineTo(cx + ox, by + flick * 0.55);
-            ctx.closePath();
-            ctx.fill();
-        }
-    }
-
-    ctx.fillStyle = '#165a82';
-    ctx.beginPath();
-    ctx.moveTo(cx - 4, y + 7);
-    ctx.lineTo(cx - 21, y + 15);
-    ctx.lineTo(cx - 19, y + 21);
-    ctx.lineTo(cx - 3, y + 14);
-    ctx.closePath();
-    ctx.fill();
-    ctx.beginPath();
-    ctx.moveTo(cx + 4, y + 7);
-    ctx.lineTo(cx + 21, y + 15);
-    ctx.lineTo(cx + 19, y + 21);
-    ctx.lineTo(cx + 3, y + 14);
-    ctx.closePath();
-    ctx.fill();
-
-    ctx.fillStyle = '#3aa8e0';
-    ctx.beginPath();
-    ctx.moveTo(cx - 4, y + 7);
-    ctx.lineTo(cx - 21, y + 15);
-    ctx.lineTo(cx - 18, y + 15.5);
-    ctx.lineTo(cx - 4, y + 9);
-    ctx.closePath();
-    ctx.fill();
-    ctx.beginPath();
-    ctx.moveTo(cx + 4, y + 7);
-    ctx.lineTo(cx + 21, y + 15);
-    ctx.lineTo(cx + 18, y + 15.5);
-    ctx.lineTo(cx + 4, y + 9);
-    ctx.closePath();
-    ctx.fill();
-
-    ctx.fillStyle = '#c8c8c8';
-    ctx.fillRect(cx - 22, y + 14, 6, 3);
-    ctx.fillRect(cx + 16, y + 14, 6, 3);
-    ctx.fillStyle = '#4fc1ff';
-    ctx.fillRect(cx - 21, y + 12, 3, 2);
-    ctx.fillRect(cx + 18, y + 12, 3, 2);
-
-    ctx.fillStyle = '#4fc1ff';
-    ctx.beginPath();
-    ctx.moveTo(cx, y - 5);
-    ctx.lineTo(cx + 4.5, y + 3);
-    ctx.lineTo(cx + 6, y + 11);
-    ctx.lineTo(cx + 5, by - 1);
-    ctx.lineTo(cx - 5, by - 1);
-    ctx.lineTo(cx - 6, y + 11);
-    ctx.lineTo(cx - 4.5, y + 3);
-    ctx.closePath();
-    ctx.fill();
-
-    ctx.fillStyle = '#9ee7ff';
-    ctx.fillRect(cx - 1.1, y + 1, 2.2, 13);
-
-    ctx.fillStyle = '#0b3a52';
-    ctx.fillRect(cx - 8.5, by - 5, 6.5, 5);
-    ctx.fillRect(cx + 2, by - 5, 6.5, 5);
-    ctx.fillStyle = '#7ee7ff';
-    ctx.beginPath();
-    ctx.arc(cx - 5.2, by - 1.2, 2.1, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(cx + 5.2, by - 1.2, 2.1, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = '#072433';
-    ctx.beginPath();
-    ctx.moveTo(cx - 3.6, y + 4);
-    ctx.lineTo(cx + 3.6, y + 4);
-    ctx.lineTo(cx + 2.6, y + 11);
-    ctx.lineTo(cx - 2.6, y + 11);
-    ctx.closePath();
-    ctx.fill();
-    ctx.fillStyle = '#d7f7ff';
-    ctx.beginPath();
-    ctx.moveTo(cx - 2.2, y + 5);
-    ctx.lineTo(cx + 2.2, y + 5);
-    ctx.lineTo(cx + 1.5, y + 9.5);
-    ctx.lineTo(cx - 1.5, y + 9.5);
-    ctx.closePath();
-    ctx.fill();
-
-    ctx.restore();
 }
 
 function drawEnemy(enemy: Enemy): void {

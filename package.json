@@ -215,6 +215,24 @@
         "when": "codeToPlay:isDev"
       },
       {
+        "command": "codeToPlay.kernelPanicGrantGold",
+        "title": "Kernel Panic: Grant Gold",
+        "category": "Code to Play",
+        "when": "codeToPlay:isDev"
+      },
+      {
+        "command": "codeToPlay.kernelPanicGrantDiamonds",
+        "title": "Kernel Panic: Grant Diamonds",
+        "category": "Code to Play",
+        "when": "codeToPlay:isDev"
+      },
+      {
+        "command": "codeToPlay.kernelPanicUnlockCharacters",
+        "title": "Kernel Panic: Unlock All Characters",
+        "category": "Code to Play",
+        "when": "codeToPlay:isDev"
+      },
+      {
         "command": "codeToPlay.signIn",
         "title": "Sign in with GitHub",
         "category": "Code to Play"

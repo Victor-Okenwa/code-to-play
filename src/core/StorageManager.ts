@@ -19,7 +19,9 @@ import {
     CiBirdEconomy,
     normalizeCiBirdEconomy,
     DebugSnakeEconomy,
-    normalizeDebugSnakeEconomy
+    normalizeDebugSnakeEconomy,
+    KernelPanicEconomy,
+    normalizeKernelPanicEconomy
 } from './types';
 
 /**
@@ -159,6 +161,19 @@ export class StorageManager implements vscode.Disposable {
         await this.globalState.update(
             StorageKey.DEBUG_SNAKE_ECONOMY,
             normalizeDebugSnakeEconomy(state)
+        );
+    }
+
+    getKernelPanicEconomy(): KernelPanicEconomy {
+        return normalizeKernelPanicEconomy(
+            this.globalState.get<unknown>(StorageKey.KERNEL_PANIC_ECONOMY)
+        );
+    }
+
+    async saveKernelPanicEconomy(state: KernelPanicEconomy): Promise<void> {
+        await this.globalState.update(
+            StorageKey.KERNEL_PANIC_ECONOMY,
+            normalizeKernelPanicEconomy(state)
         );
     }
 

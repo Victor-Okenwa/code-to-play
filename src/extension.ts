@@ -13,7 +13,7 @@ import { createActivityBarView } from './ui/ActivityBarProvider';
 import { createStatusBar } from './ui/StatusBarManager';
 import { createWebviewManager } from './ui/WebViewManager';
 import { AllGames } from './games/registry';
-import { GameEvent, formatHighScores, DEFAULT_DIFFICULTY_KEY, CI_BIRD_CHARACTER_IDS, DEBUG_SNAKE_CHARACTER_IDS } from './core/types';
+import { GameEvent, formatHighScores, DEFAULT_DIFFICULTY_KEY, CI_BIRD_CHARACTER_IDS, DEBUG_SNAKE_CHARACTER_IDS, KERNEL_PANIC_CHARACTER_IDS } from './core/types';
 import { AuthManager } from './auth/AuthManager';
 import { StatsSync } from './stats/StatsSync';
 import { EntitlementsSync } from './billing/EntitlementsSync';
@@ -363,6 +363,69 @@ export function activate(context: vscode.ExtensionContext) {
 		vscode.window.showInformationMessage('All Debug Snake characters unlocked.');
 	});
 
+	const kernelPanicGrantGold = vscode.commands.registerCommand('codeToPlay.kernelPanicGrantGold', async () => {
+		if (!isLocalDev) {
+			return;
+		}
+
+		const amountText = await vscode.window.showInputBox({
+			title: 'Kernel Panic: Grant Gold',
+			prompt: 'How many gold coins to add?',
+			value: '500',
+			validateInput: value => Number.isInteger(Number(value)) && Number(value) >= 0
+				? undefined
+				: 'Enter a non-negative integer'
+		});
+		if (amountText === undefined) {
+			return;
+		}
+
+		const economy = storageManager.getKernelPanicEconomy();
+		economy.gold += Number(amountText);
+		await storageManager.saveKernelPanicEconomy(economy);
+		webviewManager.sendKernelPanicEconomy();
+		vscode.window.showInformationMessage(`Kernel Panic wallet: ${economy.gold} gold, ${economy.diamonds} diamonds.`);
+	});
+
+	const kernelPanicGrantDiamonds = vscode.commands.registerCommand('codeToPlay.kernelPanicGrantDiamonds', async () => {
+		if (!isLocalDev) {
+			return;
+		}
+
+		const amountText = await vscode.window.showInputBox({
+			title: 'Kernel Panic: Grant Diamonds',
+			prompt: 'How many diamonds to add?',
+			value: '100',
+			validateInput: value => Number.isInteger(Number(value)) && Number(value) >= 0
+				? undefined
+				: 'Enter a non-negative integer'
+		});
+		if (amountText === undefined) {
+			return;
+		}
+
+		const economy = storageManager.getKernelPanicEconomy();
+		economy.diamonds += Number(amountText);
+		await storageManager.saveKernelPanicEconomy(economy);
+		webviewManager.sendKernelPanicEconomy();
+		vscode.window.showInformationMessage(`Kernel Panic wallet: ${economy.gold} gold, ${economy.diamonds} diamonds.`);
+	});
+
+	const kernelPanicUnlockCharacters = vscode.commands.registerCommand('codeToPlay.kernelPanicUnlockCharacters', async () => {
+		if (!isLocalDev) {
+			return;
+		}
+
+		const economy = storageManager.getKernelPanicEconomy();
+		economy.unlocked = [...KERNEL_PANIC_CHARACTER_IDS];
+		if (!economy.unlocked.includes(economy.selected)) {
+			economy.selected = 'blue';
+		}
+		await storageManager.saveKernelPanicEconomy(economy);
+		webviewManager.sendKernelPanicEconomy();
+		vscode.window.showInformationMessage('All Kernel Panic characters unlocked.');
+	});
+
 	// Command to import data
 	const importDataCommand = vscode.commands.registerCommand('codeToPlay.importData', async () => {
 		if (!isLocalDev) {
@@ -518,6 +581,9 @@ export function activate(context: vscode.ExtensionContext) {
 		debugSnakeGrantBugs,
 		debugSnakeGrantPink,
 		debugSnakeUnlockCharacters,
+		kernelPanicGrantGold,
+		kernelPanicGrantDiamonds,
+		kernelPanicUnlockCharacters,
 		importDataCommand,
 		resetGameStateCommand
 	);

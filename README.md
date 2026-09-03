@@ -30,7 +30,7 @@ Play classic games with a coding twist:
 - **Debug Snake** - Catch bugs, collect pink balls, and unlock snakes
 - **Whack-a-Bug** - Click bugs before they escape in this fast-paced game
 - **CI Bird** - Flap through CI gates, collect coins, and unlock birds
-- **Call Stack**, **Merge Conflict**, and **Kernel Panic** — Pro games. New Pro checkouts include a **5-day free trial**.
+- **Call Stack**, **Merge Conflict**, and **Kernel Panic** — Pro games (Kernel Panic: unlock crafts with gold/diamonds, rush aliens, bosses). New Pro checkouts include a **5-day free trial**.
 
 ### Smart Code Tracking
 

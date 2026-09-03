@@ -10,7 +10,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { IGame, getHighScoreFor, DEFAULT_DIFFICULTY_KEY, resolveDifficultyKey, CiBirdEconomy, DebugSnakeEconomy } from '../core/types';
+import { IGame, getHighScoreFor, DEFAULT_DIFFICULTY_KEY, resolveDifficultyKey, CiBirdEconomy, DebugSnakeEconomy, KernelPanicEconomy } from '../core/types';
 import { GameManager } from '../core/GameManager';
 
 export class WebviewManager {
@@ -128,6 +128,9 @@ export class WebviewManager {
                 if (gameId === 'debug-snake') {
                     this.sendDebugSnakeEconomy();
                 }
+                if (gameId === 'kernel-panic') {
+                    this.sendKernelPanicEconomy();
+                }
             }
         });
     }
@@ -193,6 +196,9 @@ export class WebviewManager {
                 }
                 if (game.id === 'debug-snake') {
                     this.sendDebugSnakeEconomy();
+                }
+                if (game.id === 'kernel-panic') {
+                    this.sendKernelPanicEconomy();
                 }
             }, 500);
         } catch (error) {
@@ -530,6 +536,9 @@ export class WebviewManager {
                 if (gameId === 'debug-snake') {
                     this.sendDebugSnakeEconomy();
                 }
+                if (gameId === 'kernel-panic') {
+                    this.sendKernelPanicEconomy();
+                }
                 break;
 
             case 'ciBirdSaveEconomy':
@@ -541,6 +550,12 @@ export class WebviewManager {
             case 'debugSnakeSaveEconomy':
                 if (gameId === 'debug-snake') {
                     await this.saveDebugSnakeEconomy(message);
+                }
+                break;
+
+            case 'kernelPanicSaveEconomy':
+                if (gameId === 'kernel-panic') {
+                    await this.saveKernelPanicEconomy(message);
                 }
                 break;
 
@@ -623,6 +638,50 @@ export class WebviewManager {
             pink: economy.pink,
             unlocked: economy.unlocked,
             selected: economy.selected
+        });
+    }
+
+    sendKernelPanicEconomy(): void {
+        const panel = this.activePanels.get('kernel-panic');
+        if (!panel) {
+            return;
+        }
+
+        const economy = this.kernelPanicStorage().getKernelPanicEconomy();
+        panel.webview.postMessage({
+            command: 'kernelPanicEconomy',
+            gold: economy.gold,
+            diamonds: economy.diamonds,
+            unlocked: economy.unlocked,
+            selected: economy.selected
+        });
+    }
+
+    private kernelPanicStorage(): {
+        getKernelPanicEconomy(): KernelPanicEconomy;
+        saveKernelPanicEconomy(state: KernelPanicEconomy): Promise<void>;
+    } {
+        return (this.gameManager as unknown as {
+            storageManager: {
+                getKernelPanicEconomy(): KernelPanicEconomy;
+                saveKernelPanicEconomy(state: KernelPanicEconomy): Promise<void>;
+            };
+        }).storageManager;
+    }
+
+    private async saveKernelPanicEconomy(message: {
+        gold?: unknown;
+        diamonds?: unknown;
+        unlocked?: unknown;
+        selected?: unknown;
+    }): Promise<void> {
+        await this.kernelPanicStorage().saveKernelPanicEconomy({
+            gold: typeof message.gold === 'number' ? message.gold : 0,
+            diamonds: typeof message.diamonds === 'number' ? message.diamonds : 0,
+            unlocked: Array.isArray(message.unlocked)
+                ? message.unlocked.filter((id): id is string => typeof id === 'string')
+                : ['blue'],
+            selected: typeof message.selected === 'string' ? message.selected : 'blue'
         });
     }
 
