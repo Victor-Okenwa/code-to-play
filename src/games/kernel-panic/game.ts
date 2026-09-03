@@ -9,9 +9,13 @@ import {
     CANVAS_WIDTH,
     DIAMOND_CHANCE,
     FIRE_RATE_BONUS_MULT,
+    GOLD_DROP_CHANCE,
+    HEALTH_PICKUP_SIZE,
     LOOT_DIAMOND_R,
     LOOT_GOLD_R,
-    PLAYER_BASE_SPEED
+    PICKUP_SIZE,
+    PLAYER_BASE_SPEED,
+    POWER_DROP_WEIGHTS
 } from './constants';
 import { drawCraft } from './characters';
 import {
@@ -28,7 +32,8 @@ import {
     createBoss,
     drawBoss,
     nextBossDelay,
-    type BossEnemy
+    type BossEnemy,
+    type BossVariant
 } from './boss';
 import {
     createRushAlien,
@@ -99,6 +104,7 @@ interface Enemy extends Rect {
     maxHp: number;
     waveId: number;
     warned: boolean;
+    variant?: BossVariant;
 }
 
 type TimedPowerKind = 'rapid' | 'spread' | 'shield' | 'weaker' | 'score';
@@ -169,8 +175,7 @@ const POWER_DURATION = 7;
 const WEAKER_SPEED = 0.55;
 const RAPID_FIRE = 0.45;
 
-const POWER_KINDS: PowerKind[] = ['shield', 'rapid', 'spread', 'weaker', 'score', 'health'];
-const TIMED_POWER_KINDS: TimedPowerKind[] = ['rapid', 'spread', 'shield', 'weaker', 'score'];
+const TIMED_POWER_KINDS: TimedPowerKind[] = ['shield', 'rapid', 'spread', 'weaker', 'score'];
 
 const POWERUP_COLORS: Record<PowerKind, string> = {
     shield: '#9e9e9e',
@@ -764,6 +769,7 @@ function spawnBossNow(): void {
     activeBoss = boss;
     enemies.push({
         kind: 'boss',
+        variant: boss.variant,
         x: boss.x,
         y: boss.y,
         w: boss.w,
@@ -1142,7 +1148,9 @@ function splitLeak(enemy: Enemy): void {
 }
 
 function dropKillLoot(enemy: Enemy): void {
-    spawnLoot(enemy.x + enemy.w / 2, enemy.y + enemy.h / 2, 'gold', 1);
+    if (Math.random() < GOLD_DROP_CHANCE) {
+        spawnLoot(enemy.x + enemy.w / 2, enemy.y + enemy.h / 2, 'gold', 1);
+    }
     const chance = DIAMOND_CHANCE[selectedDifficulty] ?? 0.1;
     if (Math.random() < chance) {
         spawnLoot(enemy.x + enemy.w / 2 + 10, enemy.y + enemy.h / 2 - 6, 'diamond', 1);
@@ -1175,6 +1183,19 @@ function spawnLoot(x: number, y: number, kind: 'gold' | 'diamond', amount: numbe
     });
 }
 
+function pickPowerKind(): PowerKind {
+    const entries = Object.entries(POWER_DROP_WEIGHTS) as Array<[PowerKind, number]>;
+    const total = entries.reduce((sum, [, weight]) => sum + weight, 0);
+    let roll = Math.random() * total;
+    for (const [kind, weight] of entries) {
+        roll -= weight;
+        if (roll <= 0) {
+            return kind;
+        }
+    }
+    return 'rapid';
+}
+
 function maybeDropPickup(enemy: Enemy): void {
     killsSinceDrop += 1;
     const pity = selectedDifficulty === 'easy' ? 3 : selectedDifficulty === 'medium' ? 4 : 5;
@@ -1182,12 +1203,13 @@ function maybeDropPickup(enemy: Enemy): void {
         return;
     }
     killsSinceDrop = 0;
-    const kind = POWER_KINDS[Math.floor(Math.random() * POWER_KINDS.length)] ?? 'health';
+    const kind = pickPowerKind();
+    const size = kind === 'health' ? HEALTH_PICKUP_SIZE : PICKUP_SIZE;
     pickups.push({
-        x: enemy.x + enemy.w / 2 - 9,
+        x: enemy.x + enemy.w / 2 - size / 2,
         y: enemy.y,
-        w: 18,
-        h: 18,
+        w: size,
+        h: size,
         vy: 48,
         kind
     });
@@ -1439,7 +1461,20 @@ function draw(_ts: number): void {
     }
     for (const enemy of enemies) {
         if (enemy.kind === 'boss') {
-            drawBoss(ctx, enemy as BossEnemy);
+            drawBoss(ctx, {
+                kind: 'boss',
+                variant: enemy.variant ?? 'blue',
+                x: enemy.x,
+                y: enemy.y,
+                w: enemy.w,
+                h: enemy.h,
+                vy: enemy.vy,
+                vx: enemy.vx,
+                hp: enemy.hp,
+                maxHp: enemy.maxHp,
+                waveId: enemy.waveId,
+                warned: enemy.warned
+            });
         } else {
             drawEnemy(enemy);
         }
@@ -1525,31 +1560,57 @@ function drawPickup(pickup: Pickup): void {
     ctx.fillStyle = POWERUP_COLORS[pickup.kind];
     ctx.fillRect(pickup.x, pickup.y, pickup.w, pickup.h);
     ctx.fillStyle = '#1e1e1e';
-    ctx.font = 'bold 9px Orbitron, sans-serif';
+    ctx.font = pickup.kind === 'health'
+        ? 'bold 14px Orbitron, sans-serif'
+        : 'bold 9px Orbitron, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(POWERUP_LABELS[pickup.kind], pickup.x + pickup.w / 2, pickup.y + pickup.h / 2);
+    ctx.fillText(
+        POWERUP_LABELS[pickup.kind],
+        pickup.x + pickup.w / 2,
+        pickup.y + pickup.h / 2
+    );
 }
 
 function drawModHud(): void {
-    let x = 8;
-    const y = 14;
-    for (const kind of TIMED_POWER_KINDS) {
-        const left = activeMods[kind];
-        if (!left) {
-            continue;
+    const radius = 14;
+    const gap = 36;
+    const startY = 56;
+    const cx = CANVAS_WIDTH - 22;
+
+    TIMED_POWER_KINDS.forEach((kind, index) => {
+        const cy = startY + index * gap;
+        const remaining = activeMods[kind] ?? 0;
+        const active = remaining > 0;
+        const color = POWERUP_COLORS[kind];
+
+        ctx.save();
+        ctx.globalAlpha = active ? 1 : 0.28;
+
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+        ctx.fillStyle = '#1e1e1e';
+        ctx.fill();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        if (active) {
+            const progress = Math.max(0, Math.min(1, remaining / POWER_DURATION));
+            ctx.beginPath();
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 3;
+            ctx.arc(cx, cy, radius + 3, -Math.PI / 2, -Math.PI / 2 + progress * Math.PI * 2);
+            ctx.stroke();
         }
-        const label = `${POWERUP_LABELS[kind]} ${Math.ceil(left)}`;
-        const width = 36;
-        ctx.fillStyle = 'rgba(30, 30, 30, 0.75)';
-        ctx.fillRect(x, y - 8, width, 16);
-        ctx.fillStyle = POWERUP_COLORS[kind];
-        ctx.font = 'bold 9px Orbitron, sans-serif';
-        ctx.textAlign = 'left';
+
+        ctx.fillStyle = color;
+        ctx.font = 'bold 8px Orbitron, sans-serif';
+        ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(label, x + 5, y);
-        x += width + 6;
-    }
+        ctx.fillText(POWERUP_LABELS[kind], cx, cy);
+        ctx.restore();
+    });
 }
 
 function drawEnemy(enemy: Enemy): void {

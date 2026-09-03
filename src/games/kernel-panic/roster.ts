@@ -51,7 +51,7 @@ export const CHARACTERS: readonly CraftCharacter[] = [
     {
         id: 'green',
         name: 'Green Spaceship',
-        cost: 100,
+        cost: 130,
         currency: 'gold',
         mods: NONE,
         color: '#4ec9b0',
@@ -61,7 +61,7 @@ export const CHARACTERS: readonly CraftCharacter[] = [
     {
         id: 'yellow',
         name: 'Yellow Spaceship',
-        cost: 150,
+        cost: 180,
         currency: 'gold',
         mods: NONE,
         color: '#dcdcaa',
@@ -71,7 +71,7 @@ export const CHARACTERS: readonly CraftCharacter[] = [
     {
         id: 'white',
         name: 'White Spaceship',
-        cost: 200,
+        cost: 230,
         currency: 'gold',
         mods: NONE,
         color: '#e8e8e8',
@@ -91,7 +91,7 @@ export const CHARACTERS: readonly CraftCharacter[] = [
     {
         id: 'pink',
         name: 'Pink Spaceship',
-        cost: 250,
+        cost: 280,
         currency: 'gold',
         mods: NONE,
         color: '#c586c0',
