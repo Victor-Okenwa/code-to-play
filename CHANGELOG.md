@@ -16,8 +16,8 @@
 - **Kernel Panic balance & power-up UX**:
   - Boss variants: Blue (30 HP), Yellow (90 HP), Red (180 HP, larger) with weighted spawn
   - Threat kills drop gold at 70% (diamonds unchanged); gold craft prices +30
-  - Rush alien takes 5 direct hits; power-up kinds weighted (health very rare, larger pickup)
-  - Timed power-ups show always-on right-side indicators with circular progress; re-collect resets timer (no stacking)
+  - Rush alien takes 5 direct hits; power-up kinds weighted (spread less rare; health very rare, larger pickup)
+  - Bosses move slower; timed power-ups show always-on right-side indicators with circular progress; re-collect resets timer (no stacking)
 
 ## [1.2.1] - 2026-09-02
 

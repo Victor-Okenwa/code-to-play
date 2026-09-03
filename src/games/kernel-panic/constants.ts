@@ -21,7 +21,7 @@ export const RUSH_EVERY: Record<string, number> = {
 
 export const BOSS_SIZE = 100;
 export const BOSS_RED_SIZE = 120;
-export const BOSS_SPEED_MULT = 0.5;
+export const BOSS_SPEED_MULT = 0.3;
 export const BOSS_MIN_DELAY = 8;
 export const BOSS_MAX_DELAY = 15;
 export const BOSS_WARN_FLASHES = 3;
@@ -40,6 +40,6 @@ export const POWER_DROP_WEIGHTS: Record<string, number> = {
     score: 32,
     shield: 12,
     weaker: 12,
-    spread: 8,
+    spread: 16,
     health: 4
 };
