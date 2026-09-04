@@ -13,7 +13,7 @@ import { createActivityBarView } from './ui/ActivityBarProvider';
 import { createStatusBar } from './ui/StatusBarManager';
 import { createWebviewManager } from './ui/WebViewManager';
 import { AllGames } from './games/registry';
-import { GameEvent, formatHighScores, DEFAULT_DIFFICULTY_KEY, CI_BIRD_CHARACTER_IDS, DEBUG_SNAKE_CHARACTER_IDS, KERNEL_PANIC_CHARACTER_IDS } from './core/types';
+import { GameEvent, formatHighScores, DEFAULT_DIFFICULTY_KEY, CI_BIRD_CHARACTER_IDS, DEBUG_SNAKE_CHARACTER_IDS, KERNEL_PANIC_CHARACTER_IDS, GIT_RUN_CHARACTER_IDS } from './core/types';
 import { AuthManager } from './auth/AuthManager';
 import { StatsSync } from './stats/StatsSync';
 import { EntitlementsSync } from './billing/EntitlementsSync';
@@ -222,7 +222,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 		await gameManager.unlockPro();
 		vscode.window.showInformationMessage(
-			'Pro unlocked. Call Stack, Merge Conflict, and Kernel Panic are playable, and plays were adjusted.'
+			'Pro unlocked. All Pro games are playable, and plays were adjusted.'
 		);
 	});
 
@@ -233,7 +233,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 		await gameManager.lockPro();
 		vscode.window.showInformationMessage(
-			'Pro locked. You are on the Free plan. Call Stack, Merge Conflict, and Kernel Panic need a Pro subscription.'
+			'Pro locked. You are on the Free plan. Pro games need a Pro subscription.'
 		);
 	});
 
@@ -426,6 +426,69 @@ export function activate(context: vscode.ExtensionContext) {
 		vscode.window.showInformationMessage('All Kernel Panic characters unlocked.');
 	});
 
+	const gitRunGrantCoins = vscode.commands.registerCommand('codeToPlay.gitRunGrantCoins', async () => {
+		if (!isLocalDev) {
+			return;
+		}
+
+		const amountText = await vscode.window.showInputBox({
+			title: 'Git Run: Grant Coins',
+			prompt: 'How many coins to add?',
+			value: '500',
+			validateInput: value => Number.isInteger(Number(value)) && Number(value) >= 0
+				? undefined
+				: 'Enter a non-negative integer'
+		});
+		if (amountText === undefined) {
+			return;
+		}
+
+		const economy = storageManager.getGitRunEconomy();
+		economy.coins += Number(amountText);
+		await storageManager.saveGitRunEconomy(economy);
+		webviewManager.sendGitRunEconomy();
+		vscode.window.showInformationMessage(`Git Run wallet: ${economy.coins} coins, ${economy.diamonds} diamonds.`);
+	});
+
+	const gitRunGrantDiamonds = vscode.commands.registerCommand('codeToPlay.gitRunGrantDiamonds', async () => {
+		if (!isLocalDev) {
+			return;
+		}
+
+		const amountText = await vscode.window.showInputBox({
+			title: 'Git Run: Grant Diamonds',
+			prompt: 'How many diamonds to add?',
+			value: '100',
+			validateInput: value => Number.isInteger(Number(value)) && Number(value) >= 0
+				? undefined
+				: 'Enter a non-negative integer'
+		});
+		if (amountText === undefined) {
+			return;
+		}
+
+		const economy = storageManager.getGitRunEconomy();
+		economy.diamonds += Number(amountText);
+		await storageManager.saveGitRunEconomy(economy);
+		webviewManager.sendGitRunEconomy();
+		vscode.window.showInformationMessage(`Git Run wallet: ${economy.coins} coins, ${economy.diamonds} diamonds.`);
+	});
+
+	const gitRunUnlockCharacters = vscode.commands.registerCommand('codeToPlay.gitRunUnlockCharacters', async () => {
+		if (!isLocalDev) {
+			return;
+		}
+
+		const economy = storageManager.getGitRunEconomy();
+		economy.unlocked = [...GIT_RUN_CHARACTER_IDS];
+		if (!economy.unlocked.includes(economy.selected)) {
+			economy.selected = 'main';
+		}
+		await storageManager.saveGitRunEconomy(economy);
+		webviewManager.sendGitRunEconomy();
+		vscode.window.showInformationMessage('All Git Run runners unlocked.');
+	});
+
 	// Command to import data
 	const importDataCommand = vscode.commands.registerCommand('codeToPlay.importData', async () => {
 		if (!isLocalDev) {
@@ -584,6 +647,9 @@ export function activate(context: vscode.ExtensionContext) {
 		kernelPanicGrantGold,
 		kernelPanicGrantDiamonds,
 		kernelPanicUnlockCharacters,
+		gitRunGrantCoins,
+		gitRunGrantDiamonds,
+		gitRunUnlockCharacters,
 		importDataCommand,
 		resetGameStateCommand
 	);

@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Kernel Panic</title>
+    <title>Git Run</title>
   </head>
   <body>
       <audio id="popSound" preload="auto" style="display: none;">
@@ -27,9 +27,6 @@
       <audio id="crashSound" preload="auto" style="display: none;">
         <source src="SOUND_SRC_CRASH_WAV" type="audio/wav">
       </audio>
-      <audio id="shotSound" preload="auto" style="display: none;">
-        <source src="SOUND_SRC_SHOT_WAV" type="audio/wav">
-      </audio>
       <audio id="explodeSound" preload="auto" style="display: none;">
         <source src="SOUND_SRC_EXPLODE_WAV" type="audio/wav">
       </audio>
@@ -50,13 +47,13 @@
 
       <div class="game-container">
         <div class="game-over-alert" id="gameOverAlert">
-          <h2>KERNEL PANIC!</h2>
+          <h2>CAUGHT!</h2>
           <p id="alertScore">Score: 0</p>
         </div>
 
         <div class="game-header">
-          <h1>Kernel Panic</h1>
-          <p>Fly the kernel craft. Shoot threats. Don't shoot healthy processes.</p>
+          <h1>Git Run</h1>
+          <p>Jump crates. Duck bars. Don't get caught.</p>
         </div>
 
         <div class="difficulty-selection" id="difficultySelection">
@@ -68,7 +65,7 @@
                 <span class="difficulty-name">EASY</span>
               </div>
               <div class="difficulty-description">
-                Segfaults only • Slow start • Rush every 20s
+                Slow scroll · 1 HP · Force Push every 20s
               </div>
               <div class="difficulty-best">Best: <span data-difficulty-best="easy">0</span></div>
             </div>
@@ -78,7 +75,7 @@
                 <span class="difficulty-name">MEDIUM</span>
               </div>
               <div class="difficulty-description">
-                + zombies • Faster start • Rush every 15s
+                Mixed obstacles · 1 HP · Force Push every 15s
               </div>
               <div class="difficulty-best">Best: <span data-difficulty-best="medium">0</span></div>
             </div>
@@ -88,7 +85,7 @@
                 <span class="difficulty-name">HARD</span>
               </div>
               <div class="difficulty-description">
-                Leaks + healthy • Panic waves • Rush every 15s
+                Fast scroll · 1 HP · Force Push every 15s
               </div>
               <div class="difficulty-best">Best: <span data-difficulty-best="hard">0</span></div>
             </div>
@@ -100,69 +97,62 @@
             <div class="about-game-body">
               <h3>What it is</h3>
               <p>
-                A vertical shmup. Fly a craft, shoot falling threats, and unlock
-                spaceships with gold and diamonds. Survive until HP is gone.
-                Rush-hour alien craft and bosses interrupt the fight. One play per run.
+                A landscape single-lane runner (like the Chrome dino). Jump over trees,
+                duck under iron bars, and stay ahead of the bug man. Unlock runners with
+                coins and diamonds. Base HP is 1 — a hit means caught unless you have a
+                shield or +1 HP from a runner or health pickup. One play per run.
               </p>
               <h3>Difficulty</h3>
               <ul>
                 <li>
-                  <strong>Easy</strong> — segfaults only at first, slow start, 3 HP.
-                  Rush every 20s. Bosses every 8–15s.
+                  <strong>Easy</strong> — slow scroll, 1 HP. Force Push every 20s.
                 </li>
                 <li>
-                  <strong>Medium</strong> — zombies from the start, faster spawn,
-                  3 HP. Rush every 15s.
+                  <strong>Medium</strong> — mixed obstacles, 1 HP. Force Push every 15s.
                 </li>
                 <li>
-                  <strong>Hard</strong> — memory leaks that split on hit,
-                  avoidable healthy processes, 2 HP, panic waves from the start.
-                  Rush every 15s.
+                  <strong>Hard</strong> — fast scroll, 1 HP. Force Push every 15s.
                 </li>
               </ul>
               <h3>How to play</h3>
               <p>
-                Pick a difficulty, choose a craft, then Boot Kernel.
-                Score 10 / 15 / 20 for segfault, zombie, and leak kills.
-                Kills drop gold (and sometimes diamonds). Do not shoot healthy processes (−25).
+                Pick a difficulty, choose a runner (Bob Main … John Origin), then Start Run.
+                Score rises with distance; coins and diamonds pad the wallet and the lead.
               </p>
               <ul>
-                <li><strong>Arrows / WASD</strong> — Move.</li>
-                <li><strong>Space</strong> — Fire.</li>
+                <li><strong>Up / W / Space</strong> — Jump over trees.</li>
+                <li><strong>Down / S</strong> — Duck under hanging iron bars.</li>
                 <li><strong>P</strong> — Pause. <strong>Ctrl+M</strong> — Mute. <strong>Ctrl+F</strong> — Focus play.</li>
-                <li>Counter rush lasers with your shots; alien crafts dodge while locking in and take 5 hits. Some rushes send a second craft.</li>
-                <li>Bosses: Blue 30 / Yellow 90 / Red 180 HP; drop 3 diamonds + 6 gold.</li>
+                <li>Force Push rushes dump coin snakes then dense waves — sometimes a dual push, sometimes HEAD.</li>
               </ul>
               <h3>Power-ups</h3>
               <p>
-                Threat kills have a chance to drop a colored capsule. Collect
-                it. Timed mods last a few seconds and can overlap; grabbing
-                the same kind again refreshes the timer. Health heals on
-                collect.
+                Pickups drop along the track. Timed mods last a few seconds and refresh
+                if you grab the same kind again. Shield and boost are one-shot.
               </p>
               <ul>
-                <li><strong>Grey shield</strong> — ignore enemy body hits.</li>
-                <li><strong>Red rapid fire</strong> — shoot faster.</li>
-                <li><strong>Magenta spread shot</strong> — fire three bolts.</li>
-                <li><strong>Blue weaker enemies</strong> — threats slow down.</li>
-                <li><strong>Yellow score boost</strong> — threat kills score double.</li>
-                <li><strong>Green health</strong> — restore 1 HP.</li>
+                <li><strong>Magnet</strong> — pull coins and diamonds.</li>
+                <li><strong>Shield</strong> — absorb one hit.</li>
+                <li><strong>Jetpack</strong> — lift into the sky for coin formations (Up/Down to fly).</li>
+                <li><strong>Boost</strong> — auto-clear the next obstacle hit.</li>
+                <li><strong>x2</strong> — double coin rewards.</li>
+                <li><strong>Health</strong> — restore 1 HP.</li>
               </ul>
             </div>
           </section>
         </div>
 
         <div class="character-selection" id="characterSelection" style="display: none">
-          <h2 class="difficulty-title">Choose Craft</h2>
+          <h2 class="difficulty-title">Choose Runner</h2>
           <p class="wallet-line">
-            Gold <span id="walletGold">0</span>
+            Coins <span id="walletCoins">0</span>
             · Diamonds <span id="walletDiamonds">0</span>
           </p>
           <canvas id="characterPreview" width="220" height="160"></canvas>
           <div class="char-nav">
             <button type="button" class="btn char-arrow" id="charPrevBtn" aria-label="Previous character">◀</button>
             <div class="char-meta">
-              <h3 id="charName">Blue Spaceship</h3>
+              <h3 id="charName">Bob Main</h3>
               <p id="charCost">Free</p>
               <p id="charMods">No special ability</p>
               <p id="charLocked"></p>
@@ -184,8 +174,8 @@
               <div class="score-value" id="highScore">0</div>
             </div>
             <div class="score-item">
-              <div class="score-label">Gold</div>
-              <div class="score-value" id="goldHud">0</div>
+              <div class="score-label">Coins</div>
+              <div class="score-value" id="coinsHud">0</div>
             </div>
             <div class="score-item">
               <div class="score-label">Diamonds</div>
@@ -193,28 +183,28 @@
             </div>
             <div class="score-item">
               <div class="score-label">HP</div>
-              <div class="score-value" id="hp">3</div>
+              <div class="score-value" id="hp">1</div>
             </div>
             <div class="score-item">
-              <div class="score-label">Threat</div>
-              <div class="score-value" id="threatLevel">1</div>
+              <div class="score-label">Catch</div>
+              <div class="score-value" id="catchHud">0%</div>
             </div>
           </div>
 
           <div class="game-area focus-play-target">
-            <canvas id="gameCanvas" width="360" height="480"></canvas>
+            <canvas id="gameCanvas" width="520" height="280"></canvas>
           </div>
 
           <div class="game-over" id="gameOver">
-            <h2>Kernel Panic</h2>
+            <h2>Caught!</h2>
             <p>Score: <span id="finalScore">0</span></p>
-            <button class="btn" id="restartBtn">Reboot</button>
+            <button class="btn" id="restartBtn">Restart</button>
           </div>
 
           <div class="controls">
-            <button class="btn" id="startBtn">Boot Kernel</button>
+            <button class="btn" id="startBtn">Start Run</button>
             <button class="btn" id="pauseBtn" style="display: none">Pause (P)</button>
-            <button class="btn back-btn" id="backToMenuBtn">Change Craft</button>
+            <button class="btn back-btn" id="backToMenuBtn">Change Runner</button>
           </div>
         </div>
 
@@ -223,27 +213,27 @@
             <summary>How to Play</summary>
             <h3>Controls</h3>
             <ul>
-              <li><strong>Arrows / WASD</strong> — Move</li>
-              <li><strong>Space</strong> — Fire</li>
+              <li><strong>Up / W / Space</strong> — Jump</li>
+              <li><strong>Down / S</strong> — Duck</li>
               <li><strong>P</strong> — Pause/Resume</li>
               <li><strong>Ctrl+M</strong> — Toggle sound</li>
               <li><strong>Ctrl+F</strong> — Toggle focus play mode</li>
             </ul>
             <h3>Rules</h3>
             <ul>
-              <li>Shoot red segfaults, purple zombies, and orange leaks</li>
-              <li>Do not shoot green dashed healthy processes (−25)</li>
-              <li>Leaks split when hit. Survive until HP is gone — threat ramps the longer you last</li>
+              <li>Stay ahead of the bug man — catch meter at 100% ends the run</li>
+              <li>Jump over trees; duck under iron bars</li>
+              <li>Force Push rushes interrupt with coin snakes and dense waves</li>
             </ul>
             <h3>Power-ups</h3>
-            <p>Collect falling capsules. About 1 in 3 threat kills drop one:</p>
+            <p>Collect glowing pickups along the track:</p>
             <ul>
-              <li><strong>Grey</strong> — shield (ignore body hits)</li>
-              <li><strong>Red</strong> — rapid fire</li>
-              <li><strong>Magenta</strong> — spread shot</li>
-              <li><strong>Blue</strong> — slower threats</li>
-              <li><strong>Yellow</strong> — double score on threat kills</li>
-              <li><strong>Green</strong> — heal 1 HP</li>
+              <li><strong>Magnet</strong> — pull coins and diamonds</li>
+              <li><strong>Shield</strong> — absorb one hit</li>
+              <li><strong>Jetpack</strong> — fly through sky coin formations</li>
+              <li><strong>Boost</strong> — auto-clear next obstacle</li>
+              <li><strong>x2</strong> — double coin rewards</li>
+              <li><strong>Health</strong> — restore 1 HP</li>
             </ul>
           </details>
         </div>

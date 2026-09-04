@@ -21,7 +21,9 @@ import {
     DebugSnakeEconomy,
     normalizeDebugSnakeEconomy,
     KernelPanicEconomy,
-    normalizeKernelPanicEconomy
+    normalizeKernelPanicEconomy,
+    GitRunEconomy,
+    normalizeGitRunEconomy
 } from './types';
 
 /**
@@ -174,6 +176,19 @@ export class StorageManager implements vscode.Disposable {
         await this.globalState.update(
             StorageKey.KERNEL_PANIC_ECONOMY,
             normalizeKernelPanicEconomy(state)
+        );
+    }
+
+    getGitRunEconomy(): GitRunEconomy {
+        return normalizeGitRunEconomy(
+            this.globalState.get<unknown>(StorageKey.GIT_RUN_ECONOMY)
+        );
+    }
+
+    async saveGitRunEconomy(state: GitRunEconomy): Promise<void> {
+        await this.globalState.update(
+            StorageKey.GIT_RUN_ECONOMY,
+            normalizeGitRunEconomy(state)
         );
     }
 

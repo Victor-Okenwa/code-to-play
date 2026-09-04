@@ -172,7 +172,7 @@ export interface GlobalPlayState {
     /** Whether games are currently unlocked and playable */
     isUnlocked: boolean;
 
-    /** Whether Pro games (Call Stack, Merge Conflict, Kernel Panic) are allowed */
+    /** Whether Pro games are allowed */
     isProUnlocked: boolean;
 
     /** Whether the +2 Pro play spaces have already been applied */
@@ -257,7 +257,10 @@ export enum StorageKey {
     DEBUG_SNAKE_ECONOMY = 'codeToPlay.debugSnakeEconomy',
 
     /** Kernel Panic gold, diamonds, and unlocked crafts */
-    KERNEL_PANIC_ECONOMY = 'codeToPlay.kernelPanicEconomy'
+    KERNEL_PANIC_ECONOMY = 'codeToPlay.kernelPanicEconomy',
+
+    /** Git Run coins, diamonds, and unlocked runners */
+    GIT_RUN_ECONOMY = 'codeToPlay.gitRunEconomy'
 }
 
 export const CI_BIRD_CHARACTER_IDS = [
@@ -424,6 +427,61 @@ export function normalizeKernelPanicEconomy(raw: unknown): KernelPanicEconomy {
         : 'blue';
 
     return { gold, diamonds, unlocked, selected };
+}
+
+export const GIT_RUN_CHARACTER_IDS = [
+    'main',
+    'feat',
+    'hotfix',
+    'dev',
+    'bisect',
+    'release',
+    'rebase',
+    'origin'
+] as const;
+
+export type GitRunCharacterId = (typeof GIT_RUN_CHARACTER_IDS)[number];
+
+export interface GitRunEconomy {
+    coins: number;
+    diamonds: number;
+    unlocked: string[];
+    selected: string;
+}
+
+export const DEFAULT_GIT_RUN_ECONOMY: GitRunEconomy = {
+    coins: 0,
+    diamonds: 0,
+    unlocked: ['main'],
+    selected: 'main'
+};
+
+export function normalizeGitRunEconomy(raw: unknown): GitRunEconomy {
+    const valid = new Set<string>(GIT_RUN_CHARACTER_IDS);
+    if (!raw || typeof raw !== 'object') {
+        return { ...DEFAULT_GIT_RUN_ECONOMY, unlocked: [...DEFAULT_GIT_RUN_ECONOMY.unlocked] };
+    }
+
+    const data = raw as Partial<GitRunEconomy>;
+    const coins = typeof data.coins === 'number' && Number.isFinite(data.coins)
+        ? Math.max(0, Math.floor(data.coins))
+        : 0;
+    const diamonds = typeof data.diamonds === 'number' && Number.isFinite(data.diamonds)
+        ? Math.max(0, Math.floor(data.diamonds))
+        : 0;
+
+    const unlocked = Array.isArray(data.unlocked)
+        ? [...new Set(data.unlocked.filter(id => typeof id === 'string' && valid.has(id)))]
+        : [];
+    if (!unlocked.includes('main')) {
+        unlocked.unshift('main');
+    }
+
+    const selected = typeof data.selected === 'string' && unlocked.includes(data.selected)
+        ? data.selected
+        : 'main';
+
+    return { coins, diamonds, unlocked, selected };
 }
 
 /**

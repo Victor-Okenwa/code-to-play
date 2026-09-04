@@ -144,7 +144,7 @@ export class GameManager {
         if (game.isPremium && !globalState.isProUnlocked) {
             return {
                 success: false,
-                reason: `Pro required. Start a ${PRO_TRIAL_DAYS}-day free trial to play Call Stack, Merge Conflict, and Kernel Panic.`
+                reason: `Pro required. Start a ${PRO_TRIAL_DAYS}-day free trial to play Pro games.`
             };
         }
 

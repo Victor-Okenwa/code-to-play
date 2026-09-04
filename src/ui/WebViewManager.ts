@@ -10,7 +10,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { IGame, getHighScoreFor, DEFAULT_DIFFICULTY_KEY, resolveDifficultyKey, CiBirdEconomy, DebugSnakeEconomy, KernelPanicEconomy } from '../core/types';
+import { IGame, getHighScoreFor, DEFAULT_DIFFICULTY_KEY, resolveDifficultyKey, CiBirdEconomy, DebugSnakeEconomy, KernelPanicEconomy, GitRunEconomy } from '../core/types';
 import { GameManager } from '../core/GameManager';
 
 export class WebviewManager {
@@ -131,6 +131,9 @@ export class WebviewManager {
                 if (gameId === 'kernel-panic') {
                     this.sendKernelPanicEconomy();
                 }
+                if (gameId === 'git-run') {
+                    this.sendGitRunEconomy();
+                }
             }
         });
     }
@@ -199,6 +202,9 @@ export class WebviewManager {
                 }
                 if (game.id === 'kernel-panic') {
                     this.sendKernelPanicEconomy();
+                }
+                if (game.id === 'git-run') {
+                    this.sendGitRunEconomy();
                 }
             }, 500);
         } catch (error) {
@@ -539,6 +545,9 @@ export class WebviewManager {
                 if (gameId === 'kernel-panic') {
                     this.sendKernelPanicEconomy();
                 }
+                if (gameId === 'git-run') {
+                    this.sendGitRunEconomy();
+                }
                 break;
 
             case 'ciBirdSaveEconomy':
@@ -556,6 +565,12 @@ export class WebviewManager {
             case 'kernelPanicSaveEconomy':
                 if (gameId === 'kernel-panic') {
                     await this.saveKernelPanicEconomy(message);
+                }
+                break;
+
+            case 'gitRunSaveEconomy':
+                if (gameId === 'git-run') {
+                    await this.saveGitRunEconomy(message);
                 }
                 break;
 
@@ -682,6 +697,50 @@ export class WebviewManager {
                 ? message.unlocked.filter((id): id is string => typeof id === 'string')
                 : ['blue'],
             selected: typeof message.selected === 'string' ? message.selected : 'blue'
+        });
+    }
+
+    sendGitRunEconomy(): void {
+        const panel = this.activePanels.get('git-run');
+        if (!panel) {
+            return;
+        }
+
+        const economy = this.gitRunStorage().getGitRunEconomy();
+        panel.webview.postMessage({
+            command: 'gitRunEconomy',
+            coins: economy.coins,
+            diamonds: economy.diamonds,
+            unlocked: economy.unlocked,
+            selected: economy.selected
+        });
+    }
+
+    private gitRunStorage(): {
+        getGitRunEconomy(): GitRunEconomy;
+        saveGitRunEconomy(state: GitRunEconomy): Promise<void>;
+    } {
+        return (this.gameManager as unknown as {
+            storageManager: {
+                getGitRunEconomy(): GitRunEconomy;
+                saveGitRunEconomy(state: GitRunEconomy): Promise<void>;
+            };
+        }).storageManager;
+    }
+
+    private async saveGitRunEconomy(message: {
+        coins?: unknown;
+        diamonds?: unknown;
+        unlocked?: unknown;
+        selected?: unknown;
+    }): Promise<void> {
+        await this.gitRunStorage().saveGitRunEconomy({
+            coins: typeof message.coins === 'number' ? message.coins : 0,
+            diamonds: typeof message.diamonds === 'number' ? message.diamonds : 0,
+            unlocked: Array.isArray(message.unlocked)
+                ? message.unlocked.filter((id): id is string => typeof id === 'string')
+                : ['main'],
+            selected: typeof message.selected === 'string' ? message.selected : 'main'
         });
     }
 

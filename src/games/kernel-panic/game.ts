@@ -37,6 +37,7 @@ import {
 } from './boss';
 import {
     createRushAlien,
+    DUAL_RUSH_CHANCE,
     drawAlienLaser,
     drawRushAlien,
     hitRushAlien,
@@ -300,7 +301,9 @@ let particles: Particle[] = [];
 let activeMods: Partial<Record<TimedPowerKind, number>> = {};
 let inRush = false;
 let nextRushAt = 20;
-let rushAlien: RushAlien | null = null;
+let rushAliens: RushAlien[] = [];
+let rushWavesLeft = 0;
+let nextRushAlienAt = 0;
 let nextBossAt = 10;
 let bossWarningT = 0;
 let bossWarningFlashesLeft = 0;
@@ -574,7 +577,9 @@ function resetRun(playing: boolean): void {
     particles = [];
     activeMods = {};
     inRush = false;
-    rushAlien = null;
+    rushAliens = [];
+    rushWavesLeft = 0;
+    nextRushAlienAt = 0;
     nextRushAt = rushEveryFor(selectedDifficulty);
     nextBossAt = nextBossDelay();
     bossWarningT = 0;
@@ -707,26 +712,51 @@ function updateRush(dt: number): void {
         startRush();
     }
 
-    if (!rushAlien) {
+    if (!inRush) {
         return;
     }
 
-    updateRushAlien(rushAlien, dt, player.x + player.w / 2);
+    const playerCx = player.x + player.w / 2;
+    for (const alien of rushAliens) {
+        updateRushAlien(alien, dt, playerCx, bullets);
+    }
 
-    if (rushAlienDone(rushAlien)) {
+    const before = rushAliens.length;
+    rushAliens = rushAliens.filter(alien => !rushAlienDone(alien));
+    if (rushAliens.length < before && rushWavesLeft > 0) {
+        // Short gap before the successive craft enters
+        nextRushAlienAt = elapsed + 0.75;
+    }
+
+    if (
+        rushWavesLeft > 0
+        && rushAliens.length === 0
+        && elapsed >= nextRushAlienAt
+    ) {
+        const bias = Math.random() < 0.5 ? -48 : 48;
+        rushAliens.push(createRushAlien(playerCx, bias));
+        rushWavesLeft -= 1;
+        playSound('warningSound');
+    }
+
+    if (rushWavesLeft <= 0 && rushAliens.length === 0) {
         endRush();
     }
 }
 
 function startRush(): void {
     inRush = true;
-    rushAlien = createRushAlien(player.x + player.w / 2);
+    const dual = Math.random() < DUAL_RUSH_CHANCE;
+    rushWavesLeft = dual ? 1 : 0;
+    nextRushAlienAt = 0;
+    rushAliens = [createRushAlien(player.x + player.w / 2)];
     playSound('warningSound');
 }
 
 function endRush(): void {
     inRush = false;
-    rushAlien = null;
+    rushAliens = [];
+    rushWavesLeft = 0;
     nextRushAt = elapsed + rushEveryFor(selectedDifficulty);
     spawnAcc = 0;
 }
@@ -996,8 +1026,11 @@ function collide(): void {
         const bullet = bullets[bi]!;
         let hit = false;
 
-        if (rushAlien && !rushAlien.destroyed) {
-            for (const laser of rushAlien.lasers) {
+        for (const alien of rushAliens) {
+            if (alien.destroyed) {
+                continue;
+            }
+            for (const laser of alien.lasers) {
                 if (!laser.hit && aabb(bullet, laser)) {
                     laser.hit = true;
                     bullets.splice(bi, 1);
@@ -1007,18 +1040,22 @@ function collide(): void {
                 }
             }
             if (hit) {
-                continue;
+                break;
             }
-            if (aabb(bullet, rushAlien)) {
+            if (aabb(bullet, alien)) {
                 bullets.splice(bi, 1);
-                const destroyed = hitRushAlien(rushAlien);
+                const destroyed = hitRushAlien(alien);
                 playSound('explodeSound');
-                spawnBurst(rushAlien.x + rushAlien.w / 2, rushAlien.y + rushAlien.h / 2, '#4ec9b0');
+                spawnBurst(alien.x + alien.w / 2, alien.y + alien.h / 2, '#4ec9b0');
                 if (destroyed) {
-                    dropRushReward(rushAlien.x + rushAlien.w / 2, rushAlien.y + rushAlien.h / 2);
+                    dropRushReward(alien.x + alien.w / 2, alien.y + alien.h / 2);
                 }
-                continue;
+                hit = true;
+                break;
             }
+        }
+        if (hit) {
+            continue;
         }
 
         for (let ei = enemies.length - 1; ei >= 0; ei--) {
@@ -1035,8 +1072,8 @@ function collide(): void {
         }
     }
 
-    if (rushAlien) {
-        for (const laser of rushAlien.lasers) {
+    for (const alien of rushAliens) {
+        for (const laser of alien.lasers) {
             if (!laser.hit && aabb(player, laser)) {
                 laser.hit = true;
                 if (!hasMod('shield')) {
@@ -1480,9 +1517,9 @@ function draw(_ts: number): void {
         }
     }
 
-    if (rushAlien) {
-        drawRushAlien(ctx, rushAlien);
-        for (const laser of rushAlien.lasers) {
+    for (const alien of rushAliens) {
+        drawRushAlien(ctx, alien);
+        for (const laser of alien.lasers) {
             if (!laser.hit) {
                 drawAlienLaser(ctx, laser);
             }
@@ -1557,19 +1594,26 @@ function drawLoot(item: Loot): void {
 }
 
 function drawPickup(pickup: Pickup): void {
+    const cx = pickup.x + pickup.w / 2;
+    const cy = pickup.y + pickup.h / 2;
+    const radius = Math.min(pickup.w, pickup.h) / 2;
+
     ctx.fillStyle = POWERUP_COLORS[pickup.kind];
-    ctx.fillRect(pickup.x, pickup.y, pickup.w, pickup.h);
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = 'rgba(30, 30, 30, 0.45)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
     ctx.fillStyle = '#1e1e1e';
     ctx.font = pickup.kind === 'health'
         ? 'bold 14px Orbitron, sans-serif'
         : 'bold 9px Orbitron, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(
-        POWERUP_LABELS[pickup.kind],
-        pickup.x + pickup.w / 2,
-        pickup.y + pickup.h / 2
-    );
+    ctx.fillText(POWERUP_LABELS[pickup.kind], cx, cy);
 }
 
 function drawModHud(): void {

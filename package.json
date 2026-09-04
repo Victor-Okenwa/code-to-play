@@ -233,6 +233,24 @@
         "when": "codeToPlay:isDev"
       },
       {
+        "command": "codeToPlay.gitRunGrantCoins",
+        "title": "Git Run: Grant Coins",
+        "category": "Code to Play",
+        "when": "codeToPlay:isDev"
+      },
+      {
+        "command": "codeToPlay.gitRunGrantDiamonds",
+        "title": "Git Run: Grant Diamonds",
+        "category": "Code to Play",
+        "when": "codeToPlay:isDev"
+      },
+      {
+        "command": "codeToPlay.gitRunUnlockCharacters",
+        "title": "Git Run: Unlock All Runners",
+        "category": "Code to Play",
+        "when": "codeToPlay:isDev"
+      },
+      {
         "command": "codeToPlay.signIn",
         "title": "Sign in with GitHub",
         "category": "Code to Play"

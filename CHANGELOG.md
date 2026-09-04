@@ -4,6 +4,12 @@
 
 ### Added
 
+- **Git Run** (Pro):
+  - Three-lane chase runner: dodge obstacles ahead of a bug man (jump / slide / lane switch)
+  - Base 1 HP — an obstacle hit catches you unless you have a shield, a health pickup, or a +1 HP runner (Jay Release, John Origin)
+  - Character select after difficulty with eight humanoid runners (Bob Main free; Mike Feat / Mary Hotfix / Ned Dev cost coins; Hank Bisect / Jay Release / Ada Rebase / John Origin cost diamonds)
+  - Coins common; diamonds at 8%/12%/18% (Easy/Medium/Hard); power-ups: magnet, shield, slow, boost, 2× coins, health — timed ones use right-side ring HUD
+  - Force Push rush every 20s (Easy) / 15s (Medium & Hard); ~38% successive second wave; optional Detached HEAD elite
 - **Kernel Panic** (Pro):
   - Character select after difficulty with eight crafts (Blue free; Green/Yellow/White/Pink cost gold; Red/Rocket/Alien cost diamonds)
   - Gold from every threat kill; diamonds at 10%/15%/20% (Easy/Medium/Hard), independent of power-up drops
@@ -16,7 +22,7 @@
 - **Kernel Panic balance & power-up UX**:
   - Boss variants: Blue (30 HP), Yellow (90 HP), Red (180 HP, larger) with weighted spawn
   - Threat kills drop gold at 70% (diamonds unchanged); gold craft prices +30
-  - Rush alien takes 5 direct hits; power-up kinds weighted (spread less rare; health very rare, larger pickup)
+  - Rush alien takes 5 direct hits, longer lock-in with dodge, and ~38% chance of a successive second craft
   - Bosses move slower; timed power-ups show always-on right-side indicators with circular progress; re-collect resets timer (no stacking)
 
 ## [1.2.1] - 2026-09-02
