@@ -1,15 +1,17 @@
 # Changelog
 
-## [Unreleased]
+## [1.3.0] - 2026-09-04
 
 ### Added
 
 - **Git Run** (Pro):
-  - Three-lane chase runner: dodge obstacles ahead of a bug man (jump / slide / lane switch)
+  - Landscape single-lane chase runner: jump trees, duck hanging iron bars, stay ahead of a morphing chase bug
   - Base 1 HP — an obstacle hit catches you unless you have a shield, a health pickup, or a +1 HP runner (Jay Release, John Origin)
-  - Character select after difficulty with eight humanoid runners (Bob Main free; Mike Feat / Mary Hotfix / Ned Dev cost coins; Hank Bisect / Jay Release / Ada Rebase / John Origin cost diamonds)
-  - Coins common; diamonds at 8%/12%/18% (Easy/Medium/Hard); power-ups: magnet, shield, slow, boost, 2× coins, health — timed ones use right-side ring HUD
+  - Character select after difficulty with eight runners (Bob Main free; Mike Feat / Mary Hotfix / Ned Dev cost coins; Hank Bisect / Jay Release / Ada Rebase / John Origin cost diamonds)
+  - Coins common; diamonds at 8%/12%/18% (Easy/Medium/Hard); power-ups: magnet, shield, jetpack, boost, 2× coins, health — timed ones use right-side ring HUD
+  - Jetpack lift-off into a star/cloud sky with shaped coin formations (Flappy-style Up/Down); white pack with bluish-red propeller fire
   - Force Push rush every 20s (Easy) / 15s (Medium & Hard); ~38% successive second wave; optional Detached HEAD elite
+  - Catch ending: bug lunges and swallows the runner before the Caught screen
 - **Kernel Panic** (Pro):
   - Character select after difficulty with eight crafts (Blue free; Green/Yellow/White/Pink cost gold; Red/Rocket/Alien cost diamonds)
   - Gold from every threat kill; diamonds at 10%/15%/20% (Easy/Medium/Hard), independent of power-up drops
@@ -29,7 +31,7 @@
 
 ### Added
 
-- **`codeToPlay.unlock.linesToUnlock` setting** — choose how many meaningful lines of code unlock more plays (default and minimum: 1000)
+- `**codeToPlay.unlock.linesToUnlock` setting** — choose how many meaningful lines of code unlock more plays (default and minimum: 1000)
 
 ### Changed
 
