@@ -66,7 +66,7 @@ export const BUG_FORM_EVERY = 7;
 
 export const POWER_DURATION: Record<string, number> = {
     magnet: 6,
-    jetpack: 8.5,
+    jetpack: 13.5,
     x2: 6,
     boost: 0
 };

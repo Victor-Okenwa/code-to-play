@@ -337,6 +337,10 @@ function backToCharacters(): void {
     isRunning = false;
     isPaused = false;
     isSwallowing = false;
+    runnerEaten = false;
+    jetpack = null;
+    flyUp = false;
+    flyDown = false;
 
     gameOverElement.classList.remove('show');
     gameOverAlert.classList.remove('show');
@@ -564,6 +568,25 @@ function scrollSpeed(): number {
 
 function inJetpack(): boolean {
     return jetpack !== null;
+}
+
+/** 0 upright → 1 horizontal; eases during ascend/descend. */
+function jetpackLean(): number {
+    if (!jetpack) {
+        return 0;
+    }
+    if (jetpack.phase === 'ascend') {
+        const p = Math.min(1, jetpack.t / JETPACK_ASCEND);
+        // Smoothstep for a soft tip into flight
+        return p * p * (3 - 2 * p);
+    }
+    if (jetpack.phase === 'sky') {
+        return 1;
+    }
+    // descend: ease back to upright
+    const p = Math.min(1, jetpack.t / JETPACK_DESCEND);
+    const eased = p * p * (3 - 2 * p);
+    return 1 - eased;
 }
 
 function update(dt: number): void {
@@ -1196,91 +1219,139 @@ function updateHud(): void {
 }
 
 function draw(): void {
-    // Sky with depth
-    const sky = ctx.createLinearGradient(0, 0, 0, GROUND_Y);
-    sky.addColorStop(0, '#243044');
-    sky.addColorStop(0.55, '#1a2230');
-    sky.addColorStop(1, '#151a24');
-    ctx.fillStyle = sky;
-    ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    const skyMode = Boolean(jetpack && (jetpack.phase === 'sky' || jetpack.phase === 'descend'));
+    const ascendP = jetpack?.phase === 'ascend' ? Math.min(1, jetpack.t / JETPACK_ASCEND) : 0;
+    const blend =
+        jetpack?.phase === 'ascend'
+            ? ascendP
+            : jetpack?.phase === 'descend'
+              ? 1 - Math.min(1, jetpack.t / JETPACK_DESCEND)
+              : skyMode
+                ? 1
+                : 0;
 
-    // Far hills (pseudo-3D depth)
-    ctx.fillStyle = 'rgba(36, 52, 72, 0.55)';
-    ctx.beginPath();
-    ctx.moveTo(0, GROUND_Y - 28);
-    ctx.quadraticCurveTo(120, GROUND_Y - 55, 240, GROUND_Y - 30);
-    ctx.quadraticCurveTo(360, GROUND_Y - 60, 520, GROUND_Y - 26);
-    ctx.lineTo(CANVAS_WIDTH, GROUND_Y);
-    ctx.lineTo(0, GROUND_Y);
-    ctx.closePath();
-    ctx.fill();
+    if (blend < 0.99) {
+        const sky = ctx.createLinearGradient(0, 0, 0, GROUND_Y);
+        sky.addColorStop(0, '#243044');
+        sky.addColorStop(0.55, '#1a2230');
+        sky.addColorStop(1, '#151a24');
+        ctx.fillStyle = sky;
+        ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-    drawGround();
-    drawRoadMarks();
+        ctx.fillStyle = 'rgba(36, 52, 72, 0.55)';
+        ctx.beginPath();
+        ctx.moveTo(0, GROUND_Y - 28);
+        ctx.quadraticCurveTo(120, GROUND_Y - 55, 240, GROUND_Y - 30);
+        ctx.quadraticCurveTo(360, GROUND_Y - 60, 520, GROUND_Y - 26);
+        ctx.lineTo(CANVAS_WIDTH, GROUND_Y);
+        ctx.lineTo(0, GROUND_Y);
+        ctx.closePath();
+        ctx.fill();
+
+        drawGround();
+        drawRoadMarks();
+    }
+
+    if (blend > 0.01) {
+        drawJetpackSky(blend);
+    }
+
+    if (!skyMode || jetpack?.phase === 'descend') {
+        for (const obs of obstacles) {
+            if (!obs.hit) {
+                drawObstacle(ctx, obs);
+            }
+        }
+    }
 
     for (const item of loot) {
         drawLoot(ctx, item);
     }
-    for (const obs of obstacles) {
-        if (!obs.hit) {
-            drawObstacle(ctx, obs);
-        }
-    }
 
     const lift = jumpLift();
     const swallowP = isSwallowing ? Math.min(1, swallowT / SWALLOW_DURATION) : 0;
-    const mouthOpen = isSwallowing
-        ? Math.min(1, Math.max(0, (swallowP - 0.12) / 0.35))
-        : Math.max(0, (chase.meter - 85) / 40);
-    const bugScale = isSwallowing ? 1 + swallowP * 0.55 : 1;
+    let mouthOpen = 0;
+    if (isSwallowing) {
+        if (swallowP < 0.35) {
+            mouthOpen = swallowP / 0.35;
+        } else if (swallowP < 0.55) {
+            mouthOpen = 1;
+        } else {
+            mouthOpen = Math.max(0, 1 - (swallowP - 0.55) / 0.25);
+        }
+    } else {
+        mouthOpen = Math.max(0, (chase.meter - 85) / 40);
+    }
+    const bugScale = isSwallowing
+        ? 1 + Math.sin(Math.min(1, swallowP / 0.7) * Math.PI) * 0.35
+        : 1;
 
-    drawBugMan(ctx, bugX, GROUND_Y, {
-        meter: chase.meter,
-        form: bugForm,
-        t: elapsed,
-        mouthOpen,
-        scaleBoost: bugScale,
-        hop: isSwallowing ? Math.sin(swallowT * 18) * 2 : undefined
-    });
+    if (!inJetpack()) {
+        drawBugMan(ctx, bugX, GROUND_Y, {
+            meter: chase.meter,
+            form: bugForm,
+            t: elapsed,
+            mouthOpen,
+            scaleBoost: bugScale,
+            hop: isSwallowing ? Math.sin(swallowT * 18) * 2 : undefined
+        });
+    }
+
+    if (isSwallowing && swallowP >= 0.48) {
+        runnerEaten = true;
+    }
 
     const invulnBlink = invuln <= 0 || Math.floor(invuln * 12) % 2 === 0;
-    const showRunner = !isSwallowing || swallowP < 0.72;
+    const showRunner = !runnerEaten && (!isSwallowing || swallowP < 0.5);
     if (invulnBlink && showRunner) {
-        const swallowPull = isSwallowing ? Math.max(0, (swallowP - 0.25) / 0.45) : 0;
-        const runnerX = PLAYER_X - PLAYER_W / 2 - swallowPull * (PLAYER_X - bugX - 6);
-        const runnerScale = 1 - swallowPull * 0.85;
-        const runnerLift = lift + (isSwallowing ? swallowPull * 10 : 0);
+        const swallowPull = isSwallowing ? Math.min(1, Math.max(0, (swallowP - 0.15) / 0.32)) : 0;
+        const runnerX = PLAYER_X - PLAYER_W / 2 - swallowPull * Math.max(8, PLAYER_X - bugX);
+        const runnerScale = 1 - swallowPull * 0.95;
+        const runnerLift = lift + (isSwallowing ? swallowPull * 14 : 0);
+        const flying = Boolean(jetpack);
+        const flyLean = jetpackLean();
 
         ctx.save();
         if (swallowPull > 0) {
             const cx = runnerX + PLAYER_W / 2;
-            const cy = GROUND_Y - runnerLift - PLAYER_H * 0.4;
+            const cy = GROUND_Y - runnerLift - PLAYER_H * 0.35;
             ctx.translate(cx, cy);
-            ctx.scale(runnerScale, runnerScale);
-            ctx.rotate(swallowPull * -0.6);
+            ctx.scale(Math.max(0.05, runnerScale), Math.max(0.05, runnerScale));
+            ctx.rotate(swallowPull * -0.85);
             ctx.translate(-cx, -cy);
-            ctx.globalAlpha = 1 - swallowPull * 0.7;
+            ctx.globalAlpha = Math.max(0, 1 - swallowPull);
         }
         drawRunner(ctx, getWallet().selected, runnerX, GROUND_Y - PLAYER_H, PLAYER_W, PLAYER_H, {
             jumping: jumpT > 0 || (isSwallowing && swallowPull > 0),
-            sliding: slideT > 0,
-            shield: hasShield && !isSwallowing,
+            sliding: slideT > 0 && !flying,
+            shield: hasShield && !isSwallowing && !flying,
+            jetpack: flying,
+            flying,
+            flyLean,
             t: elapsed,
             lift: runnerLift
         });
         ctx.restore();
     }
 
-    // Gulp flash near end of swallow
-    if (isSwallowing && swallowP > 0.7) {
-        const flash = Math.sin((swallowP - 0.7) * Math.PI * 6) * 0.25;
-        ctx.fillStyle = `rgba(244, 135, 113, ${Math.max(0, flash)})`;
+    if (isSwallowing && runnerEaten) {
+        const gulp = Math.sin((swallowP - 0.5) * Math.PI * 4) * 0.12;
+        ctx.fillStyle = `rgba(244, 135, 113, ${Math.max(0, gulp)})`;
         ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     }
 
-    drawVignette();
+    if (!skyMode) {
+        drawVignette();
+    }
     drawModHud();
     drawRushBanner();
+
+    if (jetpack?.phase === 'sky') {
+        ctx.fillStyle = 'rgba(212, 212, 212, 0.85)';
+        ctx.font = 'bold 11px Orbitron, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(`JETPACK  ${Math.ceil(jetpack.skyLeft)}s`, CANVAS_WIDTH / 2, 18);
+    }
 
     if (isPaused) {
         ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
@@ -1290,6 +1361,40 @@ function draw(): void {
         ctx.textAlign = 'center';
         ctx.fillText('PAUSED', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2);
     }
+}
+
+function drawJetpackSky(blend: number): void {
+    const sky = ctx.createLinearGradient(0, 0, 0, CANVAS_HEIGHT);
+    sky.addColorStop(0, '#0b1220');
+    sky.addColorStop(0.45, '#152238');
+    sky.addColorStop(1, '#1a2838');
+    ctx.globalAlpha = blend;
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+    ctx.fillStyle = '#e8eef8';
+    for (let i = 0; i < 48; i++) {
+        const sx = ((i * 97 + elapsed * 12) % CANVAS_WIDTH + CANVAS_WIDTH) % CANVAS_WIDTH;
+        const sy = ((i * 53) % (CANVAS_HEIGHT - 20)) + 8;
+        const twinkle = 0.35 + 0.65 * Math.abs(Math.sin(elapsed * 2 + i));
+        ctx.globalAlpha = blend * twinkle;
+        ctx.beginPath();
+        ctx.arc(sx, sy, i % 5 === 0 ? 1.6 : 1, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    ctx.globalAlpha = blend * 0.55;
+    for (let i = 0; i < 5; i++) {
+        const cx = ((i * 140 - elapsed * 28) % (CANVAS_WIDTH + 120)) - 40;
+        const cy = 40 + (i % 3) * 48;
+        ctx.fillStyle = i % 2 === 0 ? 'rgba(200, 210, 230, 0.35)' : 'rgba(180, 195, 220, 0.28)';
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, 48, 14, 0, 0, Math.PI * 2);
+        ctx.ellipse(cx + 22, cy + 4, 36, 12, 0, 0, Math.PI * 2);
+        ctx.ellipse(cx - 20, cy + 2, 30, 10, 0, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    ctx.globalAlpha = 1;
 }
 
 function drawGround(): void {
@@ -1379,6 +1484,12 @@ function drawModHud(): void {
             active: (activeMods[kind] ?? 0) > 0
         })),
         {
+            key: 'jetpack',
+            remaining: jetpack?.phase === 'sky' ? jetpack.skyLeft : jetpack ? 1 : 0,
+            max: POWER_DURATION.jetpack ?? JETPACK_SKY,
+            active: Boolean(jetpack)
+        },
+        {
             key: 'shield',
             remaining: hasShield ? 1 : 0,
             max: 1,
@@ -1407,7 +1518,7 @@ function drawModHud(): void {
         ctx.lineWidth = 2;
         ctx.stroke();
 
-        if (entry.active && entry.max > 0 && TIMED_POWER_KINDS.includes(entry.key as TimedPowerKind)) {
+        if (entry.active && entry.max > 0 && (TIMED_POWER_KINDS.includes(entry.key as TimedPowerKind) || entry.key === 'jetpack')) {
             const progress = Math.max(0, Math.min(1, entry.remaining / entry.max));
             ctx.beginPath();
             ctx.strokeStyle = color;

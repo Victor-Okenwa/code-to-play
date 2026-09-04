@@ -54,7 +54,7 @@ export const CHARACTERS: readonly RunnerCharacter[] = [
     {
         id: 'feat',
         name: 'Mike Feat',
-        cost: 120,
+        cost: 270,
         currency: 'coins',
         mods: { ...NONE, jumpHang: 1.2 },
         color: '#ce9178',
@@ -65,7 +65,7 @@ export const CHARACTERS: readonly RunnerCharacter[] = [
     {
         id: 'hotfix',
         name: 'Mary Hotfix',
-        cost: 180,
+        cost: 330,
         currency: 'coins',
         mods: { ...NONE, jumpHang: 1.35 },
         color: '#f48771',
@@ -76,7 +76,7 @@ export const CHARACTERS: readonly RunnerCharacter[] = [
     {
         id: 'dev',
         name: 'Ned Dev',
-        cost: 220,
+        cost: 370,
         currency: 'coins',
         mods: { ...NONE, slideHang: 1.35 },
         color: '#4ec9b0',

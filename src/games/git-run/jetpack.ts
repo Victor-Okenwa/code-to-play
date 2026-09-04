@@ -20,9 +20,9 @@ const FORMATIONS: FormationKind[] = [
     'octagon'
 ];
 
-export const JETPACK_ASCEND = 1.15;
-export const JETPACK_SKY = 8.5;
-export const JETPACK_DESCEND = 1.25;
+export const JETPACK_ASCEND = 1.35;
+export const JETPACK_SKY = 13.5;
+export const JETPACK_DESCEND = 1.45;
 export const JETPACK_FLY_MID = CANVAS_HEIGHT * 0.42;
 export const JETPACK_FLY_MIN = 36;
 export const JETPACK_FLY_MAX = CANVAS_HEIGHT - 36;

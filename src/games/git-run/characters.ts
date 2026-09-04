@@ -19,19 +19,24 @@ export function drawRunner(
         t?: number;
         lift?: number;
         flying?: boolean;
+        /** 0 upright → 1 fully horizontal (Superman lean). */
+        flyLean?: number;
     } = {}
 ): void {
     const character = getCharacter(id);
     const sliding = Boolean(opts.sliding);
     const jumping = Boolean(opts.jumping);
     const flying = Boolean(opts.flying);
+    const flyLean = Math.min(1, Math.max(0, opts.flyLean ?? (flying ? 1 : 0)));
     const lift = opts.lift ?? (jumping ? 28 : 0);
     const bodyH = sliding ? h * 0.42 : h;
     const feetY = y + h - lift;
     const bodyTop = feetY - bodyH;
     const t = opts.t ?? 0;
     const cx = x + w / 2;
-    const runPhase = t * 14;
+    const midY = bodyTop + bodyH / 2;
+    // Freeze run cycle while leaning into flight
+    const runPhase = flyLean > 0.15 ? 0 : t * 14;
 
     ctx.save();
 
@@ -42,6 +47,13 @@ export function drawRunner(
         ctx.beginPath();
         ctx.ellipse(cx, y + h + 2, w * 0.42 * shadowScale, 5 * shadowScale, 0, 0, Math.PI * 2);
         ctx.fill();
+    }
+
+    // Smooth upright → horizontal lean (head leads to the right)
+    if (flyLean > 0.001) {
+        ctx.translate(cx, midY);
+        ctx.rotate(flyLean * (Math.PI / 2));
+        ctx.translate(-cx, -midY);
     }
 
     if (opts.shield) {
@@ -55,7 +67,7 @@ export function drawRunner(
     }
 
     if (opts.jetpack) {
-        drawJetpackUnit(ctx, cx - 2, bodyTop + bodyH * 0.45, t, flying ? 1.2 : 0.85);
+        drawJetpackUnit(ctx, cx - 2, bodyTop + bodyH * 0.45, t, 0.85 + flyLean * 0.55);
     }
 
     drawSideProfile(
@@ -70,7 +82,8 @@ export function drawRunner(
         character.gender === 'female',
         runPhase,
         sliding,
-        jumping || flying
+        jumping || flyLean > 0.2,
+        flyLean
     );
 
     ctx.restore();
@@ -97,12 +110,14 @@ function drawSideProfile(
     female: boolean,
     runPhase: number,
     sliding: boolean,
-    jumping: boolean
+    jumping: boolean,
+    flyLean = 0
 ): void {
     const light = shade(color, 35);
     const dark = shade(color, -40);
     const accentDark = shade(accent, -30);
     const legSwing = Math.sin(runPhase);
+    const gliding = flyLean > 0.25;
 
     // Back cape / pack (depth behind body)
     if (kind === 'hero') {
@@ -121,9 +136,13 @@ function drawSideProfile(
         ctx.fill();
     }
 
-    // Far leg (behind) — articulated thigh + shin
+    // Far leg (behind) — articulated thigh + shin, or trailing glide pose
     if (!sliding) {
-        drawRunLeg(ctx, cx - 1, y + h * 0.52, runPhase + Math.PI, accentDark, jumping, false);
+        if (gliding) {
+            drawGlideLeg(ctx, cx - 1, y + h * 0.52, accentDark, false, flyLean);
+        } else {
+            drawRunLeg(ctx, cx - 1, y + h * 0.52, runPhase + Math.PI, accentDark, jumping, false);
+        }
     }
 
     // Torso (side slab with light/dark)
@@ -159,7 +178,11 @@ function drawSideProfile(
 
     // Near leg (front)
     if (!sliding) {
-        drawRunLeg(ctx, cx + 2, y + h * 0.52, runPhase, accent, jumping, true);
+        if (gliding) {
+            drawGlideLeg(ctx, cx + 2, y + h * 0.52, accent, true, flyLean);
+        } else {
+            drawRunLeg(ctx, cx + 2, y + h * 0.52, runPhase, accent, jumping, true);
+        }
     } else {
         // Duck: crouched legs
         ctx.fillStyle = accent;
@@ -172,23 +195,39 @@ function drawSideProfile(
         ctx.fill();
     }
 
-    // Far arm (opposite phase to near leg)
-    const armPhase = -legSwing;
-    ctx.strokeStyle = dark;
-    ctx.lineWidth = 3.5;
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(cx - 2, torsoY + 6);
-    ctx.lineTo(cx - 10 + armPhase * 4, torsoY + torsoH * 0.75 + (sliding ? 4 : armPhase * 5));
-    ctx.stroke();
+    // Arms — glide: both stretch forward; else run pump
+    if (gliding) {
+        const reach = 10 + flyLean * 8;
+        ctx.strokeStyle = dark;
+        ctx.lineWidth = 3.5;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(cx - 2, torsoY + 6);
+        ctx.lineTo(cx + reach - 4, torsoY + 2);
+        ctx.stroke();
+        ctx.strokeStyle = light;
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(cx + 6, torsoY + 8);
+        ctx.lineTo(cx + reach + 6, torsoY + 4);
+        ctx.stroke();
+    } else {
+        const armPhase = -legSwing;
+        ctx.strokeStyle = dark;
+        ctx.lineWidth = 3.5;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(cx - 2, torsoY + 6);
+        ctx.lineTo(cx - 10 + armPhase * 4, torsoY + torsoH * 0.75 + (sliding ? 4 : armPhase * 5));
+        ctx.stroke();
 
-    // Near arm
-    ctx.strokeStyle = light;
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.moveTo(cx + 6, torsoY + 8);
-    ctx.lineTo(cx + 14 - armPhase * 5, torsoY + 6 + (jumping ? -8 : -armPhase * 6));
-    ctx.stroke();
+        ctx.strokeStyle = light;
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(cx + 6, torsoY + 8);
+        ctx.lineTo(cx + 14 - armPhase * 5, torsoY + 6 + (jumping ? -8 : -armPhase * 6));
+        ctx.stroke();
+    }
 
     // Head in profile
     const headR = female ? 8 : 8.5;
@@ -297,6 +336,41 @@ function drawRunLeg(
     ctx.fillStyle = near ? '#1e1e1e' : '#2a2a2a';
     ctx.beginPath();
     ctx.ellipse(footX + 3, footY + 1, near ? 7.5 : 6.5, 3.2, 0.12, 0, Math.PI * 2);
+    ctx.fill();
+}
+
+/** Static trailing legs for horizontal jetpack glide. */
+function drawGlideLeg(
+    ctx: CanvasRenderingContext2D,
+    hipX: number,
+    hipY: number,
+    color: string,
+    near: boolean,
+    lean: number
+): void {
+    // Angle back (negative = behind torso when upright; reads as trailing when rotated horizontal)
+    const trail = -0.55 - lean * 0.35 + (near ? 0.08 : -0.08);
+    const thighLen = 11;
+    const shinLen = 11;
+    const kneeX = hipX + Math.sin(trail) * thighLen;
+    const kneeY = hipY + Math.cos(trail) * thighLen;
+    const shinA = trail + 0.15;
+    const footX = kneeX + Math.sin(shinA) * shinLen;
+    const footY = kneeY + Math.cos(shinA) * shinLen;
+
+    ctx.strokeStyle = color;
+    ctx.lineWidth = near ? 5.5 : 4.5;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(hipX, hipY);
+    ctx.lineTo(kneeX, kneeY);
+    ctx.lineTo(footX, footY);
+    ctx.stroke();
+
+    ctx.fillStyle = near ? '#1e1e1e' : '#2a2a2a';
+    ctx.beginPath();
+    ctx.ellipse(footX + 2, footY + 1, near ? 7 : 6, 3, 0.2, 0, Math.PI * 2);
     ctx.fill();
 }
 
