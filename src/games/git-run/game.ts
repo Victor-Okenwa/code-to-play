@@ -214,6 +214,8 @@ let flyY = GROUND_Y;
 let flyVel = 0;
 let flyUp = false;
 let flyDown = false;
+let endGamePanelTimer = 0;
+let endGameAlertTimer = 0;
 
 function playSound(id: string): void {
     if (typeof soundManager !== 'undefined') {
@@ -464,11 +466,27 @@ function setupEventListeners(): void {
         }
     });
 
+    window.addEventListener('gameChrome:restart', () => {
+        if (gamePlay.style.display === 'block') {
+            startGame();
+        }
+    });
     window.addEventListener('gameChrome:requestRestart', () => {
         if (gamePlay.style.display === 'block') {
             startGame();
         }
     });
+}
+
+function clearEndGameTimers(): void {
+    if (endGamePanelTimer) {
+        clearTimeout(endGamePanelTimer);
+        endGamePanelTimer = 0;
+    }
+    if (endGameAlertTimer) {
+        clearTimeout(endGameAlertTimer);
+        endGameAlertTimer = 0;
+    }
 }
 
 function resetRun(playing: boolean): void {
@@ -502,6 +520,7 @@ function resetRun(playing: boolean): void {
     flyVel = 0;
     flyUp = false;
     flyDown = false;
+    clearEndGameTimers();
     resetTrackIds();
     isPaused = false;
     isRunning = playing;
@@ -513,13 +532,17 @@ function resetRun(playing: boolean): void {
 }
 
 function startGame(): void {
+    clearEndGameTimers();
     resetRun(true);
+    gameOverElement.classList.remove('show');
+    gameOverAlert.classList.remove('show');
     startBtn.style.display = 'none';
     pauseBtn.style.display = 'inline-block';
     stopLoop();
     lastTs = 0;
     rafId = requestAnimationFrame(loop);
     notifyGameStateChanged();
+    draw();
 }
 
 function stopLoop(): void {
@@ -1117,6 +1140,7 @@ function finishEndGame(): void {
     forcePush = null;
     chase.rushBoost = 0;
     stopLoop();
+    clearEndGameTimers();
 
     const final = Math.floor(score);
     score = final;
@@ -1134,18 +1158,26 @@ function finishEndGame(): void {
     alertTitle.textContent = 'CAUGHT!';
     gameOverTitle.textContent = 'Caught!';
 
-    setTimeout(() => {
+    // Show Restart after the catch flash so the alert does not cover the button
+    endGamePanelTimer = window.setTimeout(() => {
+        endGamePanelTimer = 0;
         finalScoreElement.textContent = score.toString();
         gameOverElement.classList.add('show');
         startBtn.style.display = 'inline-block';
         pauseBtn.style.display = 'none';
-    }, 400);
+        notifyGameStateChanged();
+        draw();
+    }, 2200);
 }
 
 function showGameOverAlert(): void {
     alertScore.textContent = `Score: ${Math.floor(score)}`;
     gameOverAlert.classList.add('show');
-    setTimeout(() => {
+    if (endGameAlertTimer) {
+        clearTimeout(endGameAlertTimer);
+    }
+    endGameAlertTimer = window.setTimeout(() => {
+        endGameAlertTimer = 0;
         gameOverAlert.classList.remove('show');
     }, 2000);
 }
@@ -1550,9 +1582,13 @@ function sendGameOver(finalScore: number): void {
 
 function setupButtons(): void {
     init();
-    startBtn?.addEventListener('click', startGame);
-    pauseBtn?.addEventListener('click', togglePause);
-    restartBtn?.addEventListener('click', startGame);
+    startBtn?.addEventListener('click', () => startGame());
+    pauseBtn?.addEventListener('click', () => togglePause());
+    restartBtn?.addEventListener('click', event => {
+        event.preventDefault();
+        event.stopPropagation();
+        startGame();
+    });
 }
 
 if (document.readyState === 'loading') {

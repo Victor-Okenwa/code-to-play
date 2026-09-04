@@ -394,6 +394,10 @@ body.focus-play-active {
   z-index: 20;
 }
 
+.focus-play-game-over-slot .game-over-alert:not(.show) {
+  pointer-events: none !important;
+}
+
 .focus-play-game-over-slot .game-over {
   margin: 0;
   max-width: 90%;
